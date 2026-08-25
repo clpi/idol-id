@@ -353,6 +353,10 @@ def lower_text(source, target, emit, opt):
 def run_source(source, args):
     def work(path):
         rc, o, e = idol(["run", path] + args, timeout=RUN_TIMEOUT)
+        if rc != 0 and "DNB004" in e:
+            e += ("\n\n— the direct backend has no machine realization on this host yet; "
+                  "analyze, fmt, and lowering remain fully live. this refusal is exact "
+                  "compiler law, not a web error.")
         return {"rc": rc, "stdout": o[-30000:], "stderr": e[-6000:]}
     return with_tmp_source(source, work)
 
