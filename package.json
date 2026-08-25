@@ -1,0 +1,16 @@
+{
+  "name": "idol-id",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "check": "npm test && npm run build",
+    "dev": "npm run build && npx --yes wrangler@4.125.0 dev",
+    "deploy": "npm run build && npx --yes wrangler@4.125.0 deploy"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

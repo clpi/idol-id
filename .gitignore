@@ -1,6 +1,10 @@
-r2.env
-registry/
-*.out
 __pycache__/
 *.pyc
 .DS_Store
+registry/
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.dev.vars.*
+runtime/*.wasm
