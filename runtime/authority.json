@@ -8,7 +8,7 @@
   "native": {
     "repository": "clpi/idol-native",
     "branch": "main",
-    "commit": "932a3ade3fa40c0653242559305fb67ffa142e84"
+    "commit": "d422ef33c88811b99523ef0cc19a03bd158dd3c0"
   },
   "rule": "semantic identity persists; web, wasm, dom, worker and machine are realizations",
   "wasm_artifact": {
