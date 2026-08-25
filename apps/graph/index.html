@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explorer — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  .pane-editor { flex: 1.1; }
+  .pane-panel { flex: 1; border-left: 1px solid var(--rule); }
+  .editor-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
+  .samples { display: flex; gap: 6px; }
+  .samples select {
+    background: var(--bg-raise); color: var(--ink-2); border: 1px solid var(--rule-2);
+    border-radius: var(--radius); font-family: var(--mono); font-size: 10px; padding: 3px 6px;
+  }
+  .out { padding: 12px 14px; white-space: pre-wrap; color: var(--ink-2); font-size: 12px; }
+  .out .err { color: var(--danger); }
+  .out .ok { color: var(--ok); }
+  .code-out { padding: 12px 14px; overflow: auto; }
+  .code-out pre { color: var(--ink-2); }
+  .lower-ctl { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+  .lower-ctl select { font-size: 11px; padding: 4px 8px; }
+  .facts-sec { padding: 12px 14px; border-bottom: 1px solid var(--rule); }
+  .facts-sec h4 { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px; }
+  .facts-sec .kv { display: flex; gap: 10px; font-size: 11px; padding: 1px 0; }
+  .facts-sec .kv .k { color: var(--ink-4); min-width: 110px; }
+  .facts-sec .kv .v { color: var(--ink-2); }
+  .run-ctl { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+  .run-ctl input { flex: 1; }
+  .inspector { padding: 12px 14px; border-bottom: 1px solid var(--rule); display: none; }
+  .inspector .t { color: var(--ink); font-size: 13px; margin-bottom: 6px; }
+  .busy { position: absolute; top: 8px; right: 12px; z-index: 6; display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <div class="stage">
+    <div class="pane pane-editor">
+      <div class="pane-head">
+        <span>source</span>
+        <span class="spacer"></span>
+        <span class="samples">
+          <select id="sample" title="load an example"></select>
+        </span>
+        <button class="ghost" id="fmt" title="format (⌘⇧F)">fmt</button>
+        <button id="analyze" title="analyze (⌘↵)">analyze</button>
+        <button id="runb" class="primary" title="run (⌘R)">run</button>
+      </div>
+      <div class="busy" id="busy"><span class="spin"></span></div>
+      <div id="editor" style="flex:1;display:flex;min-height:0;"></div>
+    </div>
+    <div class="split-v" id="split"></div>
+    <div class="pane pane-panel">
+      <div class="tabs" id="tabs">
+        <button class="tab here" data-tab="graph">graph</button>
+        <button class="tab" data-tab="lowering">lowering</button>
+        <button class="tab" data-tab="run">run</button>
+        <button class="tab" data-tab="facts">facts</button>
+      </div>
+      <div class="pane-body" id="panel" style="display:flex;flex-direction:column;">
+        <div id="tab-graph" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+          <div class="inspector" id="inspector"></div>
+          <div id="graph" style="flex:1;min-height:0;"></div>
+        </div>
+        <div id="tab-lowering" style="flex:1;display:none;flex-direction:column;min-height:0;">
+          <div class="lower-ctl">
+            <select id="ltarget">
+              <option value="native">native</option>
+              <option value="aarch64-linux">aarch64-linux</option>
+              <option value="aarch64-macos">aarch64-macos</option>
+              <option value="wasm32-wasi">wasm32-wasi</option>
+            </select>
+            <select id="lemit">
+              <option value="asm">asm</option>
+              <option value="c">c</option>
+              <option value="wasm">wasm</option>
+            </select>
+            <select id="lopt"><option>3</option><option>2</option><option>1</option><option>0</option><option>s</option></select>
+            <button id="lower">lower</button>
+            <span class="mono-note" id="lstat"></span>
+          </div>
+          <div class="code-out pane-body" id="lout"><div class="empty"><div class="glyph">⌄</div><div>choose a target and lower</div><div class="mono-note">the same graph semantics realize per target — only physics differs</div></div></div>
+        </div>
+        <div id="tab-run" style="flex:1;display:none;flex-direction:column;min-height:0;">
+          <div class="run-ctl">
+            <input type="text" id="rargs" placeholder="argv (space separated)" spellcheck="false">
+            <button id="rrun">run</button>
+          </div>
+          <div class="out pane-body" id="rout"><span class="mono-note">⌘R runs the source natively.</span></div>
+        </div>
+        <div id="tab-facts" style="flex:1;display:none;overflow:auto;" class="pane-body"><div id="facts"><div class="empty"><div class="glyph">◇</div><div>analyze to publish facts</div></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="statusbar"></div>
+</div>
+
+<script src="/shared/idol.js"></script>
+<script src="/shared/graph.js"></script>
+<script src="/shared/shell.js"></script>
+<script>
+(function () {
+  Shell.boot("graph", {
+    title: "Explorer",
+    keys: [["⌘1-4", "panels"], ["⌘↵", "analyze"], ["⌘R", "run"], ["⌘⇧F", "format"], ["hover", "any token"]],
+  });
+  IdolShell.crumbs([{ label: "explorer" }, { label: "editor" }]);
+
+  const SAMPLES = {
+    "subject relation": `-- subject-first relation faces
+add = (a, b) a + b
+x: i64 = add(20, 22)
+stdout:write(x)`,
+    "one static projection": `-- . is exactly one statically known projection
+pack = { name = "idol", born = 2024 }
+n = pack.name
+stdout:write(n)`,
+    "computed projection": `-- [] is computed or indexed projection
+arr = { 10, 20, 30 }
+second = arr[2]
+stdout:write(second)`,
+    "world access": `-- @ is the current world
+magic = @(40 + 2)
+stdout:write(magic)`,
+    "control": `sum = 0
+for i = 1, 10 do
+  sum = sum + i
+end
+stdout:write(sum)`,
+    "descriptors": `clamp = (v: f64, lo: f64, hi: f64)
+  if v < lo then lo
+  elseif v > hi then hi
+  else v
+
+stdout:write(clamp(1.5, 0.0, 1.0))`,
+  };
+
+  const data = {
+    graph: null, explain: null, sim: null,
+    onReveal: (nd) => { if (nd) { setTab("graph"); gv.select(nd.id, true); } },
+  };
+  const ed = Idol.editor("#editor", {
+    source: decodeShare() || SAMPLES["subject relation"],
+    oninput: () => { schedule(); },
+  });
+  const ex = Idol.explore(ed, data);
+
+  const gv = new GraphView("#graph", {
+    onSelect: (nd) => showInspector(nd),
+    onOpen: (nd) => { /* future: cross-world navigation */ },
+  });
+
+  /* share: source in the URL hash */
+  function decodeShare() {
+    try {
+      const h = location.hash.slice(1);
+      if (h.length > 2) return decodeURIComponent(escape(atob(h)));
+    } catch (e) {}
+    return null;
+  }
+  function encodeShare() {
+    try { history.replaceState(null, "", "#" + btoa(unescape(encodeURIComponent(ed.source)))); } catch (e) {}
+  }
+
+  /* tabs */
+  const tabs = document.querySelectorAll("#tabs .tab");
+  function setTab(name) {
+    tabs.forEach((t) => t.classList.toggle("here", t.dataset.tab === name));
+    for (const id of ["graph", "lowering", "run", "facts"]) {
+      const el = document.getElementById("tab-" + id);
+      el.style.display = id === name ? (id === "graph" || id === "lowering" || id === "run" ? "flex" : "block") : "none";
+    }
+    if (name === "graph") gv.fitIfFirst();
+  }
+  tabs.forEach((t) => t.addEventListener("click", () => setTab(t.dataset.tab)));
+
+  /* split drag */
+  (function () {
+    const split = document.getElementById("split");
+    const stage = document.querySelector(".stage");
+    let dragging = false;
+    split.addEventListener("mousedown", () => { dragging = true; });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const r = stage.getBoundingClientRect();
+      const f = Math.min(0.8, Math.max(0.2, (e.clientX - r.left) / r.width));
+      document.querySelector(".pane-editor").style.flex = f;
+      document.querySelector(".pane-panel").style.flex = 1 - f;
+    });
+    window.addEventListener("mouseup", () => dragging = false);
+  })();
+
+  /* samples */
+  const sel = document.getElementById("sample");
+  for (const k of Object.keys(SAMPLES)) {
+    const o = document.createElement("option");
+    o.value = k; o.textContent = k; sel.appendChild(o);
+  }
+  sel.addEventListener("change", () => { ed.setSource(SAMPLES[sel.value]); analyze(true); });
+
+  /* analysis */
+  let timer = null;
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(() => analyze(false), 550);
+  }
+  async function analyze(explicit) {
+    document.getElementById("busy").style.display = "block";
+    encodeShare();
+    try {
+      const r = await Idol.api.post("/api/analyze", { source: ed.source });
+      data.graph = r.graph; data.explain = r.explain;
+      ex.rebind();
+      gv.setGraph(r.graph);
+      renderFacts(r);
+      if (explicit) Idol.toast("graph published — " + (r.graph ? r.graph.nodes.length + " nodes" : "no graph"));
+    } catch (e) {
+      Idol.toast("analyze: " + e.message, true);
+    } finally {
+      document.getElementById("busy").style.display = "none";
+    }
+  }
+  document.getElementById("analyze").addEventListener("click", () => analyze(true));
+
+  function renderFacts(r) {
+    const f = document.getElementById("facts");
+    const g = r.graph || {};
+    const rows = [];
+    const kv = (k, v) => `<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+    const chk = r.check || {};
+    rows.push(`<div class="facts-sec"><h4>check</h4>` +
+      (chk.ok ? `<div class="kv"><span class="k">law</span><span class="v ok" style="color:var(--ok)">✓ no errors</span></div>`
+              : `<div class="kv"><span class="k">law</span><span class="v" style="color:var(--danger)">${Idol === undefined ? "" : ""}${escapeHtml((chk.output || "").split("\n").slice(-6).join("\n"))}</span></div>`) +
+      `</div>`);
+    rows.push(`<div class="facts-sec"><h4>graph</h4>` +
+      kv("schema", g.schema || "—") +
+      kv("version", g.version !== undefined ? g.version : "—") +
+      kv("nodes", (g.nodes || []).length) +
+      kv("edges", (g.edges || []).length) +
+      kv("applications", (g.applications || []).length) +
+      kv("source law", g.root_source_law ? g.root_source_law.family + " · " + g.root_source_law.schema : "—") +
+      `</div>`);
+    if (g.worlds && g.worlds.length) {
+      rows.push(`<div class="facts-sec"><h4>worlds</h4>` +
+        g.worlds.map((w) => kv(w.home !== undefined ? ("home " + w.home) : "world",
+          `reach ${w.reach || "—"} · members ${(w.members || []).length}`)).join("") + `</div>`);
+    }
+    const ks = r.explain && r.explain.knowledge_snapshot;
+    if (ks && ks.entities && ks.entities.length) {
+      rows.push(`<div class="facts-sec"><h4>knowledge</h4>` +
+        ks.entities.slice(0, 12).map((x) => kv(x.name, `${x.kind} · ${x.phase} · ${x.knowledge}`)).join("") + `</div>`);
+    }
+    const to = r.explain && r.explain.transform_provenance;
+    if (to && to.entries && to.entries.length) {
+      rows.push(`<div class="facts-sec"><h4>transform lineage</h4>` +
+        to.entries.slice(0, 12).map((x) => kv(x.transform, `${x.site} · ${x.evidence}`)).join("") + `</div>`);
+    }
+    f.innerHTML = rows.join("");
+  }
+  function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  /* lowering */
+  document.getElementById("lower").addEventListener("click", async () => {
+    const out = document.getElementById("lout");
+    const st = document.getElementById("lstat");
+    st.textContent = "lowering…";
+    out.innerHTML = `<div style="padding:14px"><span class="spin"></span></div>`;
+    try {
+      const r = await Idol.api.post("/api/lower", {
+        source: ed.source,
+        target: document.getElementById("ltarget").value,
+        emit: document.getElementById("lemit").value,
+        opt: document.getElementById("lopt").value,
+      });
+      if (r.ok) {
+        out.innerHTML = "";
+        const pre = document.createElement("pre");
+        pre.textContent = r.text || "(empty emit)";
+        out.appendChild(pre);
+        st.textContent = `${(r.text || "").split("\n").length} lines`;
+      } else {
+        out.innerHTML = `<div class="out"><span class="err">${escapeHtml(r.stderr || r.stdout || "lowering refused")}</span></div>`;
+        st.textContent = "refused";
+      }
+    } catch (e) {
+      st.textContent = "";
+      out.innerHTML = `<div class="out"><span class="err">${e.message}</span></div>`;
+    }
+  });
+
+  /* run */
+  async function run() {
+    const out = document.getElementById("rout");
+    out.innerHTML = `<span class="spin"></span>`;
+    try {
+      const args = document.getElementById("rargs").value.trim();
+      const r = await Idol.api.post("/api/run", {
+        source: ed.source, args: args ? args.split(/\s+/) : [],
+      });
+      out.innerHTML =
+        `<span class="${r.rc === 0 ? "ok" : "err"}">exit ${r.rc}</span>\n` +
+        escapeHtml(r.stdout || "") +
+        (r.stderr ? `\n<span class="err">${escapeHtml(r.stderr)}</span>` : "");
+    } catch (e) {
+      out.innerHTML = `<span class="err">${e.message}</span>`;
+    }
+  }
+  document.getElementById("rrun").addEventListener("click", run);
+  document.getElementById("runb").addEventListener("click", () => { setTab("run"); run(); });
+
+  /* fmt */
+  document.getElementById("fmt").addEventListener("click", async () => {
+    try {
+      const r = await Idol.api.post("/api/fmt", { source: ed.source });
+      if (r.ok) { ed.setSource(r.source); Idol.toast("formatted"); }
+      else Idol.toast(r.output || "formatter refused", true);
+    } catch (e) { Idol.toast(e.message, true); }
+  });
+
+  /* keys */
+  document.addEventListener("keydown", (e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (!mod) return;
+    if (e.key === "Enter") { e.preventDefault(); analyze(true); }
+    else if (e.key.toLowerCase() === "r") { e.preventDefault(); setTab("run"); run(); }
+    else if (e.key.toLowerCase() === "g") { e.preventDefault(); setTab("graph"); }
+    else if (e.shiftKey && e.key.toLowerCase() === "f") { e.preventDefault(); document.getElementById("fmt").click(); }
+    else if (["1", "2", "3", "4"].includes(e.key)) {
+      e.preventDefault();
+      setTab(["graph", "lowering", "run", "facts"][+e.key - 1]);
+    }
+  });
+
+  /* inspector */
+  function showInspector(nd) {
+    const box = document.getElementById("inspector");
+    if (!nd) { box.style.display = "none"; return; }
+    const g = data.graph || {};
+    const outs = (g.edges || []).filter((x) => x.from === nd.id);
+    const ins = (g.edges || []).filter((x) => x.to === nd.id);
+    box.style.display = "block";
+    box.innerHTML = `<div class="t">${nd.name} <span style="color:var(--ink-4);font-size:10px">#${nd.id} · ${nd.kind}${nd.line ? " · line " + nd.line : ""}</span></div>` +
+      (outs.length ? `<div class="kv" style="font-size:11px"><span style="color:var(--ink-4);min-width:90px">relations out</span><span style="color:var(--ink-2)">${outs.map((x) => x.relation).join(", ")}</span></div>` : "") +
+      (ins.length ? `<div class="kv" style="font-size:11px"><span style="color:var(--ink-4);min-width:90px">relations in</span><span style="color:var(--ink-2)">${ins.map((x) => x.relation).join(", ")}</span></div>` : "");
+  }
+
+  analyze(true);
+  setTab("graph");
+})();
+</script>
+</body>
+</html>

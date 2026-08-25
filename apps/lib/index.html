@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registry — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  .pane-list { width: 300px; flex: none; border-right: 1px solid var(--rule); }
+  .pane-list .search { padding: 10px 12px; border-bottom: 1px solid var(--rule); display: flex; gap: 8px; }
+  .pane-list .search input { flex: 1; font-size: 11px; }
+  .seg { display: flex; border-bottom: 1px solid var(--rule); }
+  .seg button { flex: 1; border: 0; border-radius: 0; background: none; padding: 7px 0; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4); border-bottom: 1px solid transparent; }
+  .seg button.here { color: var(--ink); border-bottom-color: var(--ink); background: none; }
+  .row .metric { color: var(--ink-4); font-size: 10px; flex: none; }
+  .pkg-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--rule); }
+  .pkg-head h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.02em; }
+  .pkg-head .sub { color: var(--ink-3); margin-top: 4px; font-size: 11.5px; }
+  .pkg-head .meta { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .statgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 16px 20px; }
+  .statgrid .cell { background: var(--bg); padding: 10px 12px; }
+  .statgrid .cell .n { color: var(--ink); font-size: 15px; }
+  .statgrid .cell .l { color: var(--ink-4); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
+  .pkg-body { flex: 1; overflow: auto; display: flex; flex-direction: column; min-height: 0; }
+  .read-section { padding: 14px 20px; border-bottom: 1px solid var(--rule); }
+  .read-section h3 { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px; }
+  .read-section p { color: var(--ink-2); font-size: 12px; max-width: 70ch; }
+  .rel-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rel-chips .chip { border: 1px solid var(--rule-2); color: var(--ink-2); padding: 2px 8px; border-radius: 2px; font-size: 10.5px; cursor: pointer; }
+  .rel-chips .chip:hover { border-color: var(--ink-3); color: var(--ink); }
+  .actions { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--rule); }
+  .editor-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .vrow { display: flex; gap: 12px; padding: 8px 20px; border-bottom: 1px solid var(--rule); align-items: center; }
+  .vrow .v { color: var(--ink); }
+  .vrow .when { color: var(--ink-4); font-size: 10px; }
+  .vrow button { margin-left: auto; font-size: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <div class="stage">
+    <div class="pane pane-list">
+      <div class="search">
+        <input type="search" id="q" placeholder="search worlds…" spellcheck="false">
+      </div>
+      <div class="seg">
+        <button class="here" data-set="libs">homes</button>
+        <button data-set="worlds">published</button>
+      </div>
+      <div class="pane-body"><div class="list" id="list"></div></div>
+    </div>
+    <div class="pane pkg-body" id="detail">
+      <div class="empty" style="flex:1"><div class="glyph">◍</div><div>select a world</div>
+        <div class="mono-note">every .id home · every published world · every token explorable</div></div>
+    </div>
+  </div>
+  <div class="statusbar"></div>
+</div>
+
+<script src="/shared/idol.js"></script>
+<script src="/shared/graph.js"></script>
+<script src="/shared/shell.js"></script>
+<script>
+(function () {
+  Shell.boot("lib", { title: "Registry", keys: [["hover", "any token"], ["⌘K", "search"], ["⌘E", "open in explorer"]] });
+  IdolShell.crumbs([{ label: "registry" }, { label: "…" }]);
+
+  let set = "libs";
+  let items = [];
+  let current = null;
+  const q = document.getElementById("q");
+
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); q.focus(); q.select(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") { e.preventDefault(); openInExplorer(); }
+  });
+
+  document.querySelectorAll(".seg button").forEach((b) => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("here", x === b));
+      set = b.dataset.set;
+      load();
+    });
+  });
+
+  q.addEventListener("input", render);
+
+  async function load() {
+    try {
+      const r = set === "libs" ? await Idol.api.get("/api/libs") : await Idol.api.get("/api/worlds");
+      items = r.libs || r.worlds || [];
+      render();
+    } catch (e) { Idol.toast(e.message, true); }
+  }
+
+  function render() {
+    const needle = q.value.trim().toLowerCase();
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+    const f = items.filter((x) =>
+      !needle || x.name.toLowerCase().includes(needle) ||
+      (x.summary || "").toLowerCase().includes(needle));
+    if (!f.length) {
+      list.innerHTML = `<div class="empty"><div class="glyph">∅</div><div>nothing matches</div></div>`;
+      return;
+    }
+    for (const it of f) {
+      const sub = set === "libs"
+        ? (it.summary || it.relations && it.relations.slice(0, 5).join(" ") || "")
+        : `v${it.version || "?"} · ${it.summary || ""}`;
+      const metric = set === "libs" ? `${it.lines || "?"} ln` : `${(it.stats && it.stats.lines) || "?"} ln`;
+      const row = Idol.el("div", { class: "row" + (current === it.name ? " here" : "") },
+        Idol.el("div", { class: "grow" },
+          Idol.el("div", { class: "title" }, it.name),
+          Idol.el("div", { class: "sub" }, sub)),
+        Idol.el("span", { class: "metric" }, metric));
+      row.addEventListener("click", () => select(it.name));
+      list.appendChild(row);
+    }
+  }
+
+  async function select(name) {
+    current = name;
+    document.querySelectorAll("#list .row").forEach((r) =>
+      r.classList.toggle("here", r.querySelector(".title").textContent === name));
+    IdolShell.crumbs([{ label: "registry" }, { label: name }]);
+    const d = document.getElementById("detail");
+    d.innerHTML = `<div style="padding:20px"><span class="spin"></span></div>`;
+    try {
+      const det = await Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/detail");
+      renderDetail(name, det);
+    } catch (e) {
+      d.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${e.message}</div></div>`;
+    }
+  }
+
+  function renderDetail(name, det) {
+    const d = document.getElementById("detail");
+    const g = det.graph || {};
+    const st = det.stats || {};
+    const reg = set === "worlds";
+    d.innerHTML = "";
+
+    const head = Idol.el("div", { class: "pkg-head" },
+      Idol.el("h1", null, name),
+      Idol.el("div", { class: "sub" }, det.summary || st.summary || (reg ? "published world" : "layout-projected home")),
+      Idol.el("div", { class: "meta" },
+        Idol.el("span", { class: "badge" }, reg ? "world" : "home"),
+        g.version !== undefined ? Idol.el("span", { class: "badge" }, "sim-v0 · v" + g.version) : null,
+        det.check && det.check.ok ? Idol.el("span", { class: "badge ok" }, "law ✓") : Idol.el("span", { class: "badge danger" }, "errors"),
+        st.source_hash ? Idol.el("span", { class: "badge" }, "hash " + st.source_hash) : null));
+    d.appendChild(head);
+
+    const acts = Idol.el("div", { class: "actions" },
+      Idol.el("button", { class: "primary", onclick: openInExplorer }, "open in explorer"),
+      Idol.el("button", { onclick: copyAdd }, reg ? "copy fetch" : "copy path"),
+      Idol.el("button", { class: "ghost", onclick: () => Idol.api.text("/api/lib/" + encodeURIComponent(name) + "/source").then((s) => { navigator.clipboard.writeText(s); Idol.toast("source copied"); }) }, "copy source"));
+    d.appendChild(acts);
+
+    const stats = Idol.el("div", { class: "statgrid" });
+    const cells = [
+      [st.lines || (det.source.match(/\n/g) || []).length + 1, "lines"],
+      [(g.nodes || []).length, "graph nodes"],
+      [(g.edges || []).length, "relations"],
+      [(g.applications || []).length, "applications"],
+      [(g.worlds || []).length, "worlds"],
+      [(g.callable_linkages || []).length, "linkages"],
+    ];
+    for (const [n, l] of cells) stats.appendChild(Idol.el("div", { class: "cell" },
+      Idol.el("div", { class: "n" }, String(n)), Idol.el("div", { class: "l" }, l)));
+    d.appendChild(stats);
+
+    const tabs = Idol.el("div", { class: "tabs" },
+      Idol.el("button", { class: "tab here", "data-t": "read" }, "read"),
+      Idol.el("button", { class: "tab", "data-t": "source" }, "source"),
+      Idol.el("button", { class: "tab", "data-t": "graph" }, "graph"),
+      Idol.el("button", { class: "tab", "data-t": "deps" }, "dependents"));
+    d.appendChild(tabs);
+
+    const bodies = {};
+    for (const t of ["read", "source", "graph", "deps"]) {
+      const b = Idol.el("div", { style: "flex:1;display:none;flex-direction:column;min-height:0;" });
+      bodies[t] = b; d.appendChild(b);
+    }
+    tabs.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+      tabs.querySelectorAll(".tab").forEach((x) => x.classList.toggle("here", x === t));
+      for (const k in bodies) bodies[k].style.display = k === t.dataset.t ? "flex" : "none";
+      if (t.dataset.t === "graph") gview && gview.fitIfFirst();
+    }));
+
+    // read
+    const rels = [...new Set(((g.nodes || []).filter((n) => n.name && n.kind !== "module").map((n) => n.name)))];
+    const relSec = Idol.el("div", { class: "read-section" },
+      Idol.el("h3", null, "relations"),
+      Idol.el("div", { class: "rel-chips" },
+        rels.slice(0, 40).map((r) => Idol.el("span", {
+          class: "chip",
+          title: "ask why",
+          onclick: async () => {
+            try {
+              const w = await Idol.api.get("/api/whys?subject=" + encodeURIComponent(r));
+              Idol.toast(w.facts.length ? w.facts[0].cause : "no facts yet", false);
+            } catch (e) { Idol.toast(e.message, true); }
+          },
+        }, r))));
+    const lawSec = Idol.el("div", { class: "read-section" },
+      Idol.el("h3", null, "what this is"),
+      Idol.el("p", null, reg
+        ? "A published world. Source, graph facts, and provenance travel together; versions are sealed source snapshots."
+        : "A layout-projected home. Names, paths, and spellings are provenance — meaning resolves in the graph. Click source: every token answers hover."));
+    bodies.read.appendChild(relSec);
+    bodies.read.appendChild(lawSec);
+    bodies.read.style.overflow = "auto";
+
+    // source — token explorer, read-only
+    const edMount = Idol.el("div", { style: "flex:1;display:flex;min-height:0;" });
+    bodies.source.appendChild(edMount);
+    const ed = Idol.editor(edMount, { source: det.source || "" });
+    ed.ta.readOnly = true;
+    ed.ta.style.caretColor = "transparent";
+    const ex = Idol.explore(ed, {
+      graph: det.graph, explain: det.explain,
+      onReveal: () => { tabs.querySelector('[data-t="graph"]').click(); setTimeout(() => gview && gview.fit(), 50); },
+    });
+    ex.rebind();
+
+    // graph
+    const gvMount = Idol.el("div", { style: "flex:1;min-height:0;" });
+    bodies.graph.appendChild(gvMount);
+    const gview = new GraphView(gvMount, {});
+    gview.setGraph(det.graph);
+
+    // dependents
+    bodies.deps.style.overflow = "auto";
+    const deps = Idol.el("div", { class: "list" });
+    bodies.deps.appendChild(deps);
+    Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/dependents").then((r) => {
+      deps.innerHTML = "";
+      if (!r.dependents.length) {
+        deps.appendChild(Idol.el("div", { class: "empty" }, Idol.el("div", { class: "glyph" }, "◌"),
+          Idol.el("div", null, "no dependents yet")));
+        return;
+      }
+      for (const dep of r.dependents) {
+        deps.appendChild(Idol.el("div", { class: "row", onclick: () => select(dep) },
+          Idol.el("div", { class: "grow" }, Idol.el("div", { class: "title" }, dep)),
+          Idol.el("span", { class: "metric" })));
+      }
+    }).catch(() => {});
+
+    function openInExplorer() {
+      const src = det.source || "";
+      const b = btoa(unescape(encodeURIComponent(src)));
+      window.open("https://graph.idol.id/#" + b, "_blank");
+    }
+    function copyAdd() {
+      navigator.clipboard.writeText(reg ? `@{ world = "${name}" }` : `~/lib/${name}.id`);
+      Idol.toast("copied");
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  body { overflow: auto; }
+  .api-shell { max-width: 960px; margin: 0 auto; padding: 36px 32px 140px; }
+  .api-shell h1 { font-size: 22px; font-weight: 600; }
+  .api-shell .lede { color: var(--ink-3); margin: 6px 0 26px; font-size: 12.5px; }
+  .ep { border: 1px solid var(--rule); border-radius: var(--radius); margin-bottom: 10px; background: var(--bg); }
+  .ep-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; }
+  .ep-head:hover { background: var(--bg-hover); }
+  .ep-head .m { font-size: 10px; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 2px; min-width: 44px; text-align: center; }
+  .m.get { color: var(--ok); border: 1px solid rgba(126,201,126,0.35); }
+  .m.post { color: var(--signal); border: 1px solid rgba(230,180,80,0.4); }
+  .ep-head .path { color: var(--ink); }
+  .ep-head .desc { color: var(--ink-4); margin-left: auto; font-size: 11px; text-align: right; }
+  .ep-body { border-top: 1px solid var(--rule); padding: 14px; display: none; }
+  .ep.open .ep-body { display: block; }
+  .try { display: flex; gap: 8px; margin-bottom: 10px; }
+  .try textarea { flex: 1; min-height: 64px; font-size: 11.5px; resize: vertical; }
+  .ep pre { background: var(--bg-raise); border: 1px solid var(--rule); padding: 12px; overflow: auto; max-height: 320px; font-size: 11.5px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <div class="api-shell" id="root"></div>
+  <div class="statusbar"></div>
+</div>
+
+<script src="/shared/idol.js"></script>
+<script src="/shared/shell.js"></script>
+<script>
+(function () {
+  Shell.boot("api", { title: "API", keys: [["⏎", "run request"]] });
+  IdolShell.crumbs([{ label: "api" }]);
+
+  const EPS = [
+    { m: "GET", p: "/health", d: "liveness + compiler presence", try: {} },
+    { m: "GET", p: "/info", d: "service + authority edition", try: {} },
+    { m: "GET", p: "/api/authority", d: "source-law authority edition", try: {} },
+    { m: "POST", p: "/api/analyze", d: "graph + explain + check in one pass",
+      body: { source: 'add = (a, b) a + b\nstdout:write(add(20, 22))' } },
+    { m: "POST", p: "/api/lower", d: "realization text for a target",
+      body: { source: 'x = 40 + 2', target: "aarch64-linux", emit: "asm", opt: "3" } },
+    { m: "POST", p: "/api/run", d: "native execution",
+      body: { source: 'stdout:write("hello from the graph")' } },
+    { m: "POST", p: "/api/fmt", d: "formatter",
+      body: { source: "x=1\ny   =  2" } },
+    { m: "GET", p: "/api/libs", d: "indexed homes", try: {} },
+    { m: "GET", p: "/api/worlds", d: "published worlds", try: {} },
+    { m: "GET", p: "/api/lib/:name/detail", d: "source + graph + explain + stats", try: { name: "json" } },
+    { m: "GET", p: "/api/whys?subject=X", d: "provenance facts", try: { subject: "json" } },
+    { m: "POST", p: "/api/publish", d: "publish a world (write token)",
+      body: { name: "example", version: "0.1.0", source: "x = 1", summary: "example" },
+      note: "requires Authorization: Bearer <write token>" },
+  ];
+
+  const root = document.getElementById("root");
+  root.appendChild(Idol.el("h1", null, "API"));
+  root.appendChild(Idol.el("div", { class: "lede" },
+    "the same semantic surface behind every face — try any endpoint live. POST bodies are JSON."));
+
+  for (const ep of EPS) {
+    const body = Idol.el("div", { class: "ep" });
+    const head = Idol.el("div", { class: "ep-head" },
+      Idol.el("span", { class: "m " + ep.m.toLowerCase() }, ep.m),
+      Idol.el("span", { class: "path" }, ep.p),
+      Idol.el("span", { class: "desc" }, ep.d + (ep.note ? " · " + ep.note : "")));
+    const panel = Idol.el("div", { class: "ep-body" });
+    const out = Idol.el("pre", null, "—");
+    const send = async () => {
+      out.textContent = "…";
+      try {
+        let r;
+        if (ep.m === "GET") {
+          let p = ep.p;
+          if (ep.try) for (const [k, v] of Object.entries(ep.try)) p = p.replace(":" + k, v).replace("X", v);
+          const resp = await fetch(p);
+          out.textContent = resp.status + "  " + (await resp.text()).slice(0, 4000);
+        } else {
+          const resp = await fetch(ep.p, { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(ep.body || {}) });
+          out.textContent = resp.status + "  " + (await resp.text()).slice(0, 4000);
+        }
+      } catch (e) { out.textContent = String(e); }
+    };
+    const tryRow = Idol.el("div", { class: "try" },
+      ep.m === "POST"
+        ? Idol.el("textarea", { spellcheck: "false" }, JSON.stringify(ep.body || {}, null, 1))
+        : Idol.el("input", { type: "text", value: new URLSearchParams(ep.try || {}).toString(), readOnly: true, style: "flex:1" }),
+      Idol.el("button", { class: "primary", onclick: () => {
+        if (ep.m === "POST") {
+          try { ep.body = JSON.parse(panel.querySelector("textarea").value || "{}"); } catch (e) { out.textContent = "invalid JSON"; return; }
+        }
+        send();
+      } }, "send"));
+    panel.appendChild(tryRow);
+    panel.appendChild(out);
+    head.addEventListener("click", () => body.classList.toggle("open"));
+    body.appendChild(head); body.appendChild(panel);
+    root.appendChild(body);
+  }
+})();
+</script>
+</body>
+</html>

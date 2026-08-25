@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idol — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  body { overflow: auto; }
+  .site { min-height: 100vh; display: flex; flex-direction: column; }
+  .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; position: relative; }
+  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; }
+  .hero .inner { position: relative; }
+  .hero h1 {
+    font-size: clamp(64px, 13vw, 190px); font-weight: 700; letter-spacing: -0.045em;
+    line-height: 0.92; color: var(--ink);
+  }
+  .hero h1 .sigil { color: var(--signal); }
+  .hero .tag { margin-top: 18px; color: var(--ink-2); font-size: 13px; max-width: 60ch; line-height: 1.8; }
+  .hero .tag b { color: var(--ink); font-weight: 500; }
+  .faces { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+  .faces .f {
+    border: 1px solid var(--rule-2); padding: 10px 16px; border-radius: var(--radius);
+    color: var(--ink-2); font-size: 11px; transition: border-color var(--t), color var(--t), transform var(--t);
+    cursor: default;
+  }
+  .faces .f:hover { border-color: var(--ink-3); color: var(--ink); transform: translateY(-1px); }
+  .faces .f .d { color: var(--ink-5); margin-left: 8px; font-size: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); border-top: 1px solid var(--rule); }
+  .cell-a { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 30px 30px 34px; position: relative; overflow: hidden; cursor: pointer;
+    transition: background var(--t); }
+  .cell-a:hover { background: var(--bg-hover); }
+  .cell-a .n { color: var(--ink); font-size: 15px; margin-bottom: 6px; }
+  .cell-a .u { color: var(--ink-4); font-size: 10.5px; letter-spacing: 0.08em; margin-bottom: 12px; }
+  .cell-a .d { color: var(--ink-3); font-size: 11.5px; line-height: 1.7; max-width: 40ch; }
+  .cell-a .arrow { position: absolute; right: 22px; top: 26px; color: var(--ink-5); transition: color var(--t), transform var(--t); }
+  .cell-a:hover .arrow { color: var(--ink); transform: translate(2px, -2px); }
+  footer { padding: 18px 8vw; color: var(--ink-5); font-size: 10px; letter-spacing: 0.08em; display: flex; gap: 20px; }
+  footer a { color: var(--ink-4); border: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <div class="site">
+    <div class="hero">
+      <canvas id="bg"></canvas>
+      <div class="inner">
+        <h1>ID<span class="sigil">@</span>L</h1>
+        <div class="tag">
+          <b>Semantic identity, exact facts, lawful realization.</b><br>
+          One graph holds the meaning of every program. Names are provenance,
+          delimiters are law, worlds carry authority — and the machine does the
+          rest. Every token on every page of this site answers your cursor.
+        </div>
+        <div class="faces">
+          <span class="f">()<span class="d">application</span></span>
+          <span class="f">[]<span class="d">projection</span></span>
+          <span class="f">{}<span class="d">structure</span></span>
+          <span class="f">.<span class="d">one static projection</span></span>
+          <span class="f">:<span class="d">subject relation</span></span>
+          <span class="f">@<span class="d">current world</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="grid">
+      <a class="cell-a" href="https://graph.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+        <div class="n">Explorer</div><div class="u">GRAPH.IDOL.ID</div>
+        <div class="d">Write Idol. Watch the semantic graph assemble. Lower to
+        native, Wasm, or C. Run it. Interrogate every fact.</div>
+        <div class="arrow">↗</div>
+      </a>
+      <a class="cell-a" href="https://lib.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+        <div class="n">Registry</div><div class="u">LIB.IDOL.ID</div>
+        <div class="d">Homes and published worlds. Source, graph facts, and
+        provenance travel together — not just a tarball and a README.</div>
+        <div class="arrow">↗</div>
+      </a>
+      <a class="cell-a" href="https://docs.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+        <div class="n">Law</div><div class="u">DOCS.IDOL.ID</div>
+        <div class="d">The supreme compact law, the source faces, the graph and
+        world references — the whole language on one page each.</div>
+        <div class="arrow">↗</div>
+      </a>
+      <a class="cell-a" href="https://api.idol.id/" style="border:0;border-bottom:1px solid var(--rule)">
+        <div class="n">API</div><div class="u">API.IDOL.ID</div>
+        <div class="d">The same semantic surface as HTTP. Analyze, lower, run,
+        publish — every endpoint live and documented.</div>
+        <div class="arrow">↗</div>
+      </a>
+    </div>
+    <footer>
+      <span>IDOL · .ID</span>
+      <a href="https://github.com/clpi/idol">source</a>
+      <a href="https://github.com/clpi/idol-native">native</a>
+      <a href="https://docs.idol.id/law">law</a>
+      <span style="margin-left:auto" id="auth-edition"></span>
+    </footer>
+  </div>
+  <div class="statusbar"></div>
+</div>
+
+<script src="/shared/idol.js"></script>
+<script src="/shared/shell.js"></script>
+<script>
+(function () {
+  Shell.boot("site", { title: "Idol" });
+
+  // living background: drifting semantic graph, grayscale + one signal hue
+  const cv = document.getElementById("bg");
+  const ctx = cv.getContext("2d");
+  let W, H, nodes = [], edges = [];
+  function seed() {
+    W = cv.width = cv.offsetWidth * devicePixelRatio;
+    H = cv.height = cv.offsetHeight * devicePixelRatio;
+    const n = Math.min(70, Math.floor(W * H / 26000));
+    nodes = Array.from({ length: n }, (_, i) => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: 0, vy: 0, r: 1 + Math.random() * 2.2,
+      s: Math.random() < 0.12,
+    }));
+    edges = [];
+    for (let i = 0; i < n; i++) {
+      const a = nodes[i], b = nodes[(Math.random() * n) | 0];
+      if (a !== b) edges.push([a, b]);
+    }
+  }
+  seed();
+  addEventListener("resize", seed);
+  (function frame() {
+    ctx.clearRect(0, 0, W, H);
+    for (const nd of nodes) {
+      nd.vx += (Math.random() - 0.5) * 0.12; nd.vy += (Math.random() - 0.5) * 0.12;
+      nd.vx *= 0.96; nd.vy *= 0.96; nd.x += nd.vx; nd.y += nd.vy;
+      if (nd.x < 0 || nd.x > W) nd.vx *= -1, nd.x = Math.max(0, Math.min(W, nd.x));
+      if (nd.y < 0 || nd.y > H) nd.vy *= -1, nd.y = Math.max(0, Math.min(H, nd.y));
+    }
+    ctx.lineWidth = devicePixelRatio * 0.5;
+    for (const [a, b] of edges) {
+      ctx.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    for (const nd of nodes) {
+      ctx.fillStyle = nd.s ? "rgba(230,180,80,0.75)" : "rgba(255,255,255,0.35)";
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * devicePixelRatio, 0, 7); ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  })();
+
+  fetch("/api/authority").then((r) => r.json()).then((a) => {
+    const el = document.getElementById("auth-edition");
+    if (a && a.source_law) el.textContent = "source law · " + a.source_law.schema;
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

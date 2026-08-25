@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docs — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  body { overflow: auto; }
+  .doc-shell { display: flex; min-height: 100vh; }
+  .doc-nav { width: 230px; flex: none; border-right: 1px solid var(--rule); padding: 22px 0; position: sticky; top: 0; height: 100vh; overflow: auto; }
+  .doc-nav .item { display: block; padding: 7px 22px; color: var(--ink-3); cursor: pointer; font-size: 12px; transition: color var(--t), background var(--t); }
+  .doc-nav .item:hover { color: var(--ink); background: var(--bg-hover); }
+  .doc-nav .item.here { color: var(--ink); box-shadow: inset 2px 0 0 var(--ink); }
+  .doc-main { flex: 1; min-width: 0; padding: 40px 52px 140px; max-width: 860px; }
+  .doc-main h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.01em; }
+  .doc-main h2 { font-size: 15px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  .doc-main h3 { font-size: 13px; margin: 24px 0 8px; color: var(--ink); }
+  .doc-main p { color: var(--ink-2); font-size: 12.5px; margin: 10px 0; max-width: 72ch; line-height: 1.7; }
+  .doc-main ul, .doc-main ol { margin: 10px 0 10px 22px; color: var(--ink-2); font-size: 12.5px; line-height: 1.7; }
+  .doc-main li { margin: 3px 0; }
+  .doc-main code { background: var(--bg-raise); border: 1px solid var(--rule); padding: 0 5px; border-radius: 2px; font-size: 11.5px; color: var(--ink-2); }
+  .doc-main pre { background: var(--bg-raise); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px 16px; overflow: auto; margin: 12px 0 16px; }
+  .doc-main pre code { background: none; border: 0; padding: 0; font-size: 12.5px; }
+  .doc-main table { border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+  .doc-main th, .doc-main td { border: 1px solid var(--rule); padding: 6px 12px; color: var(--ink-2); text-align: left; }
+  .doc-main th { color: var(--ink); font-weight: 500; }
+  .doc-main blockquote { border-left: 2px solid var(--rule-3); padding-left: 14px; color: var(--ink-3); margin: 10px 0; }
+  .doc-main .anchor { color: var(--ink-5); text-decoration: none; border: 0; margin-left: 8px; font-size: 11px; }
+  .doc-main .anchor:hover { color: var(--ink-3); }
+  .doc-main .tk[data-i] { cursor: pointer; }
+  .doc-main .tk[data-i]:hover { background: rgba(255,255,255,0.09); color: var(--ink); }
+  .statusbar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <div class="doc-shell">
+    <nav class="doc-nav" id="nav"></nav>
+    <main class="doc-main" id="main"></main>
+  </div>
+  <div class="statusbar"></div>
+</div>
+
+<script src="/shared/idol.js"></script>
+<script src="/shared/shell.js"></script>
+<script>
+(function () {
+  Shell.boot("docs", { title: "Docs", keys: [["hover", "any token"], ["/", "search docs"]] });
+  IdolShell.crumbs([{ label: "docs" }, { label: "…" }]);
+
+  const DOCS = [
+    { id: "law",     name: "the law" },
+    { id: "faces",   name: "source faces" },
+    { id: "graph",   name: "the graph" },
+    { id: "worlds",  name: "worlds" },
+    { id: "platform",name: "platform" },
+    { id: "synthesis", name: "research synthesis" },
+  ];
+
+  const nav = document.getElementById("nav");
+  const main = document.getElementById("main");
+  let here = location.hash.slice(1) || "law";
+
+  for (const d of DOCS) {
+    const it = document.createElement("div");
+    it.className = "item" + (d.id === here ? " here" : "");
+    it.textContent = d.name;
+    it.addEventListener("click", () => { location.hash = d.id; });
+    it.dataset.id = d.id;
+    nav.appendChild(it);
+  }
+
+  window.addEventListener("hashchange", () => {
+    here = location.hash.slice(1) || "law";
+    nav.querySelectorAll(".item").forEach((i) => i.classList.toggle("here", i.dataset.id === here));
+    load();
+  });
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  // minimal markdown → html (headings, fences, lists, tables, code, emph)
+  function md(src) {
+    const out = [];
+    const lines = src.split("\n");
+    let i = 0;
+    let inCode = false, codeBuf = [], codeLang = "";
+    let listMode = null;
+    const flushList = () => { if (listMode) { out.push(`</${listMode}>`); listMode = null; } };
+    const inline = (s) => esc(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    while (i < lines.length) {
+      const L = lines[i];
+      if (L.startsWith("```")) {
+        if (!inCode) { flushList(); inCode = true; codeBuf = []; codeLang = L.slice(3).trim(); }
+        else {
+          inCode = false;
+          out.push(`<pre data-lang="${codeLang}"><code>${esc(codeBuf.join("\n"))}</code></pre>`);
+        }
+        i++; continue;
+      }
+      if (inCode) { codeBuf.push(L); i++; continue; }
+      if (/^#{1,4} /.test(L)) {
+        flushList();
+        const lvl = L.match(/^#+/)[0].length;
+        const text = L.slice(lvl + 1).trim();
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        out.push(`<h${Math.min(lvl + 1, 4)} id="${id}">${inline(text)}<a class="anchor" href="#${id}">§</a></h${Math.min(lvl + 1, 4)}>`);
+        i++; continue;
+      }
+      if (/^(- |\* |\d+\. )/.test(L)) {
+        const mode = /^\d/.test(L) ? "ol" : "ul";
+        if (listMode !== mode) { flushList(); out.push(`<${mode}>`); listMode = mode; }
+        out.push(`<li>${inline(L.replace(/^(- |\* |\d+\. )/, ""))}</li>`);
+        i++; continue;
+      }
+      if (/^\|/.test(L) && lines[i + 1] && /^\|[-| ]+\|/.test(lines[i + 1])) {
+        flushList();
+        const head = L.split("|").slice(1, -1).map((s) => s.trim());
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].startsWith("|")) {
+          rows.push(lines[i].split("|").slice(1, -1).map((s) => s.trim()));
+          i++;
+        }
+        out.push("<table><thead><tr>" + head.map((h) => `<th>${inline(h)}</th>`).join("") +
+          "</tr></thead><tbody>" +
+          rows.map((r) => "<tr>" + r.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") +
+          "</tbody></table>");
+        continue;
+      }
+      if (L.trim() === "") { flushList(); i++; continue; }
+      if (/^> /.test(L)) { flushList(); out.push(`<blockquote>${inline(L.slice(2))}</blockquote>`); i++; continue; }
+      flushList();
+      out.push(`<p>${inline(L)}</p>`);
+      i++;
+    }
+    flushList();
+    return out.join("\n");
+  }
+
+  async function load() {
+    const d = DOCS.find((x) => x.id === here) || DOCS[0];
+    IdolShell.crumbs([{ label: "docs" }, { label: d.name }]);
+    main.innerHTML = `<div style="padding:40px 0"><span class="spin"></span></div>`;
+    try {
+      const raw = await Idol.api.text("/content/docs/" + d.id + ".md");
+      main.innerHTML = md(raw);
+      main.classList.remove("fade-in"); void main.offsetWidth; main.classList.add("fade-in");
+      // highlight id fences with the real tokenizer — tokens hoverable
+      const pop = new Idol.Popover();
+      main.querySelectorAll("pre[data-lang='id']").forEach((pre) => {
+        const code = pre.querySelector("code");
+        const src = code.textContent;
+        const toks = Idol.lex(src);
+        code.innerHTML = Idol.render(toks, src);
+        code.addEventListener("mouseover", (e) => {
+          const el = e.target;
+          if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
+          const t = toks[+el.dataset.i];
+          if (!t) return;
+          const law = Idol.lawNote(t);
+          const rr = Idol.refsOf(toks, t);
+          pop.show(
+            `<div class="p-title"><span class="lex">${Idol === null ? "" : esc(t.v)}</span><span class="kind">${t.t}</span></div>` +
+            `<div class="mono-note" style="color:var(--ink-3)">${esc(law.note)}</div>` +
+            (rr.length > 1 ? `<div class="p-sec"><div class="lbl">references</div><div class="facts">${rr.length} faces in this block</div></div>` : ""),
+            e.clientX, e.clientY, false);
+        });
+        code.addEventListener("mouseleave", () => pop.hide());
+      });
+    } catch (e) {
+      main.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${e.message}</div></div>`;
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
