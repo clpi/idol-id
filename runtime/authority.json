@@ -1,0 +1,19 @@
+{
+  "schema": "idol.web.authority.v1",
+  "language": {
+    "repository": "clpi/idol",
+    "branch": "main",
+    "commit": "f33bb3773484e7d954a2975211e683dfa89edab5"
+  },
+  "native": {
+    "repository": "clpi/idol-native",
+    "branch": "main",
+    "commit": "932a3ade3fa40c0653242559305fb67ffa142e84"
+  },
+  "rule": "semantic identity persists; web, wasm, dom, worker and machine are realizations",
+  "wasm_artifact": {
+    "required_for_claim": "measured Idol-Wasm performance claims",
+    "build_input": "IDOL_WASM_PATH",
+    "current_status": "not admitted in this repository"
+  }
+}
