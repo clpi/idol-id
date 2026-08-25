@@ -14,6 +14,7 @@ const SHARED_PREFIXES = ["/shared/", "/content/", "/runtime/", "/apps/"];
 const PASSTHROUGH_PREFIXES = ["/api/"];
 const PASSTHROUGH_PATHS = new Set(["/health", "/info", "/origin-health", "/origin-info"]);
 const CACHEABLE_EXT = /\.(?:css|js|mjs|json|md|txt|svg|png|jpe?g|gif|webp|ico|woff2?|wasm|map)$/i;
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 export function resolveHost(hostname) {
   const host = String(hostname || "").toLowerCase().replace(/:\d+$/, "");
@@ -41,6 +42,7 @@ function json(value, init = {}) {
 }
 
 function secure(response, options = {}) {
+  if (response.webSocket || response.status === 101) return response;
   const headers = new Headers(response.headers);
   headers.set("x-content-type-options", "nosniff");
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
@@ -98,7 +100,15 @@ function isNavigation(request, pathname) {
 export async function handle(request, env) {
   const url = new URL(request.url);
   const host = url.hostname.toLowerCase();
-  const info = resolveHost(host);
+  let info = resolveHost(host);
+  if (!info && LOCAL_HOSTS.has(host)) {
+    const surface = url.searchParams.get("surface") || "site";
+    info = surface === "docs" || surface === "lib" || surface === "api"
+      ? { app: surface, surface }
+      : surface === "graph" || surface === "r8a" || surface === "r8b" || surface === "r16"
+        ? { app: "graph", surface }
+        : { app: "site", surface: "site" };
+  }
 
   if (!info) return json({ error: "unknown idol.id surface", host }, { status: 404 });
   if (info.redirect) return Response.redirect(`${info.redirect}${url.pathname}${url.search}`, 308);
