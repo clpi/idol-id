@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const dist = join(root, "dist");
-const authority = process.env.IDOL_AUTHORITY_COMMIT || "f33bb3773484e7d954a2975211e683dfa89edab5";
-const native = process.env.IDOL_NATIVE_COMMIT || "932a3ade3fa40c0653242559305fb67ffa142e84";
+const authorityPin = JSON.parse(await readFile(join(root, "runtime", "authority.json"), "utf8"));
+const authority = authorityPin.language.commit;
+const native = authorityPin.native.commit;
 const commit = process.env.GITHUB_SHA || process.env.IDOL_WEB_COMMIT || "development";
 
 async function exists(path) {

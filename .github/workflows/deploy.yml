@@ -42,8 +42,6 @@ jobs:
       - name: Build one immutable deployment
         env:
           GITHUB_SHA: ${{ github.sha }}
-          IDOL_AUTHORITY_COMMIT: f33bb3773484e7d954a2975211e683dfa89edab5
-          IDOL_NATIVE_COMMIT: 932a3ade3fa40c0653242559305fb67ffa142e84
         run: npm run build
       - name: Require Cloudflare deployment token
         env:
