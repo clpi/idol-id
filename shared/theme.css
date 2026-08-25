@@ -178,21 +178,27 @@ code, pre { font-family: var(--mono); font-size: var(--fs-code); line-height: va
 }
 .codelayer pre { padding: 14px 18px 60vh 14px; min-height: 100%; width: max-content; min-width: 100%; }
 
-/* token classes — luminance carries meaning; one hue marks the world sigil */
-.tk { color: var(--ink-2); border-radius: 1px; }
-.tk-kw      { color: var(--ink); }
-.tk-type    { color: var(--ink); font-style: italic; }
-.tk-ctx     { color: var(--ink-2); font-style: italic; }
-.tk-str     { color: #cfc9bd; }
-.tk-num     { color: #9a9a9a; }
-.tk-com     { color: var(--ink-4); font-style: italic; }
-.tk-op      { color: #8f8f8f; }
-.tk-delim   { color: #6f6f6f; }
-.tk-world   { color: var(--signal); }        /* @ — current world */
-.tk-direct  { color: var(--signal); font-style: italic; }  /* @test @build */
-.tk-name    { color: var(--ink-2); }
-.tk-decl    { color: var(--ink); }           /* binding introduced here */
-.tk-fn      { color: #dcdcdc; }
+/* token classes — the code face.
+   Luminance carries structure; one warm family (hue ≈ 40°) carries meaning;
+   the signal gold marks semantic orientation: subject `:`, world `@`. */
+.tk { color: #b8b4ac; border-radius: 1px; }
+.tk-kw      { color: #f5f2ea; }                          /* grammar — warm white */
+.tk-type    { color: #e2cf9f; font-style: italic; }      /* descriptors — bright sand */
+.tk-ctx     { color: #b5aa93; font-style: italic; }
+.tk-str     { color: #c8b98d; }                          /* parchment */
+.tk-num     { color: #d4a76a; }                          /* amber value */
+.tk-com     { color: #57534a; font-style: italic; }      /* provenance recedes */
+.tk-op      { color: #90897c; }
+.tk-delim   { color: #6e6961; }
+.tk-colon   { color: var(--signal); }                    /* : the subject sigil */
+.tk-world   { color: var(--signal); }                    /* @ current world */
+.tk-direct  { color: var(--signal); font-style: italic; }/* @test @build */
+.tk-name    { color: #b0aca4; }
+.tk-decl    { color: #fbf9f4; text-decoration: underline; text-decoration-color: rgba(230,180,80,0.38); text-underline-offset: 3px; }
+.tk-fn      { color: #ece5d4; }                          /* applied relation */
+.tk-subject { color: #dfb766; }                          /* subject face shares the orientation hue */
+.tk-member  { color: #cfc4ab; }                          /* static projection member */
+.tk-param   { color: #9b968b; font-style: italic; }      /* ordinary operand */
 
 /* every token is interactive */
 .tk[data-i] { cursor: pointer; }
@@ -328,3 +334,77 @@ code, pre { font-family: var(--mono); font-size: var(--fs-code); line-height: va
   .topbar .nav a { padding: 0 8px; }
   .statusbar .keys { display: none; }
 }
+
+
+/* ----------------------------------------------------- doccode (static) */
+
+.doccode pre {
+  padding: 12px 16px; overflow: auto;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+.doccode { position: relative; }
+
+/* ------------------------------------------------------ popover faces */
+
+.popover .p-law { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.face-tag {
+  font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 2px; flex: none;
+  border: 1px solid var(--rule-2); color: var(--ink-3); background: var(--bg-panel);
+}
+.face-tag.face-world, .face-tag.face-relation { color: var(--signal); border-color: rgba(230,180,80,0.4); background: var(--signal-dim); }
+.face-tag.face-application, .face-tag.face-structure { color: var(--ink); border-color: var(--rule-3); }
+.face-tag.face-projection { color: #cfc4ab; border-color: rgba(207,196,171,0.35); }
+.popover .facts .fact.dim, .dim { color: var(--ink-4); }
+
+/* ------------------------------------------------------------- prose */
+
+.prose { max-width: 720px; color: var(--ink-2); font-size: 13px; line-height: 1.7; }
+.prose h1, .prose h2, .prose h3 { color: var(--ink); font-weight: 500; letter-spacing: 0.01em; }
+.prose h1 { font-size: 22px; margin: 0 0 6px; }
+.prose h2 { font-size: 15px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.prose h3 { font-size: 12.5px; margin: 22px 0 8px; color: var(--ink); }
+.prose p { margin: 10px 0; }
+.prose code {
+  background: var(--bg-panel); border: 1px solid var(--rule);
+  border-radius: 2px; padding: 0 4px; font-size: 12px; color: #e2cf9f;
+}
+.prose pre { margin: 12px 0; }
+.prose pre code { background: none; border: none; padding: 0; color: inherit; }
+.prose ul, .prose ol { margin: 10px 0 10px 20px; }
+.prose li { margin: 4px 0; }
+.prose blockquote {
+  border-left: 2px solid var(--rule-3); padding: 2px 0 2px 14px;
+  color: var(--ink-3); margin: 12px 0;
+}
+.prose table { border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+.prose th, .prose td { border: 1px solid var(--rule); padding: 5px 10px; text-align: left; }
+.prose th { color: var(--ink); font-weight: 500; background: var(--bg-raise); }
+.prose hr { border: none; border-top: 1px solid var(--rule); margin: 24px 0; }
+.prose a { color: var(--ink); border-bottom-color: var(--rule-3); }
+
+/* -------------------------------------------------------------- stats */
+
+.statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.statgrid .stat { background: var(--bg-panel); padding: 10px 12px; }
+.statgrid .stat .n { color: var(--ink); font-size: 16px; }
+.statgrid .stat .l { color: var(--ink-4); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 2px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--rule-2); border-radius: 999px;
+  padding: 1px 9px; font-size: 10.5px; color: var(--ink-3);
+  cursor: pointer; transition: color var(--t), border-color var(--t), background var(--t);
+  user-select: none;
+}
+.chip:hover { color: var(--ink); border-color: var(--rule-3); background: var(--bg-hover); }
+.chip.here { color: var(--signal); border-color: rgba(230,180,80,0.4); background: var(--signal-dim); }
+
+.badge {
+  display: inline-block; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid var(--rule-2); color: var(--ink-3);
+}
+.badge.ok { color: var(--ok); border-color: rgba(126,201,126,0.35); }
+.badge.bad { color: var(--danger); border-color: rgba(224,86,75,0.4); }
+.badge.sig { color: var(--signal); border-color: rgba(230,180,80,0.4); }

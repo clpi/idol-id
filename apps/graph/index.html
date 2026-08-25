@@ -193,13 +193,48 @@ stdout:write(clamp(1.5, 0.0, 1.0))`,
     window.addEventListener("mouseup", () => dragging = false);
   })();
 
-  /* samples */
+  /* samples — plus every home and published world from the registry */
   const sel = document.getElementById("sample");
+  const optg = document.createElement("optgroup");
+  optg.label = "samples";
   for (const k of Object.keys(SAMPLES)) {
     const o = document.createElement("option");
-    o.value = k; o.textContent = k; sel.appendChild(o);
+    o.value = k; o.textContent = k; optg.appendChild(o);
   }
-  sel.addEventListener("change", () => { ed.setSource(SAMPLES[sel.value]); analyze(true); });
+  sel.appendChild(optg);
+  sel.addEventListener("change", () => {
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].dataset.lib) {
+      loadFromRegistry(sel.value);
+      return;
+    }
+    ed.setSource(SAMPLES[sel.value]); analyze(true);
+  });
+  function loadFromRegistry(name) {
+    Idol.api.text("/api/lib/" + encodeURIComponent(name) + "/source").then((s) => {
+      ed.setSource(s);
+      analyze(true);
+      IdolShell.crumbs([{ label: "explorer" }, { label: name }]);
+    }).catch((e) => Idol.toast(e.message, true));
+  }
+  Idol.api.get("/api/libs").then((r) => {
+    const g1 = document.createElement("optgroup");
+    g1.label = "registry homes";
+    for (const l of r.libs || []) {
+      const o = document.createElement("option");
+      o.value = l.name; o.textContent = l.name; o.dataset.lib = "1"; g1.appendChild(o);
+    }
+    sel.appendChild(g1);
+    return Idol.api.get("/api/worlds");
+  }).then((r) => {
+    if (!r) return;
+    const g2 = document.createElement("optgroup");
+    g2.label = "published worlds";
+    for (const w of r.worlds || []) {
+      const o = document.createElement("option");
+      o.value = w.name; o.textContent = w.name + " v" + (w.version || "?"); o.dataset.lib = "1"; g2.appendChild(o);
+    }
+    sel.appendChild(g2);
+  }).catch(() => {});
 
   /* analysis */
   let timer = null;

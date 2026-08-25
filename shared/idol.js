@@ -35,17 +35,29 @@ const LAW = {
   "]":   ["projection", "closes a computed projection"],
   "{":   ["structure", "{} structured pack · table · descriptor structure"],
   "}":   ["structure", "closes a structure"],
-  ".":   ["projection", ". exactly one static projection — never dynamic search"],
-  ":":   ["relation", ": subject-oriented relation or constraint face"],
+  ".":   ["projection", ". exactly one static projection — never dynamic search · x.r is projection, not subject"],
+  ":":   ["relation", ": subject-oriented relation · declaration-side specialization (x:r = …, x:r(kg) = …)"],
   "@":   ["world", "@ current world · access · injection · qualification"],
   "=":   ["binding", "introduces or replaces a binding"],
   "==":  ["law", "identity comparison"],
+  ",":   ["pack", "operand/pack separator — exact role correspondence"],
+};
+
+/* law faces for identifiers — the highlighter teaches the delimiter law */
+const FACE_NOTE = {
+  call:    "name applied — relation application face",
+  subject: "subject face — the semantic role after : (not argument zero)",
+  member:  "static projection member — x.name, no subject implied",
+  decl:    "binding introduced here — spelling is provenance, identity is the graph",
+  param:   "callable operand — ordinary runtime data, not a specialization axis",
+  type:    "descriptor — one descriptor system, no parallel type kingdom",
 };
 
 function lawNote(tok) {
   if (LAW[tok.v]) return { face: LAW[tok.v][0], note: LAW[tok.v][1] };
+  if (tok.f && FACE_NOTE[tok.f]) return { face: tok.f, note: FACE_NOTE[tok.f] };
   if (tok.t === "kw") return { face: "grammar", note: "grammar keyword of the one source law" };
-  if (tok.t === "type") return { face: "descriptor", note: "descriptor — one descriptor system, no parallel type kingdom" };
+  if (tok.t === "type") return { face: "descriptor", note: FACE_NOTE.type };
   if (tok.t === "ctx") return { face: "grammar", note: "contextual keyword — lawful as a binding name too" };
   if (tok.t === "str") return { face: "value", note: "text value; exact bytes are provenance" };
   if (tok.t === "num") return { face: "value", note: "number value; range facts qualify the graph id" };
@@ -178,16 +190,80 @@ function lex(src) {
   return out;
 }
 
-/* -------------------------------------------------------------- highlighter */
+/* -------------------------------------------------------------- faces */
+
+/**
+ * Contextual face pass — the highlighter teaches the source law.
+ * Faces: call · subject · member · decl · param. Purely derived from
+ * token neighborhoods; conservative, never a second parser.
+ */
+function faces(tokens) {
+  const d = new Set(); // decl indices (kept for compatibility)
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    const pv = tokens[i - 1], nx = tokens[i + 1];
+    if (t.t === "name" || t.t === "ctx") {
+      // declaration: name = / name(…)(…) = / name: r = subject-specialized decl
+      if (nx && nx.v === "=" && (nx.t === "op" || nx.t === "delim")) { t.f = "decl"; d.add(i); }
+      // subject face in declaration or call: `name:` before a relation name
+      else if (nx && nx.v === ":" && nx.t === "delim") {
+        const after = tokens[i + 2];
+        // `x:r` — x is the subject (call face or declaration face)
+        if (after && (after.t === "name" || after.t === "ctx" || after.t === "kw")) {
+          t.f = "subject"; d.add(i);
+        }
+      }
+      // member: after `.`
+      else if (pv && pv.v === "." && pv.t === "delim") t.f = "member";
+      // call: name directly before `(`
+      else if (nx && nx.v === "(" && nx.t === "delim") {
+        t.f = "call";
+        // `x:r(…)` — r after `:` is the relation being applied
+        if (pv && pv.v === ":" && pv.t === "delim") t.f = "call";
+      }
+    }
+  }
+  // params: names inside the `(` group of a callable decl or fn keyword
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].v !== "(" || tokens[i].t !== "delim") continue;
+    const prev = tokens[i - 1];
+    const opens =
+      (prev && ((prev.f === "decl") || (prev.f === "call" && prev.f !== undefined && tokens[i - 2] && tokens[i - 2].v === "="))) ||
+      (prev && prev.t === "kw" && (prev.v === "fun" || prev.v === "function")) ||
+      (prev && prev.v === "=" );
+    if (!opens) continue;
+    let depth = 0, j = i;
+    for (; j < tokens.length; j++) {
+      const tk = tokens[j];
+      if (tk.v === "(" && tk.t === "delim") depth++;
+      else if (tk.v === ")" && tk.t === "delim") { depth--; if (!depth) break; }
+      else if ((tk.t === "name" || tk.t === "ctx") && !tk.f) {
+        const nx2 = tokens[j + 1];
+        if (nx2 && (nx2.v === "," || nx2.v === ")" || (nx2.v === ":" && nx2.t === "delim"))) {
+          tk.f = "param"; d.add(j);
+        }
+      }
+    }
+  }
+  return d;
+}
 
 const CLS = {
   kw: "tk-kw", lit: "tk-kw", type: "tk-type", ctx: "tk-ctx", str: "tk-str",
   num: "tk-num", com: "tk-com", op: "tk-op", delim: "tk-delim",
   world: "tk-world", direct: "tk-direct", name: "tk-name",
+  call: "tk-fn", subject: "tk-subject", member: "tk-member",
+  decl: "tk-decl", param: "tk-param",
 };
 
 function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** class of a token: face overrides base when present */
+function tcls(t) {
+  if (t.f && CLS[t.f]) return CLS[t.f];
+  return CLS[t.t] || "tk";
 }
 
 /** Render tokens to HTML with per-token data-i hooks. */
@@ -197,7 +273,9 @@ function render(tokens, src, opts) {
   let pos = 0;
   tokens.forEach((t, i) => {
     if (t.s > pos) html += esc(src.slice(pos, t.s));
-    const cls = CLS[t.t] || "tk";
+    // delimiter law coloring: : and @ are the semantic orientation faces
+    let cls = tcls(t);
+    if (t.t === "delim" && t.v === ":") cls = "tk-colon";
     html += `<span class="tk ${cls}" data-i="${i}">${esc(t.v)}</span>`;
     pos = t.e;
   });
@@ -205,44 +283,64 @@ function render(tokens, src, opts) {
   return html;
 }
 
-/* ------------------------------------------------------- declaration faces */
+/* compatibility: decls() is now faces() */
+const decls = faces;
+
+/* ----------------------------------------------------- static code views */
 
 /**
- * Mark tokens that introduce bindings: `name =`, `name: d =`, params in
- * `(a, b)`, `name:` member face. Conservative and purely for emphasis.
+ * Read-only hoverable code block: highlight + token popover, no editor.
+ * mount: element to fill. opts: {source, graph, explain, maxH}
  */
-function decls(tokens) {
-  const d = new Set();
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.t !== "name") continue;
-    const nx = tokens[i + 1];
-    if (!nx) continue;
-    if ((nx.v === "=" && nx.t === "op") || (nx.v === "=" && nx.t === "delim")) d.add(i);
-    if (nx.v === ":" && nx.t === "delim") {
-      // `name:` at statement start = subject relation face
-      const pv = tokens[i - 1];
-      if (!pv || pv.v === "\n" || [",", "(", "{"].includes(pv.v)) d.add(i);
+function doccode(mount, opts) {
+  opts = opts || {};
+  const root = typeof mount === "string" ? document.querySelector(mount) : mount;
+  root.classList.add("doccode");
+  const src = opts.source || "";
+  const tokens = lex(src);
+  faces(tokens);
+  const pre = document.createElement("pre");
+  pre.innerHTML = render(tokens, src);
+  if (opts.maxH) pre.style.maxHeight = opts.maxH;
+  root.innerHTML = "";
+  root.appendChild(pre);
+
+  const ctx = {
+    graph: opts.graph, explain: opts.explain, tokens,
+    onReveal: opts.onReveal, onLib: opts.onLib,
+  };
+  const pop = new Popover();
+  const bindCache = bindGraph(tokens, opts.graph);
+
+  root.addEventListener("mouseover", (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
+    if (pop.pinned) return;
+    const tok = tokens[+el.dataset.i];
+    if (!tok) return;
+    pop.show(popoverBody(tok, bindCache.get(+el.dataset.i) || null, ctx), e.clientX, e.clientY, false);
+  });
+  root.addEventListener("mouseleave", () => { if (!pop.pinned) pop.hide(); });
+  root.addEventListener("click", (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
+    if (e.target.closest("button")) return;
+    const tok = tokens[+el.dataset.i];
+    if (!tok) return;
+    pop.show(popoverBody(tok, bindCache.get(+el.dataset.i) || null, ctx), e.clientX, e.clientY, true);
+    fetchWhysInto(pop, tok.v);
+  });
+  pop.el.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.act === "law") global.open("https://docs.idol.id/law", "_blank");
+    if (btn.dataset.act === "lib" && opts.onLib) {
+      const lex = pop.el.querySelector(".lex");
+      if (lex) opts.onLib(lex.textContent);
+      pop.pinned = false; pop.hide();
     }
-    if (nx.v === "=" ) d.add(i);
-  }
-  // params: inside ( ... ) following `fun`/`function`/`= (`
-  for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i].v !== "(" ) continue;
-    const prev = tokens[i - 1];
-    if (!prev || !(prev.t === "kw" && (prev.v === "fun" || prev.v === "function") || prev.v === "=" || prev.v === ",")) continue;
-    let depth = 0, j = i;
-    for (; j < tokens.length; j++) {
-      if (tokens[j].v === "(") depth++;
-      else if (tokens[j].v === ")") { depth--; if (!depth) break; }
-      else if (tokens[j].t === "name" || tokens[j].t === "ctx") {
-        const nx = tokens[j + 1];
-        if (nx && (nx.v === "," || nx.v === ")" )) d.add(j);
-        else if (nx && nx.v === ":" ) d.add(j);
-      }
-    }
-  }
-  return d;
+  });
+  return { root, tokens, popover: pop };
 }
 
 /* --------------------------------------------------------------- editor */
@@ -296,9 +394,8 @@ function editor(mount, opts) {
 
   function paint() {
     tokens = lex(src);
-    const d = decls(tokens);
-    preIn.innerHTML = render(tokens, src).replace(/data-i="(\d+)"/g, (m, i) =>
-      d.has(+i) ? m.replace('class="tk ', 'class="tk tk-decl ') : m);
+    faces(tokens);                 // sets t.f — render() picks faces up
+    preIn.innerHTML = render(tokens, src);
     pre.appendChild(preIn);
     const lines = src.split("\n").length;
     gut.innerHTML = Array.from({ length: lines }, (_, k) => k + 1).join("<br>");
@@ -484,7 +581,120 @@ class Popover {
   get open() { return this.el.style.display !== "none"; }
 }
 
-/* ------------------------------------------------------- token explorer */
+function refName(graph, id) {
+  const nd = (graph.nodes || []).find((x) => x.id === id);
+  if (nd && nd.kind === "module") return "module";
+  return nd ? (nd.name ? nd.name : nd.kind) : "#" + id;
+}
+
+function relationFace(e) {
+  return `${e.relation}→${"#" + e.to}`;
+}
+
+function nodeFacts(nd, graph) {
+  const rows = [];
+  const edges = (graph.edges || []);
+  const outs = edges.filter((e) => e.from === nd.id);
+  const ins = edges.filter((e) => e.to === nd.id);
+  rows.push(["kind", nd.kind]);
+  if (nd.name) rows.push(["name", nd.name]);
+  if (nd.scope !== undefined) rows.push(["scope", refName(graph, nd.scope)]);
+  rows.push(["graph id", "#" + nd.id + " · line " + (nd.line || "?")]);
+  if (outs.length) rows.push(["relations out", outs.map(relationFace).join("  ")]);
+  if (ins.length) rows.push(["relations in", ins.map(relationFace).join("  ")]);
+  const apps = (graph.applications || []).filter((a) =>
+    a.application === nd.id || a.subject === nd.id || (a.arguments || []).includes(nd.id) || (a.results || []).includes(nd.id));
+  for (const a of apps.slice(0, 4)) {
+    rows.push(["application", `relation ${refName(graph, a.relation)} · subject ${refName(graph, a.subject)} · demand ${a.demand || "—"}`]);
+  }
+  for (const w of graph.worlds || []) {
+    if (w.world === nd.id || (w.members || []).includes(nd.id)) {
+      rows.push(["world", `home ${refName(graph, w.home)} · reach ${w.reach || "—"}`]);
+    }
+  }
+  for (const dr of graph.draws || []) {
+    if (dr.world && dr.world.id === nd.id) {
+      rows.push(["world draw", `application ${dr.application} · effect ${(dr.effect && dr.effect.card) === "one" ? "world-bound" : "none"}`]);
+    }
+  }
+  for (const lk of graph.callable_linkages || []) {
+    if (lk.callable === nd.id) {
+      rows.push(["lowering", `${lk.origin} · ${lk.exposure} · \`${lk.symbol}\``]);
+    }
+  }
+  const cs = (graph.call_shapes || []).find((s) => s.node === nd.id);
+  if (cs) rows.push(["call shape", `${cs.callee_kind} · ${cs.arg_count} operand${cs.arg_count === 1 ? "" : "s"}${cs.specializable ? " · specializable" : ""}`]);
+  return rows;
+}
+
+function knowledgeFor(name, explain) {
+  if (!explain || !explain.knowledge_snapshot) return [];
+  return (explain.knowledge_snapshot.entities || [])
+    .filter((x) => x.name === name)
+    .slice(0, 3)
+    .map((x) => `${x.kind} · ${x.phase} · knowledge ${x.knowledge} · ${x.representation}`);
+}
+/* --------------------------------------------- shared popover body */
+
+const whysCache = new Map();
+
+/** cross-world references for a subject, rendered into an open popover */
+function fetchWhysInto(pop, subject) {
+  if (!subject || subject.length < 2) return;
+  const key = subject;
+  const mount = pop.el.querySelector(".whys-mount");
+  if (!mount) return;
+  if (whysCache.has(key)) return renderWhys(mount, whysCache.get(key));
+  mount.innerHTML = `<div class="fact dim">asking the worlds…</div>`;
+  api.get("/api/whys?subject=" + encodeURIComponent(subject)).then((r) => {
+    whysCache.set(key, r);
+    if (pop.open && pop.el.querySelector(".whys-mount") === mount) renderWhys(mount, r);
+  }).catch(() => { mount.innerHTML = ""; });
+}
+
+function renderWhys(mount, r) {
+  const facts = (r && r.facts) || [];
+  if (!facts.length) { mount.innerHTML = `<div class="fact dim">no world declares this spelling</div>`; return; }
+  mount.innerHTML = facts.slice(0, 5).map((f) =>
+    `<div class="fact">${esc(f.cause)}${f.detail ? ` <span class="dim">· ${esc(f.detail)}</span>` : ""}</div>`).join("");
+}
+
+function popoverBody(tok, nd, ctx) {
+  ctx = ctx || {};
+  const law = lawNote(tok);
+  const tokens = ctx.tokens || [];
+  let h = `<div class="p-title"><span class="lex">${esc(tok.v)}</span>` +
+    `<span class="kind">${tok.t}${tok.f ? " · " + tok.f : ""}${nd ? " · " + nd.kind : ""}</span></div>`;
+  h += `<div class="p-law"><span class="face-tag face-${esc(law.face)}">${esc(law.face)}</span>` +
+    `<span class="mono-note">${esc(law.note)}</span></div>`;
+  if (nd && ctx.graph) {
+    const rows = nodeFacts(nd, ctx.graph);
+    h += `<div class="p-sec"><div class="lbl">graph</div>` +
+      rows.map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${esc(String(v))}</span></div>`).join("") +
+      `</div>`;
+  }
+  const kn = knowledgeFor(tok.v, ctx.explain);
+  if (kn.length) {
+    h += `<div class="p-sec"><div class="lbl">knowledge</div><div class="facts">` +
+      kn.map((x) => `<div class="fact">${esc(x)}</div>`).join("") + `</div></div>`;
+  }
+  const rr = refsOf(tokens, tok);
+  if (rr.length > 1) {
+    h += `<div class="p-sec"><div class="lbl">references · ${rr.length}</div><div class="facts">` +
+      rr.slice(0, 6).map((i) => `<div class="fact">line ${tokens[i].l} col ${tokens[i].c}</div>`).join("") +
+      (rr.length > 6 ? `<div class="fact dim">+${rr.length - 6} more</div>` : "") + `</div></div>`;
+  }
+  if ((tok.t === "name" || tok.t === "ctx") && !ctx.noWhys) {
+    h += `<div class="p-sec"><div class="lbl">elsewhere</div><div class="facts whys-mount"></div></div>`;
+  }
+  h += `<div class="p-actions">` +
+    (nd && ctx.onReveal ? `<button data-act="reveal">reveal in graph</button>` : ``) +
+    (rr.length > 1 ? `<button data-act="refs">flash references</button>` : ``) +
+    (ctx.onLib && (tok.t === "name" || tok.t === "ctx") ? `<button data-act="lib">find in lib</button>` : ``) +
+    `<button data-act="law">law</button></div>`;
+  return h;
+}
+
 
 /**
  * Wires hover/click popovers over an editor or static code view.
@@ -494,98 +704,11 @@ function explore(ed, data) {
   const pop = new Popover();
   let pinnedTok = null;
 
-  function nodeFacts(nd, graph) {
-    const rows = [];
-    const edges = (graph.edges || []);
-    const outs = edges.filter((e) => e.from === nd.id);
-    const ins = edges.filter((e) => e.to === nd.id);
-    rows.push(["kind", nd.kind]);
-    if (nd.name) rows.push(["name", nd.name]);
-    if (nd.scope !== undefined) rows.push(["scope", graphNodeId(graph, nd.scope)]);
-    rows.push(["graph id", "#" + nd.id + " · line " + (nd.line || "?")]);
-    if (outs.length) rows.push(["relations out", outs.map((e) => relationFace(e)).join("  ")]);
-    if (ins.length) rows.push(["relations in", ins.map((e) => relationFace(e)).join("  ")]);
-    // applications
-    const apps = (graph.applications || []).filter((a) =>
-      a.application === nd.id || a.subject === nd.id || (a.arguments || []).includes(nd.id) || (a.results || []).includes(nd.id));
-    for (const a of apps.slice(0, 4)) {
-      rows.push(["application", `relation ${ref(graph, a.relation)} · subject ${ref(graph, a.subject)} · demand ${a.demand || "—"}`]);
-    }
-    // worlds & draws
-    for (const w of graph.worlds || []) {
-      if (w.world === nd.id || (w.members || []).includes(nd.id)) {
-        rows.push(["world", `home ${ref(graph, w.home)} · reach ${w.reach || "—"}`]);
-      }
-    }
-    for (const dr of graph.draws || []) {
-      if (dr.world && dr.world.id === nd.id) {
-        rows.push(["world draw", `application ${dr.application} · effect ${(dr.effect && dr.effect.card) === "one" ? "world-bound" : "none"}`]);
-      }
-    }
-    // linkage / lowering
-    for (const lk of graph.callable_linkages || []) {
-      if (lk.callable === nd.id) {
-        rows.push(["lowering", `${lk.origin} · ${lk.exposure} · \`${lk.symbol}\``]);
-      }
-    }
-    const cs = (graph.call_shapes || []).find((s) => s.node === nd.id);
-    if (cs) rows.push(["call shape", `${cs.callee_kind} · ${cs.arg_count} operand${cs.arg_count === 1 ? "" : "s"}${cs.specializable ? " · specializable" : ""}`]);
-    return rows;
-  }
-
-  function ref(graph, id) {
-    const nd = (graph.nodes || []).find((x) => x.id === id);
-    if (nd && nd.kind === "module") return "module";
-    return nd ? (nd.name ? nd.name : nd.kind) : "#" + id;
-  }
-  function graphNodeId(graph, id) {
-    const nd = (graph.nodes || []).find((x) => x.id === id);
-    if (!nd) return "#" + id;
-    if (nd.kind === "module") return "module";
-    return nd.name || nd.kind;
-  }
-  function relationFace(e) {
-    return `${e.relation}→${"#" + e.to}`;
-  }
-
-  function knowledgeFor(name, explain) {
-    if (!explain || !explain.knowledge_snapshot) return [];
-    return (explain.knowledge_snapshot.entities || [])
-      .filter((x) => x.name === name)
-      .slice(0, 3)
-      .map((x) => `${x.kind} · ${x.phase} · knowledge ${x.knowledge} · ${x.representation}`);
-  }
-
   function popoverHTML(tok, nd) {
-    const law = lawNote(tok);
-    let h = `<div class="p-title"><span class="lex">${esc(tok.v)}</span>` +
-      `<span class="kind">${tok.t}${nd ? " · " + nd.kind : ""}</span></div>`;
-    h += `<div class="mono-note" style="color:var(--ink-3)">${esc(law.note)}</div>`;
-    if (nd && data.graph) {
-      const rows = nodeFacts(nd, data.graph);
-      h += `<div class="p-sec"><div class="lbl">graph</div>` +
-        rows.map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${esc(String(v))}</span></div>`).join("") +
-        `</div>`;
-    }
-    const kn = knowledgeFor(tok.v, data.explain);
-    if (kn.length) {
-      h += `<div class="p-sec"><div class="lbl">knowledge</div><div class="facts">` +
-        kn.map((x) => `<div class="fact">${esc(x)}</div>`).join("") + `</div></div>`;
-    }
-    const rr = refsOf(ed.tokens(), tok);
-    if (rr.length > 1) {
-      h += `<div class="p-sec"><div class="lbl">references · ${rr.length}</div><div class="facts">` +
-        rr.slice(0, 8).map((i) => {
-          const t2 = ed.tokens()[i];
-          return `<div class="fact">line ${t2.l} col ${t2.c}</div>`;
-        }).join("") + (rr.length > 8 ? `<div class="fact">+${rr.length - 8} more</div>` : "") +
-        `</div></div>`;
-    }
-    h += `<div class="p-actions">` +
-      (nd && data.onReveal ? `<button data-act="reveal">reveal in graph</button>` : ``) +
-      (rr.length > 1 ? `<button data-act="refs">flash references</button>` : ``) +
-      `<button data-act="law">law</button></div>`;
-    return h;
+    return popoverBody(tok, nd, {
+      graph: data.graph, explain: data.explain,
+      tokens: ed.tokens(), onReveal: data.onReveal, onLib: data.onLib,
+    });
   }
 
   function flashRefs(tok) {
@@ -614,8 +737,7 @@ function explore(ed, data) {
   ed.el.addEventListener("click", (e) => {
     const el = e.target;
     if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
-    const btn = e.target.closest("button");
-    if (btn) return;
+    if (e.target.closest("button")) return;
     const i = +el.dataset.i;
     const tok = ed.tokens()[i];
     if (!tok) return;
@@ -623,6 +745,7 @@ function explore(ed, data) {
     ed.pre.querySelectorAll(".tk.selected").forEach((x) => x.classList.remove("selected"));
     el.classList.add("selected");
     pop.show(popoverHTML(tok, bindCache.get(i) || null), e.clientX, e.clientY, true);
+    fetchWhysInto(pop, tok.v);
   });
 
   pop.el.addEventListener("click", (e) => {
@@ -639,6 +762,9 @@ function explore(ed, data) {
       pop.pinned = false; pop.hide();
     } else if (act === "refs" && tok) {
       flashRefs(tok);
+    } else if (act === "lib" && tok && data.onLib) {
+      data.onLib(tok.v);
+      pop.pinned = false; pop.hide();
     } else if (act === "law") {
       global.open("https://docs.idol.id/law", "_blank");
     }
@@ -709,7 +835,8 @@ function fmtBytes(n) {
 }
 
 global.Idol = {
-  lex, render, decls, editor, explore, bindGraph, refsOf, lawNote,
+  lex, render, faces, decls, editor, explore, doccode, bindGraph, refsOf,
+  lawNote, popoverBody, nodeFacts, knowledgeFor,
   Popover, api, toast, el, fmtBytes, KW, CTX, TYPES,
 };
 

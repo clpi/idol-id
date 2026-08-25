@@ -17,6 +17,8 @@ DIR=/home/clp/idol-id
   echo "Restart=always"
   echo "RestartSec=3"
   echo "Environment=IDOL_BIN=$DIR/idol-bin"
+  echo "Environment=IDOL_LIBS_DIR=$DIR/lib-src"
+  echo "EnvironmentFile=$DIR/r2.env"
   [ -n "$EXTRA" ] && cat "$EXTRA"
   echo ""
   echo "[Install]"

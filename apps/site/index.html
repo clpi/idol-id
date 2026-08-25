@@ -26,7 +26,11 @@
     cursor: default;
   }
   .faces .f:hover { border-color: var(--ink-3); color: var(--ink); transform: translateY(-1px); }
-  .faces .f .d { color: var(--ink-5); margin-left: 8px; font-size: 10px; }
+  .hero-code { margin-top: 26px; max-width: 640px; opacity: 0.92; }
+  .hero-code pre { max-width: 640px; }
+  .corpus { display: flex; gap: 26px; padding: 12px 8vw; border-top: 1px solid var(--rule); color: var(--ink-4); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; flex-wrap: wrap; }
+  .corpus b { color: var(--ink); font-weight: 500; }
+  .corpus .sig { color: var(--signal); }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); border-top: 1px solid var(--rule); }
   .cell-a { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 30px 30px 34px; position: relative; overflow: hidden; cursor: pointer;
     transition: background var(--t); }
@@ -60,10 +64,11 @@
           <span class="f">{}<span class="d">structure</span></span>
           <span class="f">.<span class="d">one static projection</span></span>
           <span class="f">:<span class="d">subject relation</span></span>
-          <span class="f">@<span class="d">current world</span></span>
         </div>
+        <div id="hero-code" class="hero-code"></div>
       </div>
     </div>
+    <div class="corpus" id="corpus"></div>
     <div class="grid">
       <a class="cell-a" href="https://graph.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
         <div class="n">Explorer</div><div class="u">GRAPH.IDOL.ID</div>
@@ -147,6 +152,37 @@
     }
     requestAnimationFrame(frame);
   })();
+
+  // the landing claim, made literal: hoverable law on the front page
+  if (window.Idol && Idol.doccode) {
+    Idol.doccode(document.getElementById("hero-code"), {
+      source: [
+        "-- subject-oriented declaration — the ruling face",
+        "body:weight(kg) = (m, g) -> m * g",
+        "",
+        "main = () -> io.print(str.from(body:weight(80, 9.8)))",
+      ].join("\n"),
+      maxH: "180px",
+      onLib: (v) => window.open("https://lib.idol.id/#" + encodeURIComponent(v), "_blank"),
+    });
+  }
+
+  // live corpus counters — the registry answers, not a hard-coded number
+  Promise.all([
+    fetch("/api/libs").then((r) => r.json()).catch(() => ({ libs: [] })),
+    fetch("/api/worlds").then((r) => r.json()).catch(() => ({ worlds: [] })),
+  ]).then(([a, b]) => {
+    const libs = a.libs || [], worlds = b.worlds || [];
+    const lines = libs.reduce((s, x) => s + (x.lines || 0), 0);
+    const rels = libs.reduce((s, x) => s + ((x.relations || []).length), 0);
+    const el2 = document.getElementById("corpus");
+    el2.innerHTML =
+      `<span><b>${libs.length}</b> homes</span>` +
+      `<span><b class="sig">${worlds.length}</b> published ${worlds.length === 1 ? "world" : "worlds"}</span>` +
+      `<span><b>${lines.toLocaleString()}</b> lines</span>` +
+      `<span><b>${rels.toLocaleString()}</b> relation names</span>` +
+      `<span>live from the registry</span>`;
+  }).catch(() => {});
 
   fetch("/api/authority").then((r) => r.json()).then((a) => {
     const el = document.getElementById("auth-edition");

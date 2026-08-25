@@ -27,6 +27,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs
 
+import r2
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 IDOL_BIN = os.environ.get("IDOL_BIN", os.path.expanduser("~/idol"))
 LIBS_DIR = os.environ.get("IDOL_LIBS_DIR", os.path.expanduser("~/lib"))
@@ -116,17 +118,61 @@ def safe_name(name):
 
 
 def registry_manifest(name):
+    """Registry view of one world: local cache overlaid on R2 (canonical)."""
+    m = r2_manifests().get(name)
+    if m is not None:
+        m = dict(m)
     p = os.path.join(REGISTRY_DIR, name, "manifest.json")
     if os.path.isfile(p):
         try:
             with open(p) as f:
-                return json.load(f)
+                local = json.load(f)
+                if m is None or (local.get("published_at") or "") >= (m.get("published_at") or ""):
+                    m = local
         except Exception:
-            return None
-    return None
+            pass
+    return m
+_r2_cache = {"at": 0.0, "manifests": None}
+
+
+def r2_manifests():
+    """Published world manifests from R2 (cached 60s)."""
+    now = time.time()
+    with REG_LOCK:
+        if _r2_cache["manifests"] is not None and now - _r2_cache["at"] < 60:
+            return _r2_cache["manifests"]
+    out = {}
+    if r2.ENABLED:
+        mans, err = r2.list_manifests()
+        if mans is not None:
+            out = mans
+    with REG_LOCK:
+        _r2_cache["at"] = now
+        _r2_cache["manifests"] = out
+    return out
 
 
 def scan_registry():
+    """Local manifests overlaid with R2 — one registry, canonical in R2."""
+    out = {}
+    for name, m in r2_manifests().items():
+        m = dict(m)
+        m["mirror"] = "r2"
+        out[name] = m
+    for m in scan_registry_local():
+        name = m.get("name")
+        local = dict(m)
+        if name in out:
+            # local cache may be ahead of the 60s R2 view — keep newer
+            if (local.get("published_at") or "") >= (out[name].get("published_at") or ""):
+                local["mirror"] = "r2+local"
+                out[name] = local
+        else:
+            out[name] = local
+    return [out[k] for k in sorted(out)]
+
+
+def scan_registry_local():
     out = []
     if not os.path.isdir(REGISTRY_DIR):
         return out
@@ -218,9 +264,14 @@ def compute_lib_detail(path):
 
 def dependents_of(subject):
     """Scan libs + registry for sources referencing subject."""
-    hits = []
+    seen = set()
+    out = []
     for lib in scan_libs() + [{"name": w["name"], "file": None} for w in scan_registry()]:
         name = lib["name"]
+        if name in seen or name == subject:
+            seen.add(name)
+            continue
+        seen.add(name)
         p = lib_path(name) or os.path.join(REGISTRY_DIR, name, "source.id")
         if not p or not os.path.isfile(p):
             continue
@@ -229,59 +280,9 @@ def dependents_of(subject):
         except OSError:
             continue
         if re.search(r"\b" + re.escape(subject) + r"\b", src):
-            hits.append(name)
-    return hits
+            out.append(name)
+    return out
 
-
-def publish(name, version, source, summary, meta):
-    if not safe_name(name):
-        return None, "invalid name"
-    if not version or not re.fullmatch(r"[0-9A-Za-z.+-]{1,32}", version):
-        return None, "invalid version"
-    with REG_LOCK:
-        d = os.path.join(REGISTRY_DIR, name)
-        os.makedirs(os.path.join(d, "versions"), exist_ok=True)
-        with open(os.path.join(d, "versions", version + ".id"), "w") as f:
-            f.write(source)
-        with open(os.path.join(d, "source.id"), "w") as f:
-            f.write(source)
-        g = None
-        def grab(path):
-            rc, out, _ = idol(["graph", path])
-            if rc == 0:
-                try:
-                    return json.loads(out)
-                except Exception:
-                    return None
-            return None
-        g = with_tmp_source(source, grab)
-        stats = {
-            "lines": source.count("\n") + 1,
-            "bytes": len(source.encode()),
-            "source_hash": hashlib.sha256(source.encode()).hexdigest()[:16],
-        }
-        manifest = {
-            "name": name,
-            "version": version,
-            "summary": summary or "",
-            "publisher": meta.get("publisher", ""),
-            "published_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "provenance": meta.get("provenance", {}),
-            "stats": stats,
-            "graph_id": (g or {}).get("source_hash"),
-            "tags": meta.get("tags", []),
-            "versions": versions_of(name),
-        }
-        with open(os.path.join(d, "manifest.json"), "w") as f:
-            json.dump(manifest, f, indent=1)
-        return manifest, None
-
-
-def versions_of(name):
-    vd = os.path.join(REGISTRY_DIR, name, "versions")
-    if not os.path.isdir(vd):
-        return []
-    return sorted(v[:-3] for v in os.listdir(vd) if v.endswith(".id"))
 
 
 # ----------------------------------------------------------------- analysis
@@ -371,6 +372,129 @@ def fmt_source(source):
                 pass
         return {"ok": False, "output": (o + e)[-2000:]}
     return with_tmp_source(source, work)
+
+
+def publish(name, version, source, summary, meta):
+    if not safe_name(name):
+        return None, "invalid name"
+    if not version or not re.fullmatch(r"[0-9A-Za-z.+-]{1,32}", version):
+        return None, "invalid version"
+    with REG_LOCK:
+        d = os.path.join(REGISTRY_DIR, name)
+        os.makedirs(os.path.join(d, "versions"), exist_ok=True)
+        with open(os.path.join(d, "versions", version + ".id"), "w") as f:
+            f.write(source)
+        with open(os.path.join(d, "source.id"), "w") as f:
+            f.write(source)
+        def grab(path):
+            rc, out, _ = idol(["graph", path])
+            if rc == 0:
+                try:
+                    return json.loads(out)
+                except Exception:
+                    return None
+            return None
+        g = with_tmp_source(source, grab)
+        stats = {
+            "lines": source.count("\n") + 1,
+            "bytes": len(source.encode()),
+            "source_hash": hashlib.sha256(source.encode()).hexdigest()[:16],
+        }
+        manifest = {
+            "name": name,
+            "version": version,
+            "summary": summary or "",
+            "publisher": meta.get("publisher", ""),
+            "published_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "provenance": meta.get("provenance", {}),
+            "stats": stats,
+            "graph_id": (g or {}).get("source_hash"),
+            "tags": meta.get("tags", []),
+            "versions": versions_of(name),
+        }
+        with open(os.path.join(d, "manifest.json"), "w") as f:
+            json.dump(manifest, f, indent=1)
+        # mirror to R2 — the canonical registry store
+        mirror = "local"
+        if r2.ENABLED:
+            try:
+                ok1, e1 = r2.put_version(name, version, source)
+                ok2, e2 = r2.put_manifest(name, manifest)
+                if ok1 and ok2:
+                    mirror = "r2"
+                else:
+                    mirror = f"local (r2 error: {e1 if not ok1 else e2})"
+            except Exception as e:
+                mirror = f"local (r2 error: {e})"
+        manifest["mirror"] = mirror
+        with open(os.path.join(d, "manifest.json"), "w") as f:
+            json.dump(manifest, f, indent=1)
+        with REG_LOCK2:
+            _r2_cache["at"] = 0.0  # force refresh
+        return manifest, None
+
+
+REG_LOCK2 = threading.Lock()
+
+
+def versions_of(name):
+    """All published versions — local cache ∪ R2."""
+    vs = set()
+    vd = os.path.join(REGISTRY_DIR, name, "versions")
+    if os.path.isdir(vd):
+        vs |= {v[:-3] for v in os.listdir(vd) if v.endswith(".id")}
+    if r2.ENABLED:
+        objs, err = r2.list_prefix(f"worlds/{name}/versions/")
+        if objs:
+            for k in objs:
+                v = k.rsplit("/", 1)[-1]
+                if v.endswith(".id"):
+                    vs.add(v[:-3])
+    return sorted(vs)
+
+
+def registry_source(name, version=None):
+    """Source of a published world: local cache first, R2 fallback."""
+    if version:
+        p = os.path.join(REGISTRY_DIR, name, "versions", version + ".id")
+        if os.path.isfile(p):
+            try:
+                return open(p, encoding="utf-8", errors="replace").read()
+            except OSError:
+                pass
+        if r2.ENABLED:
+            src, err = r2.get_version(name, version)
+            if src is not None:
+                return src
+        return None
+    p = os.path.join(REGISTRY_DIR, name, "source.id")
+    if os.path.isfile(p):
+        try:
+            return open(p, encoding="utf-8", errors="replace").read()
+        except OSError:
+            pass
+    m = registry_manifest(name)
+    if m is None and r2.ENABLED:
+        m = r2_manifests().get(name)
+    if m and r2.ENABLED:
+        return registry_source(name, m.get("version"))
+    return None
+
+
+def uses_of(name):
+    """Outgoing references: identifiers in `name`'s source that name
+    other worlds in the corpus or registry."""
+    p = lib_path(name) or os.path.join(REGISTRY_DIR, name, "source.id")
+    if not os.path.isfile(p):
+        return []
+    try:
+        src = open(p, encoding="utf-8", errors="replace").read()
+    except OSError:
+        return []
+    others = {l["name"] for l in scan_libs()} | {w["name"] for w in scan_registry()}
+    others.discard(name)
+    hits = sorted(o for o in others if re.search(r"\b" + re.escape(o) + r"\b", src))
+    return hits
 
 
 # ----------------------------------------------------------------- provenance
@@ -488,8 +612,11 @@ class Handler(BaseHTTPRequestHandler):
         if not fp.startswith(os.path.realpath(ROOT)) or not os.path.isfile(fp):
             return False
         ext = os.path.splitext(fp)[1]
+        # revalidate every use — deploys must be visible immediately; ETag-less
+        # 304s come free via last-modified, and CF respects no-cache at the edge
+        cache = "no-cache" if ext in (".html", ".js", ".css", ".json") else "public, max-age=300"
         self.reply(200, open(fp, "rb").read(), MIME.get(ext, "application/octet-stream"),
-                   cache="public, max-age=60")
+                   cache=cache)
         return True
 
     # -- GET
@@ -508,7 +635,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.jok({"status": "healthy", "app": self.app,
                              "instance": self.instance,
                              "idol": IDOL_BIN,
-                             "idol_ok": os.access(IDOL_BIN, os.X_OK)})
+                             "idol_ok": os.access(IDOL_BIN, os.X_OK),
+                             "registry": "r2" if r2.ENABLED else "local"})
         if p == "/info":
             rc, out, _ = idol(["authority"])
             return self.jok({
@@ -594,24 +722,31 @@ class Handler(BaseHTTPRequestHandler):
             reg = registry_manifest(name)
             if reg is not None:
                 if not sub:
-                    return self.jok(reg)
+                    m = dict(reg)
+                    m["versions"] = versions_of(name)
+                    return self.jok(m)
                 if sub == "source":
-                    fp = os.path.join(REGISTRY_DIR, name, "source.id")
-                    if os.path.isfile(fp):
-                        return self.reply(200, open(fp).read(), "text/plain; charset=utf-8")
+                    src = registry_source(name)
+                    if src is not None:
+                        return self.reply(200, src, "text/plain; charset=utf-8")
                 if sub == "versions":
                     return self.jok({"versions": versions_of(name)})
                 if sub == "version":
                     v = parts[2] if len(parts) > 2 else ""
-                    fp = os.path.join(REGISTRY_DIR, name, "versions", v + ".id")
-                    if safe_name(v) and os.path.isfile(fp):
-                        return self.reply(200, open(fp).read(), "text/plain; charset=utf-8")
+                    src = registry_source(name, v) if safe_name(v) else None
+                    if src is not None:
+                        return self.reply(200, src, "text/plain; charset=utf-8")
                 if sub == "dependents":
                     return self.jok({"dependents": dependents_of(name)})
+                if sub == "uses":
+                    return self.jok({"uses": uses_of(name)})
                 if sub == "detail":
                     fp = os.path.join(REGISTRY_DIR, name, "source.id")
                     if os.path.isfile(fp):
                         return self.jok(compute_lib_detail(fp))
+                    src = registry_source(name)
+                    if src is not None:
+                        return self.jok(with_tmp_source(src, lambda pth: compute_lib_detail(pth)))
                 return self.jerr(404, "not found")
             lp = lib_path(name)
             if not lp:
@@ -622,6 +757,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, open(lp).read(), "text/plain; charset=utf-8")
             if sub == "dependents":
                 return self.jok({"dependents": dependents_of(name)})
+            if sub == "uses":
+                return self.jok({"uses": uses_of(name)})
             return self.jerr(404, "not found")
 
         # ---- provenance

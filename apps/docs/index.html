@@ -150,27 +150,15 @@
       const raw = await Idol.api.text("/content/docs/" + d.id + ".md");
       main.innerHTML = md(raw);
       main.classList.remove("fade-in"); void main.offsetWidth; main.classList.add("fade-in");
-      // highlight id fences with the real tokenizer — tokens hoverable
-      const pop = new Idol.Popover();
-      main.querySelectorAll("pre[data-lang='id']").forEach((pre) => {
+      // every idol fence becomes a live token explorer — faces + law + whys
+      main.querySelectorAll("pre[data-lang='id'], pre[data-lang='idol']").forEach((pre) => {
         const code = pre.querySelector("code");
-        const src = code.textContent;
-        const toks = Idol.lex(src);
-        code.innerHTML = Idol.render(toks, src);
-        code.addEventListener("mouseover", (e) => {
-          const el = e.target;
-          if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
-          const t = toks[+el.dataset.i];
-          if (!t) return;
-          const law = Idol.lawNote(t);
-          const rr = Idol.refsOf(toks, t);
-          pop.show(
-            `<div class="p-title"><span class="lex">${Idol === null ? "" : esc(t.v)}</span><span class="kind">${t.t}</span></div>` +
-            `<div class="mono-note" style="color:var(--ink-3)">${esc(law.note)}</div>` +
-            (rr.length > 1 ? `<div class="p-sec"><div class="lbl">references</div><div class="facts">${rr.length} faces in this block</div></div>` : ""),
-            e.clientX, e.clientY, false);
+        const holder = document.createElement("div");
+        pre.replaceWith(holder);
+        Idol.doccode(holder, {
+          source: code.textContent,
+          onLib: (v) => window.open("https://lib.idol.id/#" + encodeURIComponent(v), "_blank"),
         });
-        code.addEventListener("mouseleave", () => pop.hide());
       });
     } catch (e) {
       main.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${e.message}</div></div>`;
