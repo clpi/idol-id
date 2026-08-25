@@ -1,0 +1,70 @@
+name: deploy idol.id
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: idol-id-production
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Test and build every surface
+        run: npm run check
+      - name: Validate Worker bundle
+        run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Build one immutable deployment
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          IDOL_AUTHORITY_COMMIT: f33bb3773484e7d954a2975211e683dfa89edab5
+          IDOL_NATIVE_COMMIT: 932a3ade3fa40c0653242559305fb67ffa142e84
+        run: npm run build
+      - name: Require Cloudflare deployment credentials
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'missing CLOUDFLARE_ACCOUNT_ID'; exit 2; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'missing CLOUDFLARE_API_TOKEN'; exit 2; }
+      - name: Deploy root and every subdomain atomically
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4.125.0 deploy --var "IDOL_COMMIT:${GITHUB_SHA}" --var "IDOL_AUTHORITY:f33bb3773484e7d954a2975211e683dfa89edab5"
+      - name: Deployment summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
+          ## idol.id deployed
+          One Worker version now serves:
+          - idol.id
+          - docs.idol.id
+          - lib.idol.id
+          - api.idol.id
+          - graph.idol.id
+          - r8a.idol.id
+          - r8b.idol.id
+          - r16.idol.id
+          SUMMARY
