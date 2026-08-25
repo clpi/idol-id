@@ -74,6 +74,11 @@ test("legacy health remains the compiler origin while edge health is explicit", 
   assert.equal(body.edge, true);
 });
 
+test("local development can select every surface without DNS", async () => {
+  const response = await handle(new Request("http://localhost/?surface=lib"), envWithAssets());
+  assert.equal(await response.text(), "<html>lib</html>");
+});
+
 test("unknown hosts fail closed", async () => {
   const response = await handle(new Request("https://unknown.example/"), envWithAssets());
   assert.equal(response.status, 404);
