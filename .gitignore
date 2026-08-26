@@ -7,4 +7,6 @@ dist/
 .wrangler/
 .dev.vars
 .dev.vars.*
+.platform-provision.json
+.wrangler.production.jsonc
 runtime/*.wasm
