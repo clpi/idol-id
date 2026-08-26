@@ -14,17 +14,18 @@ test("build emits worlds and platform in one deployment", async () => {
 
   const worldsHtml = await readFile("dist/apps/worlds/index.html", "utf8");
   const platformHtml = await readFile("dist/apps/platform/index.html", "utf8");
+  const surfaceCss = await readFile("dist/shared/surface.css", "utf8");
+  const shellJs = await readFile("dist/shared/shell.js", "utf8");
   assert.match(worldsHtml, /World Atlas/);
   assert.match(worldsHtml, /type="module"/);
   assert.match(worldsHtml, /runtime\/worlds\.json/);
   assert.match(worldsHtml, /compare/i);
   assert.match(worldsHtml, /@media \(max-width: 699px\)/);
-  assert.match(worldsHtml, /function decodeWorldHash\(/);
-  assert.match(worldsHtml, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
+  assert.match(shellJs, /function decodeWorldHash\(/);
+  assert.match(surfaceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
   assert.match(platformHtml, /Platform/);
   assert.match(platformHtml, /not yet enabled/i);
 
-  const surfaceCss = await readFile("dist/shared/surface.css", "utf8");
   assert.match(surfaceCss, /@font-face/);
   assert.match(surfaceCss, /font-family:\s*["']Iosevka["']/);
   assert.match(surfaceCss, /cdn\.jsdelivr\.net\/fontsource\/fonts\/iosevka@5\.3\.0\/latin-400-normal\.woff2/);
