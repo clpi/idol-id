@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Probe Docker or Podman API over protected Unix route
+      - name: Verify protected temporary route propagation and SSH origin reachability
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -33,41 +33,45 @@ jobs:
           dnsbase="https://api.cloudflare.com/client/v4/zones/$zid/dns_records"
           origcfg="$(curl -fsS "${auth[@]}" "$tbase/configurations" | jq '.result.config')"
           app_id=""; policy_id=""; token_id=""; dns_id=""
-          cleanup(){
-            set +e
-            curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$origcfg" '{config:$c}')" "$tbase/configurations" >/dev/null
-            [ -z "$policy_id" ] || curl -sS -X DELETE "${auth[@]}" "$abase/access/apps/$app_id/policies/$policy_id" >/dev/null
-            [ -z "$app_id" ] || curl -sS -X DELETE "${auth[@]}" "$abase/access/apps/$app_id" >/dev/null
-            [ -z "$token_id" ] || curl -sS -X DELETE "${auth[@]}" "$abase/access/service_tokens/$token_id" >/dev/null
-            [ -z "$dns_id" ] || curl -sS -X DELETE "${auth[@]}" "$dnsbase/$dns_id" >/dev/null
-          }
+          cleanup(){ set +e; curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$origcfg" '{config:$c}')" "$tbase/configurations" >/dev/null; [ -z "$policy_id" ] || curl -sS -X DELETE "${auth[@]}" "$abase/access/apps/$app_id/policies/$policy_id" >/dev/null; [ -z "$app_id" ] || curl -sS -X DELETE "${auth[@]}" "$abase/access/apps/$app_id" >/dev/null; [ -z "$token_id" ] || curl -sS -X DELETE "${auth[@]}" "$abase/access/service_tokens/$token_id" >/dev/null; [ -z "$dns_id" ] || curl -sS -X DELETE "${auth[@]}" "$dnsbase/$dns_id" >/dev/null; }
           trap cleanup EXIT
 
           old="$(curl -fsS "${auth[@]}" "$dnsbase?name=$BOOT_HOST" | jq -r '.result[0].id // empty')"; [ -z "$old" ] || curl -fsS -X DELETE "${auth[@]}" "$dnsbase/$old" >/dev/null
-          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg h "$BOOT_HOST" --arg t "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$h,content:$t,proxied:true,ttl:1}')" "$dnsbase")"; dns_id="$(echo "$created" | jq -r '.result.id')"
-          app="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg h "$BOOT_HOST" '{name:"r16 private bootstrap probe",domain:$h,type:"self_hosted",session_duration:"30m",app_launcher_visible:false}')" "$abase/access/apps")"; app_id="$(echo "$app" | jq -r '.result.id')"
-          tok="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data '{"name":"r16-bootstrap-probe","duration":"30m"}' "$abase/access/service_tokens")"; token_id="$(echo "$tok"|jq -r '.result.id')"; cid="$(echo "$tok"|jq -r '.result.client_id')"; csec="$(echo "$tok"|jq -r '.result.client_secret')"
-          pol="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg tid "$token_id" '{name:"bootstrap service auth",decision:"non_identity",include:[{service_token:{token_id:$tid}}],exclude:[],require:[]}')" "$abase/access/apps/$app_id/policies")"; policy_id="$(echo "$pol"|jq -r '.result.id')"
+          dns="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg h "$BOOT_HOST" --arg t "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$h,content:$t,proxied:true,ttl:1}')" "$dnsbase")"; dns_id="$(echo "$dns"|jq -r '.result.id')"
+          app="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg h "$BOOT_HOST" '{name:"r16 private route check",domain:$h,type:"self_hosted",session_duration:"30m",app_launcher_visible:false}')" "$abase/access/apps")"; app_id="$(echo "$app"|jq -r '.result.id')"
+          tok="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data '{"name":"r16-route-check","duration":"30m"}' "$abase/access/service_tokens")"; token_id="$(echo "$tok"|jq -r '.result.id')"; cid="$(echo "$tok"|jq -r '.result.client_id')"; csec="$(echo "$tok"|jq -r '.result.client_secret')"
+          pol="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg tid "$token_id" '{name:"route check",decision:"non_identity",include:[{service_token:{token_id:$tid}}],exclude:[],require:[]}')" "$abase/access/apps/$app_id/policies")"; policy_id="$(echo "$pol"|jq -r '.result.id')"
+          for i in $(seq 1 60); do dig +short @1.1.1.1 "$BOOT_HOST" | grep -q . && break; sleep 2; done
+          headers=(-H "CF-Access-Client-Id: $cid" -H "CF-Access-Client-Secret: $csec")
 
-          echo 'waiting for protected hostname DNS...'
-          for i in $(seq 1 60); do
-            if dig +short @1.1.1.1 "$BOOT_HOST" | grep -q .; then break; fi
-            sleep 2
-          done
-          dig +short @1.1.1.1 "$BOOT_HOST" || true
-
-          found=''
-          for svc in 'unix:/var/run/docker.sock' 'unix:/run/docker.sock' 'unix:/run/podman/podman.sock' 'unix:/run/user/1000/podman/podman.sock'; do
-            echo "PROBE_SERVICE=$svc"
+          route_and_wait(){
+            svc="$1"
             cfg="$(echo "$origcfg" | jq --arg h "$BOOT_HOST" --arg s "$svc" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:$s}]+[$i[-1]])')"
             curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$cfg" '{config:$c}')" "$tbase/configurations" | jq -e '.success==true' >/dev/null
-            sleep 3
-            set +e
-            body="$(curl -sS --max-time 10 -w $'\nHTTP=%{http_code}' -H "CF-Access-Client-Id: $cid" -H "CF-Access-Client-Secret: $csec" "https://$BOOT_HOST/version")"
-            rc=$?
-            set -e
-            echo "$body" | sed -E 's/(SecurityOptions|Plugins|Labels|Warnings).*/[trimmed]/' | head -c 2000; echo
-            echo "CURL_RC=$rc"
-            if echo "$body" | grep -Eq '"(Version|ApiVersion|APIVersion|Components)"'; then found="$svc"; echo "CONTAINER_API_FOUND=$svc"; break; fi
-          done
-          if [ -z "$found" ]; then echo 'CONTAINER_API_FOUND=none'; else echo 'container API is reachable through the protected temporary route'; fi
+            for i in $(seq 1 30); do
+              live="$(curl -fsS "${auth[@]}" "$tbase/configurations" | jq -r --arg h "$BOOT_HOST" '.result.config.ingress[]? | select(.hostname==$h) | .service')"
+              [ "$live" = "$svc" ] && { echo "CONFIG_VISIBLE=$svc"; break; }
+              sleep 1
+            done
+            sleep 8
+          }
+
+          echo '--- known-good HTTP origin ---'
+          route_and_wait 'http://localhost:8080'
+          curl -sS --max-time 10 -w $'\nHTTP=%{http_code}\n' "${headers[@]}" "https://$BOOT_HOST/__idol/health" | head -c 2000
+
+          echo '--- SSH port presented as HTTP origin ---'
+          route_and_wait 'http://localhost:22'
+          set +e
+          curl -v --http0.9 --max-time 10 "${headers[@]}" "https://$BOOT_HOST/" >/tmp/sshbody 2>/tmp/sshcurl
+          rc=$?
+          set -e
+          echo "CURL_RC=$rc"
+          grep -E 'HTTP/|Empty reply|Failed|reset|SSH-|Connected|502|503' /tmp/sshcurl | tail -n 80 || true
+          head -c 1000 /tmp/sshbody || true; echo
+
+          mgmt="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data '{"resources":["logs"]}' "$tbase/management" | jq -r '.result')"
+          curl -LfsS https://github.com/cloudflare/cloudflared/releases/download/2026.5.2/cloudflared-linux-amd64 -o /tmp/cloudflared; chmod +x /tmp/cloudflared
+          timeout 6 /tmp/cloudflared tail --token "$mgmt" --output=json --level debug "$R16_TUNNEL_ID" >/tmp/tail.log 2>/tmp/tail.err || true
+          echo '--- relevant connector log tail ---'
+          cat /tmp/tail.log /tmp/tail.err | grep -Ei 'localhost:22|bootstrap-r16|origin|dial|refused|reset|error' | tail -n 100 || true
