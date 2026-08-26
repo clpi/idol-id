@@ -1,26 +1,79 @@
 # The idol.id platform
 
-One platform, one design, four faces. Every face binds tokens to the same
-semantic graph.
+One edge deployment, one design system and one authority projection serve ten public host surfaces.
 
 | face | where | what |
 |---|---|---|
-| Explorer | graph.idol.id · r8b · r16 · r8a | editor, token explore, graph, lowering, run, facts |
-| Registry | lib.idol.id | homes and published worlds |
-| Docs | docs.idol.id | the law and its references |
-| API | api.idol.id | the same surface as HTTP |
+| Site | idol.id | landing, installation and project status |
+| Explorer | graph.idol.id · r8a · r8b · r16 | editor, token exploration, graph, lowering, run and facts |
+| Registry | lib.idol.id | homes, packages, published worlds, versions and provenance |
+| World Atlas | worlds.idol.id | searchable public world identities, exact manifest facts and comparison |
+| Platform | platform.idol.id | read-only capability frontier for accounts, IDE, repositories, transformations and shell programs |
+| Docs | docs.idol.id | language law and references |
+| API | api.idol.id | transport projection of compiler and registry operations |
 
-## API surface
+## Routing and origins
+
+The existing root/docs/lib/api/graph/r8 hosts are Cloudflare Worker Routes over proxied Tunnel origins. Static assets are served at the edge; dynamic requests continue to the existing compiler or registry service.
+
+`worlds.idol.id` and `platform.idol.id` are Worker Custom Domains. They are static Worker-origin surfaces and have no same-host dynamic origin. Dynamic paths there fail closed instead of recursively fetching the Worker.
+
+Every push to `idol-id/main` tests and builds all surfaces, refreshes the public world snapshot, validates Wrangler configuration and deploys one immutable Worker version.
+
+## World Atlas
+
+`worlds.idol.id` consumes `/runtime/worlds.json`, an immutable deployment snapshot refreshed from the public registry projection.
+
+The Atlas preserves exact manifest facts:
 
 ```text
-GET  /health                     liveness + compiler presence
-GET  /info                       service + authority edition
+world display name
+release version
+publisher
+published graph identity
+source hash
+provenance
+published tags
+source extent
+mirror and publication time
+```
+
+The labels `provided`, `published` and `foreign` are presentation qualifications. They do not create world kinds or establish semantic compatibility, equivalence, composition, injection or authority. The UI states when those authoritative facts are not published.
+
+Comparison currently compares exact published manifest fields. A compiler-backed semantic compatibility view is a later program and must not be inferred from manifest equality.
+
+## Platform frontier
+
+`platform.idol.id` currently exposes the implementation frontier and links to capabilities that are genuinely live.
+
+Not yet enabled:
+
+```text
+account sign-in
+API-token creation
+provider/repository connections
+private workspaces
+browser-IDE writes
+repository mutation
+remote shell execution
+world/universe management writes
+```
+
+Those capabilities require separate identity, policy, secret, world-grant, transactional transformation and evidence programs. The public frontier does not simulate them.
+
+## Dynamic API surface
+
+```text
+GET  /health                     origin liveness + compiler presence
+GET  /info                       origin service + authority edition
+GET  /__idol/health              edge liveness
+GET  /__idol/version             deployed edge version and surface
 POST /api/analyze   {source}     graph + explain + check in one pass
 POST /api/fmt       {source}     formatter
 POST /api/lower     {source, target, emit, opt}   realization text
 POST /api/run       {source, args}                native execution
 GET  /api/libs                   indexed homes
-GET  /api/worlds                 published worlds
+GET  /api/worlds                 public registry worlds
 GET  /api/lib/:name/detail       source + graph + explain + stats
 GET  /api/lib/:name/dependents   reverse references
 GET  /api/lib/:name/versions     sealed snapshots
@@ -29,17 +82,12 @@ GET  /api/whys?subject=X         provenance facts
 GET  /api/authority              source-law authority edition
 ```
 
-Targets for `/api/lower`: `native`, `aarch64-linux`, `aarch64-macos`,
-`wasm32-wasi`; emits: `asm`, `c`, `wasm`.
+Targets for `/api/lower`: `native`, `aarch64-linux`, `aarch64-macos`, `wasm32-wasi`; emits: `asm`, `c`, `wasm`.
 
-## Auth
+## Authentication boundary
 
-Reads are open. Publishes require a bearer write token supplied out-of-band.
-No server on this platform reads, sources, or executes secret files.
+Current registry reads are open. Existing publication uses an out-of-band bearer write token at the Tunnel origin. The future authenticated platform will replace this provisional surface with scoped identities, passkeys/device login, organizations, audit and explicit policy. No public page reads or executes secret files.
 
-## Instances
+## Instances and provenance
 
-The same codeface serves every subdomain: `r8b`, `r16`, `r8a` carry the
-Explorer with their instance name in the status bar; `lib`, `docs`, `api`
-carry their faces. The graph explorer on any instance is fully functional —
-instance is provenance, not authority.
+The same graph application serves `graph`, `r8a`, `r8b` and `r16`; the surface label is deployment and hardware provenance, not semantic authority. Likewise, a hostname selects a product face but never establishes world, relation, package or value identity.
