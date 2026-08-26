@@ -17,9 +17,14 @@ test("scaffold deep links load the full observation instead of reusing a bounded
   const scaffoldBinding = /const\s+([A-Za-z_$][\w$]*)\s*=\s*await request\(`scaffolds\/\$\{encodeURIComponent\(id\)\}`\)/.exec(implementation);
   assert.ok(scaffoldBinding, "selectScaffold must fetch the exact scaffold detail");
   const scaffoldVariable = escapePattern(scaffoldBinding[1]);
+  const observationRequest = new RegExp(
+    'await request\\(`observations\\/\\$\\{encodeURIComponent\\('
+      + scaffoldVariable
+      + '\\.observation_id\\)\\}`\\)',
+  );
   assert.match(
     implementation,
-    new RegExp(`await request\\(\\`observations\\/\\$\\{encodeURIComponent\\(${scaffoldVariable}\\.observation_id\\)\\}\\`\\)`),
+    observationRequest,
     "selectScaffold must hydrate the exact parent observation from the scaffold detail",
   );
   assert.doesNotMatch(implementation, /state\.observations\.find/);
