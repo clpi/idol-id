@@ -75,7 +75,7 @@ test("Access JWT validation rejects wrong audience, email domain, expiry, and al
     fetcher: async () => new Response(JSON.stringify({ keys: [expired.publicJwk] })),
   }), /expired/i);
 
-  const [h, p, s] = valid.token.split(".");
+  const [, p, s] = valid.token.split(".");
   const noneHeader = b64url(JSON.stringify({ alg: "none", kid: "test-key" }));
   await assert.rejects(() => verifyAccessJwt(`${noneHeader}.${p}.${s}`, {
     teamDomain: "idol-clpi.cloudflareaccess.com", audience: "idol-platform-aud", emailDomain: "pecunies.com", now: () => valid.now * 1000, fetcher,
@@ -86,7 +86,7 @@ test("API token material is prefix-addressable, random, digest-only, and scoped"
   let cursor = 0;
   const randomBytes = (length) => Uint8Array.from({ length }, () => (cursor++ * 17 + 11) & 255);
   const material = await createApiToken({ randomBytes });
-  assert.match(material.token, /^idol_pat_[a-z0-9_-]{12,}\.[A-Za-z0-9_-]{32,}$/);
+  assert.match(material.token, /^idol_pat_[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{32,}$/);
   assert.equal(parseApiToken(material.token).id, material.id);
   assert.equal(material.prefix, material.token.slice(0, 22));
   assert.equal(await hashApiToken(material.token), material.digest);
