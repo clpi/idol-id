@@ -16,7 +16,7 @@ function json(value, status = 200, headers = {}) {
 
 function configured(env) {
   return {
-    access: Boolean(env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD && env.ACCESS_EMAIL_DOMAIN),
+    access: Boolean(env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN)),
     storage: Boolean(env.PLATFORM_DB),
   };
 }
@@ -28,6 +28,7 @@ async function browserIdentity(request, env, dependencies) {
   return verifyAccessJwt(assertion, {
     teamDomain: env.ACCESS_TEAM_DOMAIN,
     audience: env.ACCESS_AUD,
+    email: env.ACCESS_EMAIL,
     emailDomain: env.ACCESS_EMAIL_DOMAIN,
     fetcher: dependencies.fetcher || fetch,
     now: dependencies.nowMs || (() => Date.now()),
@@ -127,7 +128,8 @@ async function browserTransport(request, env, pathname, info, dependencies) {
   }
 }
 
-async function apiTransport(request, env, pathname, dependencies) {
+async function apiTransport(request, env, pathname, info, dependencies) {
+  if (info.surface !== "api") return json({ error: "PLATFORM_API_HOST_REQUIRED" }, 404);
   if (request.method !== "GET" || pathname !== `${API_PREFIX}whoami`) return json({ error: "PLATFORM_ROUTE_NOT_FOUND" }, 404);
   const platform = service(env, dependencies);
   if (!platform) return json({ error: "PLATFORM_STORAGE_UNAVAILABLE" }, 503);
@@ -142,6 +144,7 @@ async function apiTransport(request, env, pathname, dependencies) {
 
 export async function handlePlatformTransport(request, env, pathname, info, dependencies = {}) {
   if (pathname === "/v1/platform/status" && (request.method === "GET" || request.method === "HEAD")) {
+    if (info.surface !== "platform") return json({ error: "PLATFORM_STATUS_HOST_REQUIRED" }, 404);
     return json({
       schema: "idol.web.platform.status.v1",
       configured: configured(env),
@@ -151,6 +154,6 @@ export async function handlePlatformTransport(request, env, pathname, info, depe
     });
   }
   if (pathname.startsWith(BROWSER_PREFIX)) return browserTransport(request, env, pathname, info, dependencies);
-  if (pathname.startsWith(API_PREFIX)) return apiTransport(request, env, pathname, dependencies);
+  if (pathname.startsWith(API_PREFIX)) return apiTransport(request, env, pathname, info, dependencies);
   return null;
 }
