@@ -1,0 +1,384 @@
+{
+  "schema": "idol.web.foreign.source.v1",
+  "revision": "program-j-public-read-v1",
+  "worlds": [
+    {
+      "slug": "c17",
+      "name": "C17",
+      "version": "ISO/IEC 9899:2018",
+      "summary": "C language and ABI provenance candidate for explicit native boundaries.",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": {
+        "origin": {
+          "family": "c",
+          "standard": "ISO/IEC 9899:2018"
+        }
+      },
+      "uncertainty": [
+        {
+          "fact": "implementation-defined behavior",
+          "status": "unresolved",
+          "detail": "compiler, target triple, ABI, flags, and library versions must be pinned before correspondence can be witnessed"
+        },
+        {
+          "fact": "ownership and aliasing",
+          "status": "unresolved",
+          "detail": "headers and symbols do not independently prove lifetime, provenance, or aliasing law"
+        }
+      ],
+      "requirements": [
+        "target triple",
+        "compiler and version",
+        "calling convention",
+        "layout and alignment",
+        "ownership and aliasing",
+        "failure mapping",
+        "threading",
+        "effects"
+      ],
+      "projections": [
+        {
+          "id": "c17-cabi",
+          "target": "c-abi",
+          "status": "not-admitted",
+          "artifact": null,
+          "obligations": {
+            "abi": ["calling convention", "layout", "alignment", "symbol visibility"],
+            "ownership": ["allocation owner", "borrow duration", "aliasing", "destructor responsibility"],
+            "failure": ["error code or result mapping", "panic or trap boundary"],
+            "threading": ["thread affinity", "reentrancy", "synchronization"],
+            "effect": ["filesystem", "network", "process", "environment", "device"],
+            "world": ["target", "linkage", "runtime library"]
+          },
+          "evidence": {
+            "status": "missing",
+            "required": ["header and artifact hashes", "ABI inspection", "round-trip tests", "ownership tests", "failure tests"]
+          },
+          "refusal": {
+            "code": "ARTIFACT_NOT_ADMITTED",
+            "detail": "no signed, content-addressed C ABI artifact and correspondence witness is published"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "wasm-wasi",
+      "name": "Wasm / WASI",
+      "version": "component-model-candidate",
+      "summary": "WebAssembly and WASI provenance candidate for portable component boundaries.",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": {
+        "origin": {
+          "family": "wasm",
+          "ecosystem": "WASI"
+        }
+      },
+      "uncertainty": [
+        {
+          "fact": "component interface law",
+          "status": "unresolved",
+          "detail": "WIT/component versions and canonical ABI details must be pinned"
+        },
+        {
+          "fact": "host capability set",
+          "status": "unresolved",
+          "detail": "imports and ambient host capabilities require an explicit world projection"
+        }
+      ],
+      "requirements": ["Wasm feature set", "WASI version", "imports", "exports", "memory", "resource ownership", "trap mapping"],
+      "projections": [
+        {
+          "id": "wasm-wasi-component",
+          "target": "wasm32-wasi",
+          "status": "not-admitted",
+          "artifact": null,
+          "obligations": {
+            "abi": ["component model version", "canonical ABI", "memory model", "resource handles"],
+            "ownership": ["linear resources", "host-owned handles", "memory transfer"],
+            "failure": ["result variants", "trap boundary", "host refusal"],
+            "threading": ["shared memory availability", "host scheduling"],
+            "effect": ["declared WASI imports only"],
+            "world": ["WASI imports", "runtime feature set", "target"]
+          },
+          "evidence": {
+            "status": "missing",
+            "required": ["module hash", "interface hash", "import census", "round-trip tests", "trap tests"]
+          },
+          "refusal": {
+            "code": "COMPONENT_NOT_ADMITTED",
+            "detail": "no canonical Idol component artifact and interface witness is published"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "browser",
+      "name": "Browser Web Platform",
+      "version": "living-standard-candidate",
+      "summary": "Browser, DOM, Fetch, Worker, storage, and event provenance candidate.",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": {
+        "origin": {
+          "family": "web",
+          "ecosystem": "browser"
+        }
+      },
+      "uncertainty": [
+        {
+          "fact": "browser implementation",
+          "status": "unresolved",
+          "detail": "feature availability, quotas, scheduling, and storage behavior vary by browser and policy"
+        },
+        {
+          "fact": "ambient authority",
+          "status": "unresolved",
+          "detail": "DOM, network, storage, clipboard, and device access require explicit grants"
+        }
+      ],
+      "requirements": ["browser family/version", "secure context", "CSP", "DOM", "Fetch", "storage", "Workers", "permissions"],
+      "projections": [
+        {
+          "id": "browser-wasm-js",
+          "target": "browser-wasm-js",
+          "status": "not-admitted",
+          "artifact": null,
+          "obligations": {
+            "abi": ["Wasm-JS boundary", "memory views", "string and object projection"],
+            "ownership": ["DOM node lifetime", "event listener removal", "object URL revocation"],
+            "failure": ["promise rejection", "DOM exception", "Wasm trap"],
+            "threading": ["main thread", "Worker transfer", "Atomics availability"],
+            "effect": ["DOM", "network", "storage", "clipboard", "device"],
+            "world": ["browser", "secure context", "CSP", "permission grants"]
+          },
+          "evidence": {
+            "status": "missing",
+            "required": ["browser artifact hash", "host import census", "CSP test", "mobile tests", "lifecycle tests"]
+          },
+          "refusal": {
+            "code": "BROWSER_ARTIFACT_NOT_ADMITTED",
+            "detail": "the browser bridge is live, but no canonical Idol browser Wasm semantic artifact is published"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "python",
+      "name": "Python",
+      "version": "3.x-candidate",
+      "summary": "Python runtime and extension/FFI provenance candidate.",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": {
+        "origin": {
+          "family": "python",
+          "ecosystem": "CPython"
+        }
+      },
+      "uncertainty": [
+        {
+          "fact": "runtime and extension ABI",
+          "status": "unresolved",
+          "detail": "interpreter, stable ABI selection, platform tags, and packaging metadata must be pinned"
+        },
+        {
+          "fact": "object lifetime",
+          "status": "unresolved",
+          "detail": "reference ownership, GIL behavior, exceptions, and callbacks require explicit boundary facts"
+        }
+      ],
+      "requirements": ["interpreter/version", "platform tag", "extension ABI", "reference ownership", "GIL", "exception mapping"],
+      "projections": [
+        {
+          "id": "python-extension",
+          "target": "python-extension",
+          "status": "not-admitted",
+          "artifact": null,
+          "obligations": {
+            "abi": ["CPython or stable ABI", "wheel platform tag", "symbol initialization"],
+            "ownership": ["new/borrowed references", "buffer lifetime", "callback lifetime"],
+            "failure": ["Python exception state", "Idol refusal/error mapping"],
+            "threading": ["GIL acquisition", "callback thread", "interpreter shutdown"],
+            "effect": ["imports", "filesystem", "environment", "native library loading"],
+            "world": ["Python runtime", "package environment", "target"]
+          },
+          "evidence": {
+            "status": "missing",
+            "required": ["wheel hash", "ABI tag", "reference leak tests", "exception tests", "multi-version test matrix"]
+          },
+          "refusal": {
+            "code": "PYTHON_PROJECTION_NOT_ADMITTED",
+            "detail": "no verified wheel or FFI projection is published"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "rust",
+      "name": "Rust",
+      "version": "1.x-candidate",
+      "summary": "Rust crate, C ABI, and ownership provenance candidate.",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": {
+        "origin": {
+          "family": "rust",
+          "ecosystem": "cargo"
+        }
+      },
+      "uncertainty": [
+        {
+          "fact": "Rust ABI",
+          "status": "unresolved",
+          "detail": "native Rust ABI is not a stable foreign contract; an explicit C/Wasm projection is required"
+        },
+        {
+          "fact": "unsafe boundary",
+          "status": "unresolved",
+          "detail": "layout, pinning, aliasing, panic, and Send/Sync assumptions require witnesses"
+        }
+      ],
+      "requirements": ["toolchain/version", "target", "crate features", "C or Wasm boundary", "ownership", "panic policy", "threading"],
+      "projections": [
+        {
+          "id": "rust-cabi",
+          "target": "rust-c-abi",
+          "status": "not-admitted",
+          "artifact": null,
+          "obligations": {
+            "abi": ["repr(C)", "symbol visibility", "target", "layout"],
+            "ownership": ["Box/Arc ownership", "borrow lifetime", "pinning", "aliasing"],
+            "failure": ["panic containment", "Result mapping"],
+            "threading": ["Send/Sync witness", "runtime ownership"],
+            "effect": ["allocator", "filesystem", "network", "process"],
+            "world": ["Rust toolchain", "Cargo resolution", "target"]
+          },
+          "evidence": {
+            "status": "missing",
+            "required": ["crate and artifact hashes", "cargo lock", "ABI tests", "Miri/sanitizer evidence where applicable", "panic tests"]
+          },
+          "refusal": {
+            "code": "RUST_BOUNDARY_NOT_ADMITTED",
+            "detail": "no verified C/Wasm projection and ownership witness is published"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "go",
+      "name": "Go",
+      "version": "1.x-candidate",
+      "summary": "Go module, cgo, and Wasm provenance candidate.",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": {
+        "origin": {
+          "family": "go",
+          "ecosystem": "modules"
+        }
+      },
+      "uncertainty": [
+        {
+          "fact": "runtime ownership",
+          "status": "unresolved",
+          "detail": "goroutine scheduling, GC pointers, callbacks, and runtime lifetime require explicit boundary facts"
+        },
+        {
+          "fact": "cgo portability",
+          "status": "unresolved",
+          "detail": "toolchain, target, linker, and cross-compilation support must be pinned"
+        }
+      ],
+      "requirements": ["Go version", "module graph", "target", "cgo/Wasm mode", "pointer rules", "callbacks", "runtime lifetime"],
+      "projections": [
+        {
+          "id": "go-cgo",
+          "target": "go-cgo",
+          "status": "not-admitted",
+          "artifact": null,
+          "obligations": {
+            "abi": ["C export surface", "target", "link mode", "runtime initialization"],
+            "ownership": ["Go pointer rules", "C allocation", "callback handles"],
+            "failure": ["error value mapping", "panic containment"],
+            "threading": ["goroutine scheduling", "OS-thread affinity", "callback entry"],
+            "effect": ["Go runtime", "filesystem", "network", "process"],
+            "world": ["Go toolchain", "module lock", "target"]
+          },
+          "evidence": {
+            "status": "missing",
+            "required": ["module and artifact hashes", "cross-target build matrix", "pointer-rule tests", "callback tests", "panic tests"]
+          },
+          "refusal": {
+            "code": "GO_PROJECTION_NOT_ADMITTED",
+            "detail": "no verified cgo or Wasm projection is published"
+          }
+        }
+      ]
+    }
+  ],
+  "import_kinds": [
+    {
+      "kind": "repository",
+      "stages": [
+        "ingest provenance",
+        "detect languages, build systems, and targets",
+        "extract declarations and boundary facts",
+        "publish candidate facts with uncertainty",
+        "identify missing laws and opaque behavior",
+        "plan granted probes and tests",
+        "request human confirmation",
+        "prepare private candidate world"
+      ],
+      "required_grants": ["repository metadata read", "source read when approved", "network read only when approved"],
+      "missing_facts": ["stable semantic identities", "behavior correspondence", "capability/world witness", "build/test evidence"],
+      "refusals": ["no source fetch without grant", "no execution without runner/world grant", "no public publication without review"]
+    },
+    {
+      "kind": "schema",
+      "stages": [
+        "ingest provenance",
+        "identify schema language and version",
+        "extract declarations and constraints",
+        "publish candidate boundary facts with uncertainty",
+        "identify unsupported constraints",
+        "plan round-trip and compatibility evidence",
+        "prepare private candidate world"
+      ],
+      "required_grants": ["schema read", "referenced schema read when approved"],
+      "missing_facts": ["runtime behavior", "ownership", "effects", "implementation correspondence"],
+      "refusals": ["no equivalence from shape alone", "no network dereference without grant", "no generated artifact without target witness"]
+    },
+    {
+      "kind": "api",
+      "stages": [
+        "ingest provenance",
+        "pin API description and version",
+        "extract operations, schemas, and authentication requirements",
+        "publish candidate boundary facts with uncertainty",
+        "identify effects, rate limits, and failure behavior",
+        "plan granted probes and contract tests",
+        "prepare private candidate world"
+      ],
+      "required_grants": ["description read", "network probe only when approved", "secret reference only when approved"],
+      "missing_facts": ["server implementation", "runtime behavior", "availability", "side effects", "authorization policy"],
+      "refusals": ["no live request without network grant", "no secret material in plan output", "no equivalence from documentation alone"]
+    },
+    {
+      "kind": "binary",
+      "stages": [
+        "ingest provenance",
+        "identify format, architecture, and target",
+        "extract symbols, sections, imports, exports, and metadata",
+        "publish candidate boundary facts with uncertainty",
+        "identify opaque behavior and missing source law",
+        "plan sandboxed probes when granted",
+        "prepare private candidate world"
+      ],
+      "required_grants": ["artifact read", "sandboxed execution only when approved"],
+      "missing_facts": ["source semantics", "ownership", "failure law", "effects", "behavior correspondence"],
+      "refusals": ["no semantic identity from symbols or hashes", "no execution without sandbox/world grant", "no equivalence from binary shape"]
+    }
+  ]
+}
