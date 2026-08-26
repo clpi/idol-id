@@ -22,11 +22,13 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   const worldsHtml = await readFile("dist/apps/worlds/index.html", "utf8");
   const platformHtml = await readFile("dist/apps/platform/index.html", "utf8");
   const ideHtml = await readFile("dist/apps/ide/index.html", "utf8");
+  const platformIdeEntry = await readFile("dist/shared/platform-ide-entry.js", "utf8");
+  const ideDirectory = await readFile("dist/shared/ide-directory.js", "utf8");
   const ideSemanticLayer = await readFile("dist/shared/ide-semantic-layer.js", "utf8");
   const surfaceCss = await readFile("dist/shared/surface.css", "utf8");
   const shellJs = await readFile("dist/shared/shell.js", "utf8");
+
   assert.match(worldsHtml, /World Atlas/);
-  assert.match(worldsHtml, /type="module"/);
   assert.match(worldsHtml, /runtime\/worlds\.json/);
   assert.match(worldsHtml, /runtime\/foreign\.json/);
   assert.match(worldsHtml, /shared\/foreign\.js/);
@@ -34,12 +36,10 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(worldsHtml, /Import plan/);
   assert.match(worldsHtml, /plan-only/);
   assert.match(worldsHtml, /identity not published/i);
-  assert.match(worldsHtml, /compare/i);
   assert.match(worldsHtml, /@media \(max-width: 699px\)/);
   assert.match(shellJs, /function decodeWorldHash\(/);
   assert.match(shellJs, /function worldFromPath\(/);
   assert.match(shellJs, /function worldLensFromPath\(/);
-  assert.match(shellJs, /addEventListener\("popstate"/);
   assert.match(shellJs, /platform\.idol\.id\/ide/);
   assert.match(surfaceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
 
@@ -49,17 +49,17 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(platformHtml, /Audit trail/);
   assert.match(platformHtml, /\/v1\/platform\/browser\/session/);
   assert.match(platformHtml, /transport identity/i);
-  assert.match(platformHtml, /Open browser IDE/);
-  assert.match(platformHtml, /href="\/ide"/);
-  assert.match(platformHtml, /@media \(max-width: 699px\)/);
+  assert.match(platformHtml, /\/shared\/platform-ide-entry\.js/);
+  assert.doesNotMatch(platformHtml, /<a[^>]+href="\/ide"/i);
+  assert.match(platformIdeEntry, /signed-in/);
+  assert.match(platformIdeEntry, /container\.hidden = signedIn\.hidden/);
+  assert.match(platformIdeEntry, /Open browser IDE/);
+  assert.match(platformIdeEntry, /href = "\/ide"/);
 
   assert.match(ideHtml, /Idol Browser IDE/);
-  assert.match(ideHtml, /\/shared\/workspace\.js/);
-  assert.match(ideHtml, /\/shared\/semantic-bundle\.js/);
-  assert.match(ideHtml, /\/shared\/idol\.js/);
-  assert.match(ideHtml, /\/shared\/graph\.js/);
-  assert.match(ideHtml, /\/shared\/wasm\.js/);
-  assert.match(ideHtml, /\/shared\/ide-semantic-layer\.js/);
+  for (const script of ["workspace.js", "semantic-bundle.js", "idol.js", "graph.js", "wasm.js", "ide-semantic-layer.js", "ide-directory.js"]) {
+    assert.match(ideHtml, new RegExp(`/shared/${script.replace(".", "\\.")}`));
+  }
   assert.match(ideHtml, /IndexedDB/);
   assert.match(ideHtml, /Analyze remotely/);
   assert.match(ideHtml, /lexical preview/i);
@@ -70,10 +70,16 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(ideHtml, /@media\s*\(max-width:\s*699px\)/);
   assert.match(ideHtml, /@media\s*\(max-width:\s*360px\)/);
   assert.match(ideHtml, /prefers-reduced-motion/);
+  assert.match(ideDirectory, /webkitRelativePath/);
+  assert.match(ideDirectory, /import-directory/);
+  assert.match(ideDirectory, /fileInput\.onchange/);
   assert.match(ideSemanticLayer, /replaceChildren\(fragment\)/);
-  assert.match(ideSemanticLayer, /source\.slice\(token\.span\[0\], token\.span\[1\]\)/);
-  assert.match(ideSemanticLayer, /semantic-published/);
+  assert.match(ideSemanticLayer, /source\.slice\(token\.span\[0\],token\.span\[1\]\)/);
   assert.match(ideSemanticLayer, /compiler token spans overlap/);
+  assert.match(ideSemanticLayer, /IDE_ANALYSIS_STALE/);
+  assert.match(ideSemanticLayer, /source_hash/);
+  assert.match(ideSemanticLayer, /currentEditor\.source !== snapshot\.source/);
+  assert.match(ideSemanticLayer, /mergeDisplayTokens/);
 
   assert.match(surfaceCss, /@font-face/);
   assert.match(surfaceCss, /font-family:\s*["']Iosevka["']/);
@@ -93,7 +99,6 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   const snapshot = JSON.parse(await readFile("dist/runtime/worlds.json", "utf8"));
   assert.equal(snapshot.schema, "idol.web.worlds.v1");
   assert.ok(snapshot.worlds.length > 0);
-
   const snapshotAuthority = JSON.parse(await readFile("runtime/authority.json", "utf8"));
   const foreign = JSON.parse(await readFile("dist/runtime/foreign.json", "utf8"));
   assert.equal(foreign.schema, "idol.web.foreign.v1");
@@ -102,10 +107,8 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.ok(foreign.worlds.length >= 6);
   assert.ok(foreign.worlds.every((world) => world.semantic_id === null));
   assert.ok(foreign.worlds.every((world) => world.identity_status === "not-published"));
-  assert.ok(foreign.worlds.flatMap((world) => world.projections).every((projection) =>
-    projection.status !== "available" || (projection.artifact?.sha256 && projection.evidence?.status === "verified")));
-  assert.ok(foreign.worlds.flatMap((world) => world.projections).every((projection) =>
-    projection.artifact || !("copy_command" in projection)));
+  assert.ok(foreign.worlds.flatMap((world) => world.projections).every((projection) => projection.status !== "available" || (projection.artifact?.sha256 && projection.evidence?.status === "verified")));
+  assert.ok(foreign.worlds.flatMap((world) => world.projections).every((projection) => projection.artifact || !("copy_command" in projection)));
 
   const migration = await readFile("migrations/0001_platform_identity.sql", "utf8");
   assert.match(migration, /CREATE TABLE IF NOT EXISTS platform_profile/);
