@@ -73,14 +73,28 @@ function assetRequest(request, pathname) {
   return new Request(url, request);
 }
 
+function projectionRequest(request, pathname) {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+  url.search = "";
+  return new Request(url, {
+    method: "GET",
+    headers: { "accept": "application/json" },
+  });
+}
+
 async function asset(env, request, pathname, options = {}) {
   const response = await env.ASSETS.fetch(assetRequest(request, pathname));
   if (!response.ok) return response;
   return secure(response, options);
 }
 
+function assetFound(response) {
+  return response.ok || response.status === 304;
+}
+
 async function readJsonAsset(env, request, pathname) {
-  const response = await env.ASSETS.fetch(assetRequest(request, pathname));
+  const response = await env.ASSETS.fetch(projectionRequest(request, pathname));
   if (!response.ok) return { response: json({ error: "runtime projection unavailable", path: pathname }, { status: response.status }) };
   try {
     return { value: await response.json() };
@@ -216,14 +230,14 @@ export async function handle(request, env) {
 
   if (SHARED_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
     const response = await asset(env, request, url.pathname, { immutable: CACHEABLE_EXT.test(url.pathname) });
-    if (response.ok) return response;
+    if (assetFound(response)) return response;
   }
 
   if (CACHEABLE_EXT.test(url.pathname)) {
     let response = await asset(env, request, url.pathname, { immutable: true });
-    if (response.ok) return response;
+    if (assetFound(response)) return response;
     response = await asset(env, request, `/apps/${info.app}${url.pathname}`, { immutable: true });
-    if (response.ok) return response;
+    if (assetFound(response)) return response;
     if (originless(info)) return noOrigin(info);
     return secure(await fetch(request));
   }
