@@ -1,4 +1,4 @@
-import { repositoryObservationSummary } from "./repository-core.js";
+import { repositoryObservationSummary, repositoryScaffoldSummary } from "./repository-core.js";
 
 function rows(result) {
   return Array.isArray(result?.results) ? result.results : [];
@@ -91,9 +91,20 @@ export function createD1RepositoryStore(database) {
 
     async commitScaffold(record, event) {
       const insert = database.prepare(`
-        INSERT INTO platform_repository_scaffold(id, subject, observation_id, document, created_at)
-        VALUES (?1, ?2, ?3, ?4, ?5)
-      `).bind(record.id, record.subject, record.observation_id, JSON.stringify(record.document), record.created_at);
+        INSERT INTO platform_repository_scaffold(
+          id, subject, observation_id, status, file_count,
+          refusal_code, document, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+      `).bind(
+        record.id,
+        record.subject,
+        record.observation_id,
+        record.status,
+        record.file_count,
+        record.refusal_code,
+        JSON.stringify(record.document),
+        record.created_at,
+      );
       await atomicBatch(database, [insert, auditStatement(database, event)]);
       return decodeScaffold({
         id: record.id,
@@ -105,13 +116,13 @@ export function createD1RepositoryStore(database) {
 
     async listScaffolds(subject, limit = 50) {
       const result = await database.prepare(`
-        SELECT id, observation_id, document, created_at
+        SELECT id, observation_id, status, file_count, refusal_code, created_at
         FROM platform_repository_scaffold
         WHERE subject = ?1
         ORDER BY created_at DESC, rowid DESC
         LIMIT ?2
       `).bind(subject, limit).all();
-      return rows(result).map(decodeScaffold);
+      return rows(result).map(repositoryScaffoldSummary);
     },
 
     async getScaffold(subject, id) {

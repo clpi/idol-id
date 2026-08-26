@@ -163,6 +163,27 @@ export function repositoryObservationSummary(record) {
   });
 }
 
+export function repositoryScaffoldSummary(record) {
+  if (!record) return null;
+  const status = exact(record.status, "scaffold status", 16);
+  if (status !== "preview" && status !== "refused") {
+    throw new RepositoryError("INVALID_REPOSITORY_INPUT", "scaffold status must be preview or refused", 422);
+  }
+  const count = Number(record.file_count ?? record.files?.length ?? 0);
+  const fileCount = Number.isFinite(count) && count >= 0 ? Math.trunc(count) : 0;
+  const rawRefusalCode = text(record.refusal_code ?? record.refusal?.code);
+  const refusalCode = rawRefusalCode ? exact(rawRefusalCode, "scaffold refusal code", 160) : null;
+  return Object.freeze({
+    schema: "idol.web.repository.scaffold.summary.v1",
+    id: exact(record.id, "scaffold id", 160),
+    observation_id: exact(record.observation_id, "observation id", 160),
+    status,
+    file_count: fileCount,
+    refusal_code: refusalCode,
+    created_at: exact(record.created_at, "scaffold creation time", 64),
+  });
+}
+
 const EXTENSIONS = Object.freeze({
   ".id": "idol", ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript", ".ts": "typescript", ".tsx": "typescript",
   ".rs": "rust", ".go": "go", ".py": "python", ".c": "c", ".h": "c", ".cc": "cpp", ".cpp": "cpp", ".hpp": "cpp",
