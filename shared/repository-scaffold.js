@@ -49,6 +49,24 @@ function generatedFiles(observation, capabilities, authorityPin) {
   return files;
 }
 
+function refusedScaffold(observation, capabilities, timestamp, code, detail, paths = []) {
+  return Object.freeze({
+    schema: "idol.web.repository.scaffold.v1",
+    status: "refused",
+    refusal: Object.freeze({ code, detail, paths: Object.freeze([...paths]) }),
+    authority: REPOSITORY_AUTHORITY_BOUNDARY,
+    observation_id: observation.id || null,
+    capabilities,
+    files: Object.freeze([]),
+    patch: "",
+    semantic_id: null,
+    identity_status: "not-published",
+    created_at: timestamp,
+    executed: false,
+    repository_written: false,
+  });
+}
+
 export function unifiedAddPatch(files) {
   return files.map(({ path, content }) => {
     const lines = String(content).replace(/\n$/, "").split("\n");
@@ -60,20 +78,28 @@ export function createRepositoryScaffold(observation, input, { authorityPin, cre
   if (!observation || observation.schema !== "idol.web.repository.observation.v1") throw new RepositoryError("OBSERVATION_REQUIRED", "valid repository observation required", 422);
   if (!authorityPin?.language?.commit || !authorityPin?.native?.commit) throw new RepositoryError("AUTHORITY_PIN_REQUIRED", "language and native authority pins are required", 500);
   const capabilities = normalizeCapabilities(input?.capabilities);
+  const timestamp = exact(createdAt(), "scaffold time", 64);
+  if (observation.inventory?.truncated) {
+    return refusedScaffold(
+      observation,
+      capabilities,
+      timestamp,
+      "SCAFFOLD_INCOMPLETE_INVENTORY",
+      "generated scaffold paths cannot be proven absent from an incomplete repository inventory",
+    );
+  }
   const files = generatedFiles(observation, capabilities, authorityPin);
   const existing = new Set(observation.inventory.paths || []);
   const conflicts = files.map((file) => file.path).filter((path) => existing.has(path));
   if (conflicts.length) {
-    return Object.freeze({
-      schema: "idol.web.repository.scaffold.v1",
-      status: "refused",
-      refusal: Object.freeze({ code: "SCAFFOLD_PATH_CONFLICT", detail: "generated scaffold would overwrite existing repository paths", paths: Object.freeze(conflicts) }),
-      observation_id: observation.id || null,
-      files: Object.freeze([]),
-      patch: "",
-      semantic_id: null,
-      identity_status: "not-published",
-    });
+    return refusedScaffold(
+      observation,
+      capabilities,
+      timestamp,
+      "SCAFFOLD_PATH_CONFLICT",
+      "generated scaffold would overwrite existing repository paths",
+      conflicts,
+    );
   }
   const frozenFiles = Object.freeze(files.map((file) => Object.freeze({ ...file, bytes: TEXT.encode(file.content).byteLength })));
   return Object.freeze({
@@ -87,7 +113,7 @@ export function createRepositoryScaffold(observation, input, { authorityPin, cre
     capabilities,
     files: frozenFiles,
     patch: unifiedAddPatch(frozenFiles),
-    created_at: exact(createdAt(), "scaffold time", 64),
+    created_at: timestamp,
     executed: false,
     repository_written: false,
   });
