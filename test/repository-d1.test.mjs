@@ -4,7 +4,13 @@ import { readFile } from "node:fs/promises";
 import { createD1RepositoryStore } from "../shared/repository-d1.js";
 
 function fakeDatabase() {
-  const state = { batches: [], runs: [], listSql: "", summaryRows: [] };
+  const state = {
+    batches: [],
+    runs: [],
+    listSql: "",
+    observationRows: [],
+    scaffoldRows: [],
+  };
   const database = {
     prepare(sql) {
       return {
@@ -12,7 +18,10 @@ function fakeDatabase() {
         values: [],
         bind(...values) { this.values = values; return this; },
         async run() { state.runs.push(this); return { success: true }; },
-        async all() { state.listSql = sql; return { results: state.summaryRows }; },
+        async all() {
+          state.listSql = sql;
+          return { results: /platform_repository_scaffold/i.test(sql) ? state.scaffoldRows : state.observationRows };
+        },
       };
     },
     async batch(statements) {
@@ -73,7 +82,17 @@ test("D1 commits repository records and audit events in one database batch", asy
     id: "scf_atomic",
     subject: "user-1",
     observation_id: observationRecord.id,
-    document: { schema: "idol.web.repository.scaffold.v1", id: "scf_atomic", observation_id: observationRecord.id, status: "preview" },
+    status: "preview",
+    file_count: 4,
+    refusal_code: null,
+    document: {
+      schema: "idol.web.repository.scaffold.v1",
+      id: "scf_atomic",
+      observation_id: observationRecord.id,
+      status: "preview",
+      files: [{ path: ".idol/authority.json" }],
+      patch: "large patch body",
+    },
     created_at: "2026-08-26T12:01:00.000Z",
   };
   const savedScaffold = await store.commitScaffold(scaffoldRecord, audit(scaffoldRecord.id, "repository.scaffold.previewed"));
@@ -87,7 +106,7 @@ test("D1 commits repository records and audit events in one database batch", asy
 
 test("D1 observation lists return bounded summaries without selecting full documents", async () => {
   const { database, state } = fakeDatabase();
-  state.summaryRows = [{
+  state.observationRows = [{
     id: "obs_summary",
     provider: "github",
     namespace: "acme",
@@ -112,8 +131,35 @@ test("D1 observation lists return bounded summaries without selecting full docum
   }]);
 });
 
-test("repository migration stores bounded observation summary facts", async () => {
+test("D1 scaffold lists return bounded summaries without files or patches", async () => {
+  const { database, state } = fakeDatabase();
+  state.scaffoldRows = [{
+    id: "scf_summary",
+    observation_id: "obs_summary",
+    status: "refused",
+    file_count: 0,
+    refusal_code: "SCAFFOLD_PATH_CONFLICT",
+    created_at: "2026-08-26T12:01:00.000Z",
+  }];
+  const listed = await createD1RepositoryStore(database).listScaffolds("user-1", 50);
+  assert.doesNotMatch(state.listSql, /\bdocument\b/i);
+  assert.deepEqual(listed, [{
+    schema: "idol.web.repository.scaffold.summary.v1",
+    id: "scf_summary",
+    observation_id: "obs_summary",
+    status: "refused",
+    file_count: 0,
+    refusal_code: "SCAFFOLD_PATH_CONFLICT",
+    created_at: "2026-08-26T12:01:00.000Z",
+  }]);
+  assert.equal("files" in listed[0], false);
+  assert.equal("patch" in listed[0], false);
+});
+
+test("repository migration stores bounded observation and scaffold summary facts", async () => {
   const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
   assert.match(migration, /file_count INTEGER NOT NULL/);
   assert.match(migration, /inventory_truncated INTEGER NOT NULL/);
+  assert.match(migration, /status TEXT NOT NULL/);
+  assert.match(migration, /refusal_code TEXT/);
 });
