@@ -19,6 +19,7 @@ jobs:
     environment: production
     steps:
       - name: Discover r16 Cloudflare Tunnel authority
+        id: tunnel
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -27,12 +28,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "missing production CLOUDFLARE_API_TOKEN"; exit 2; }
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
-
-          echo '::group::active tunnels'
           tunnels="$(curl -fsS "${auth[@]}" "$base/cfd_tunnel?is_deleted=false&per_page=100")"
-          echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv'
-          echo '::endgroup::'
-
           found=0
           while IFS=$'\t' read -r id name status; do
             cfg="$(curl -fsS "${auth[@]}" "$base/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
@@ -41,11 +37,44 @@ jobs:
               echo "R16_TUNNEL_ID=$id"
               echo "R16_TUNNEL_NAME=$name"
               echo "R16_TUNNEL_STATUS=$status"
-              echo "$cfg" | jq -c '{version:.result.version, ingress:[.result.config.ingress[] | {hostname,path,service,originRequest}]}'
+              raw="$(echo "$cfg" | jq -r '.result.config.ingress[] | select(.service=="ssh://localhost:22") | .hostname // empty' | head -n1)"
+              echo "R16_SSH_HOST=$raw"
+              echo "ssh_host=$raw" >> "$GITHUB_OUTPUT"
+              echo "$cfg" | jq -c '{version:.result.version, ingress:[.result.config.ingress[] | {hostname,path,service}]}'
             fi
           done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
+          [ "$found" -eq 1 ] || { echo 'r16 tunnel not found'; exit 3; }
 
-          if [ "$found" -eq 0 ]; then
-            echo 'No remotely-managed tunnel configuration containing r16.idol.id was visible to this token.'
-            exit 3
-          fi
+      - name: Probe SSH ingress and accepted authentication methods
+        env:
+          SSH_HOST: ${{ steps.tunnel.outputs.ssh_host }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_HOST"
+          curl -L --fail --silent --show-error \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared access tcp --hostname "$SSH_HOST" --url localhost:2222 >/tmp/cloudflared.log 2>&1 &
+          proxy=$!
+          trap 'kill $proxy 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            nc -z 127.0.0.1 2222 && break
+            sleep 1
+          done
+          echo '--- ssh host key ---'
+          ssh-keyscan -p 2222 127.0.0.1 2>&1 | sed -n '1,12p' || true
+          echo '--- ssh auth probe ---'
+          set +e
+          ssh -vv -p 2222 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o BatchMode=yes \
+            -o ConnectTimeout=10 \
+            clp@127.0.0.1 true 2>&1 \
+            | grep -E 'Authentications that can continue|Offering public key|Permission denied|Remote protocol version|Server host key' \
+            | tail -n 20
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "SSH_PROBE_RC=$rc"
