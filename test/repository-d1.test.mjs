@@ -4,14 +4,7 @@ import { readFile } from "node:fs/promises";
 import { createD1RepositoryStore } from "../shared/repository-d1.js";
 
 function fakeDatabase() {
-  const state = {
-    batches: [],
-    runs: [],
-    listSql: "",
-    observationRow: null,
-    scaffoldRow: null,
-    summaryRows: [],
-  };
+  const state = { batches: [], runs: [], listSql: "", summaryRows: [] };
   const database = {
     prepare(sql) {
       return {
@@ -19,15 +12,7 @@ function fakeDatabase() {
         values: [],
         bind(...values) { this.values = values; return this; },
         async run() { state.runs.push(this); return { success: true }; },
-        async first() {
-          if (/platform_repository_scaffold/i.test(sql)) return state.scaffoldRow;
-          if (/platform_repository_observation/i.test(sql)) return state.observationRow;
-          return null;
-        },
-        async all() {
-          state.listSql = sql;
-          return { results: state.summaryRows };
-        },
+        async all() { state.listSql = sql; return { results: state.summaryRows }; },
       };
     },
     async batch(statements) {
@@ -71,19 +56,11 @@ test("D1 commits repository records and audit events in one database batch", asy
     provider: "github",
     namespace: "acme",
     repository: "demo",
-    coordinate: "github:acme/demo",
-    requested_ref: "HEAD",
-    default_branch: "main",
     resolved_revision: "abc123",
     file_count: 2,
-    truncated: false,
+    inventory_truncated: false,
     document: { ...observationDocument, id: "obs_atomic" },
     created_at: "2026-08-26T12:00:00.000Z",
-  };
-  state.observationRow = {
-    id: observationRecord.id,
-    document: JSON.stringify(observationRecord.document),
-    created_at: observationRecord.created_at,
   };
   const savedObservation = await store.commitObservation(observationRecord, audit(observationRecord.id, "repository.observed"));
   assert.equal(savedObservation.id, observationRecord.id);
@@ -98,12 +75,6 @@ test("D1 commits repository records and audit events in one database batch", asy
     observation_id: observationRecord.id,
     document: { schema: "idol.web.repository.scaffold.v1", id: "scf_atomic", observation_id: observationRecord.id, status: "preview" },
     created_at: "2026-08-26T12:01:00.000Z",
-  };
-  state.scaffoldRow = {
-    id: scaffoldRecord.id,
-    observation_id: observationRecord.id,
-    document: JSON.stringify(scaffoldRecord.document),
-    created_at: scaffoldRecord.created_at,
   };
   const savedScaffold = await store.commitScaffold(scaffoldRecord, audit(scaffoldRecord.id, "repository.scaffold.previewed"));
   assert.equal(savedScaffold.id, scaffoldRecord.id);
@@ -121,16 +92,12 @@ test("D1 observation lists return bounded summaries without selecting full docum
     provider: "github",
     namespace: "acme",
     repository: "large",
-    coordinate: "github:acme/large",
-    requested_ref: "HEAD",
-    default_branch: "main",
     resolved_revision: "deadbeef",
     file_count: 5000,
-    truncated: 1,
+    inventory_truncated: 1,
     created_at: "2026-08-26T12:00:00.000Z",
   }];
-  const store = createD1RepositoryStore(database);
-  const listed = await store.listObservations("user-1", 50);
+  const listed = await createD1RepositoryStore(database).listObservations("user-1", 50);
   assert.doesNotMatch(state.listSql, /\bdocument\b/i);
   assert.deepEqual(listed, [{
     schema: "idol.web.repository.observation.summary.v1",
@@ -139,17 +106,14 @@ test("D1 observation lists return bounded summaries without selecting full docum
     namespace: "acme",
     repository: "large",
     coordinate: "github:acme/large",
-    requested_ref: "HEAD",
-    default_branch: "main",
     resolved_revision: "deadbeef",
     inventory: { file_count: 5000, truncated: true },
     created_at: "2026-08-26T12:00:00.000Z",
   }]);
 });
 
-test("repository migration stores every bounded observation summary field", async () => {
+test("repository migration stores bounded observation summary facts", async () => {
   const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
-  for (const column of ["coordinate", "requested_ref", "default_branch", "file_count", "truncated"]) {
-    assert.match(migration, new RegExp(`\\b${column}\\b`), column);
-  }
+  assert.match(migration, /file_count INTEGER NOT NULL/);
+  assert.match(migration, /inventory_truncated INTEGER NOT NULL/);
 });
