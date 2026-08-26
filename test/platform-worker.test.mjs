@@ -87,6 +87,15 @@ test("browser session requires independently verified Access identity", async ()
   assert.equal((await response.json()).error, "ACCESS_IDENTITY_REQUIRED");
 });
 
+test("Access login initializes the profile and redirects to the account console", async () => {
+  const repository = memoryRepository();
+  const response = await handle(new Request("https://platform.idol.id/v1/platform/browser/login"), envWithAssets(), dependencies(repository));
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get("location"), "https://platform.idol.id/#account");
+  assert.equal(repository.profiles.get(identity.subject).email, identity.email);
+  assert.equal(repository.audits.at(-1).type, "profile.created");
+});
+
 test("authenticated browser can create profile and manage digest-only tokens", async () => {
   const repository = memoryRepository();
   const deps = dependencies(repository);
@@ -132,7 +141,7 @@ test("authenticated browser can create profile and manage digest-only tokens", a
 
   response = await handle(new Request("https://platform.idol.id/v1/platform/browser/audit"), envWithAssets(), deps);
   const audit = await response.json();
-  assert.deepEqual(audit.events.map((event) => event.type), ["token.revoked", "token.created", "profile.updated", "profile.created"]);
+  assert.deepEqual(audit.events.map((event) => event.type), ["token.revoked", "token.used", "token.created", "profile.updated", "profile.created"]);
 });
 
 test("browser mutations require same-origin custom-header CSRF evidence", async () => {
