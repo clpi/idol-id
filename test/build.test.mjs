@@ -22,6 +22,11 @@ test("build emits worlds and platform in one deployment", async () => {
   assert.match(platformHtml, /Platform/);
   assert.match(platformHtml, /not yet enabled/i);
 
+  const surfaceCss = await readFile("dist/shared/surface.css", "utf8");
+  assert.match(surfaceCss, /@font-face/);
+  assert.match(surfaceCss, /font-family:\s*["']Iosevka["']/);
+  assert.match(surfaceCss, /cdn\.jsdelivr\.net\/fontsource\/fonts\/iosevka@5\.3\.0\/latin-400-normal\.woff2/);
+
   const snapshot = JSON.parse(await readFile("dist/runtime/worlds.json", "utf8"));
   assert.equal(snapshot.schema, "idol.web.worlds.v1");
   assert.ok(snapshot.worlds.length > 0);
