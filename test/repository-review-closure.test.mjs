@@ -56,7 +56,7 @@ function fixedBytes() {
 }
 
 test("Bitbucket observation requests a bounded recursive source projection", async () => {
-  const expectedTree = "https://api.bitbucket.org/2.0/repositories/acme/demo/src/abcdef123456/?max_depth=25&pagelen=100";
+  const expectedTree = "https://api.bitbucket.org/2.0/repositories/acme/demo/src/abcdef123456/?max_depth=20&pagelen=100";
   const responses = new Map([
     ["https://api.bitbucket.org/2.0/repositories/acme/demo", { is_private: false, mainbranch: { name: "main" } }],
     ["https://api.bitbucket.org/2.0/repositories/acme/demo/commit/main", { hash: "abcdef123456" }],
@@ -90,7 +90,7 @@ test("scaffolding refuses an incomplete provider inventory before asserting path
     createdAt: () => "2026-08-26T12:00:00.000Z",
   });
   assert.equal(scaffold.status, "refused");
-  assert.equal(scaffold.refusal.code, "SCAFFOLD_INCOMPLETE_INVENTORY");
+  assert.equal(scaffold.refusal.code, "SCAFFOLD_INVENTORY_INCOMPLETE");
   assert.equal(scaffold.patch, "");
   assert.deepEqual(scaffold.files, []);
 });
