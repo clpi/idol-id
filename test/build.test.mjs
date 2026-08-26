@@ -19,10 +19,17 @@ test("build emits worlds, foreign integrations, and platform in one deployment",
   assert.match(worldsHtml, /World Atlas/);
   assert.match(worldsHtml, /type="module"/);
   assert.match(worldsHtml, /runtime\/worlds\.json/);
+  assert.match(worldsHtml, /runtime\/foreign\.json/);
+  assert.match(worldsHtml, /shared\/foreign\.js/);
+  assert.match(worldsHtml, /Integration obligations/);
+  assert.match(worldsHtml, /Import plan/);
+  assert.match(worldsHtml, /plan-only/);
+  assert.match(worldsHtml, /identity not published/i);
   assert.match(worldsHtml, /compare/i);
   assert.match(worldsHtml, /@media \(max-width: 699px\)/);
   assert.match(shellJs, /function decodeWorldHash\(/);
   assert.match(shellJs, /function worldFromPath\(/);
+  assert.match(shellJs, /function worldLensFromPath\(/);
   assert.match(shellJs, /addEventListener\("popstate"/);
   assert.match(surfaceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
   assert.match(platformHtml, /Platform/);
