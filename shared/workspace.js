@@ -4,6 +4,8 @@ const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const MAX_NAME = 120;
 const MAX_PATH = 1024;
+const BROWSER_DATABASE = "idol-browser-workspaces-v1";
+const BROWSER_STORE = "workspace";
 
 const encoder = new TextEncoder();
 
@@ -232,6 +234,107 @@ export class MemoryWorkspaceStore {
 
   async delete(workspaceId) {
     return this.snapshots.delete(String(workspaceId));
+  }
+}
+
+function requestResult(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("IndexedDB request failed"));
+  });
+}
+
+function transactionResult(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error("IndexedDB transaction failed"));
+    transaction.onabort = () => reject(transaction.error || new Error("IndexedDB transaction aborted"));
+  });
+}
+
+function openBrowserDatabase(indexedDB, databaseName) {
+  return new Promise((resolve, reject) => {
+    const opening = indexedDB.open(databaseName, 1);
+    opening.onupgradeneeded = () => {
+      const database = opening.result;
+      if (!database.objectStoreNames.contains(BROWSER_STORE)) {
+        database.createObjectStore(BROWSER_STORE, { keyPath: "id" });
+      }
+    };
+    opening.onsuccess = () => resolve(opening.result);
+    opening.onerror = () => reject(opening.error || new Error("IndexedDB open failed"));
+    opening.onblocked = () => reject(new Error("IndexedDB open blocked"));
+  });
+}
+
+export class BrowserWorkspaceStore {
+  constructor(database) {
+    if (!database?.transaction) throw new Error("invalid IndexedDB database");
+    this.database = database;
+  }
+
+  async operate(mode, operation) {
+    const transaction = this.database.transaction(BROWSER_STORE, mode);
+    const done = transactionResult(transaction);
+    const request = operation(transaction.objectStore(BROWSER_STORE));
+    const result = await requestResult(request);
+    await done;
+    return result;
+  }
+
+  async save(workspace) {
+    const snapshot = workspaceSnapshot(workspace);
+    await this.operate("readwrite", (store) => store.put(snapshot));
+    return restoreWorkspace(snapshot);
+  }
+
+  async load(workspaceId) {
+    const snapshot = await this.operate("readonly", (store) => store.get(String(workspaceId)));
+    return snapshot === undefined || snapshot === null ? null : restoreWorkspace(snapshot);
+  }
+
+  async list() {
+    const snapshots = await this.operate("readonly", (store) => store.getAll());
+    if (!Array.isArray(snapshots)) throw new Error("IndexedDB workspace list is invalid");
+    return snapshots
+      .map(restoreWorkspace)
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at) || left.id.localeCompare(right.id));
+  }
+
+  async delete(workspaceId) {
+    await this.operate("readwrite", (store) => store.delete(String(workspaceId)));
+    return true;
+  }
+
+  close() {
+    this.database.close?.();
+  }
+}
+
+export async function createBrowserWorkspaceStore({
+  indexedDB = globalThis.indexedDB,
+  databaseName = BROWSER_DATABASE,
+} = {}) {
+  if (!indexedDB?.open) {
+    return {
+      status: "storage-unavailable",
+      store: null,
+      reason: "IndexedDB is not available",
+    };
+  }
+  try {
+    const database = await openBrowserDatabase(indexedDB, String(databaseName || BROWSER_DATABASE));
+    return {
+      status: "available",
+      store: new BrowserWorkspaceStore(database),
+      reason: null,
+    };
+  } catch (error) {
+    return {
+      status: "storage-unavailable",
+      store: null,
+      reason: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
