@@ -13,6 +13,8 @@ const ID = "[A-Za-z0-9_-]{12,}";
 const OBSERVATION_PATH = new RegExp(`^observations/(${ID})$`);
 const SCAFFOLD_CREATE_PATH = new RegExp(`^observations/(${ID})/scaffolds$`);
 const SCAFFOLD_PATH = new RegExp(`^scaffolds/(${ID})$`);
+const TRANSFORMATION_CREATE_PATH = new RegExp(`^scaffolds/(${ID})/transformations$`);
+const TRANSFORMATION_PATH = new RegExp(`^transformations/(${ID})$`);
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const LOCAL_STORE = createMemoryRepositoryStore();
 
@@ -153,6 +155,7 @@ async function services(request, env, dependencies) {
 async function action(request, path, identity, repository, dependencies) {
   if (request.method === "GET" && path === "observations") return json({ observations: await repository.listObservations(identity) });
   if (request.method === "GET" && path === "scaffolds") return json({ scaffolds: await repository.listScaffolds(identity) });
+  if (request.method === "GET" && path === "transformations") return json({ transformations: await repository.listTransformations(identity) });
   if (request.method === "POST" && path === "observe") {
     const input = await readJson(request);
     const draft = await observePublicRepository(input, {
@@ -168,6 +171,12 @@ async function action(request, path, identity, repository, dependencies) {
   if (request.method === "POST" && scaffoldCreate) return json(await repository.createScaffold(identity, scaffoldCreate[1], await readJson(request)), 201);
   const scaffold = SCAFFOLD_PATH.exec(path);
   if (request.method === "GET" && scaffold) return json(await repository.getScaffold(identity, scaffold[1]));
+  const transformationCreate = TRANSFORMATION_CREATE_PATH.exec(path);
+  if (request.method === "POST" && transformationCreate) {
+    return json(await repository.createTransformation(identity, transformationCreate[1], await readJson(request)), 201);
+  }
+  const transformation = TRANSFORMATION_PATH.exec(path);
+  if (request.method === "GET" && transformation) return json(await repository.getTransformation(identity, transformation[1]));
   return json({ error: "REPOSITORY_ROUTE_NOT_FOUND" }, 404);
 }
 
@@ -188,6 +197,7 @@ async function browserTransport(request, env, path, info, dependencies) {
 function requiredScope(method, path) {
   if (method === "POST" && path === "observe") return "repository:observe";
   if (method === "POST" && SCAFFOLD_CREATE_PATH.test(path)) return "repository:scaffold";
+  if (method === "POST" && TRANSFORMATION_CREATE_PATH.test(path)) return "repository:transform";
   return "repository:read";
 }
 
@@ -214,7 +224,11 @@ export async function handleRepositoryTransport(request, env, pathname, info, de
       visibility: "public-only",
       mutation: false,
       source_transfer: "provider tree metadata only",
-      authority: "repository provenance only; no semantic identity, world grant, equivalence, or repository write",
+      transformation: "derived-world-preview-only",
+      execution: false,
+      repository_write: false,
+      world_publication: false,
+      authority: "repository provenance only; no semantic identity, world grant, equivalence, execution, or repository write",
     });
   }
   if (pathname.startsWith(BROWSER_PREFIX)) return browserTransport(request, env, pathname.slice(BROWSER_PREFIX.length), info, dependencies);
