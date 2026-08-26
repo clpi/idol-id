@@ -147,9 +147,11 @@ test("D1 observation lists return bounded summaries without selecting full docum
   }]);
 });
 
-test("repository migration stores every bounded observation summary field", async () => {
-  const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
+test("follow-up migration stores and backfills every bounded observation summary field", async () => {
+  const migration = await readFile("migrations/0003_repository_observation_summary.sql", "utf8");
   for (const column of ["coordinate", "requested_ref", "default_branch", "file_count", "truncated"]) {
-    assert.match(migration, new RegExp(`\\b${column}\\b`), column);
+    assert.match(migration, new RegExp(`ALTER TABLE platform_repository_observation\\s+ADD COLUMN ${column}\\b`), column);
   }
+  assert.match(migration, /UPDATE platform_repository_observation/);
+  assert.match(migration, /json_extract\(document, '\$\.inventory\.file_count'\)/);
 });
