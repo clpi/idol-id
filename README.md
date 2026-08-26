@@ -7,12 +7,12 @@
 | site | `idol.id` | landing, installation and project status |
 | docs | `docs.idol.id` | law, graph, world and platform references |
 | registry | `lib.idol.id` | published packages/worlds, source, graph and provenance |
-| api | `api.idol.id` | compiler/registry HTTP console |
+| api | `api.idol.id` | compiler/registry HTTP console and public world transport projections |
 | graph | `graph.idol.id`, `r8a.idol.id`, `r8b.idol.id`, `r16.idol.id` | explorer, lowering and architecture projections |
-| worlds | `worlds.idol.id` | public World Atlas and exact registry-manifest comparison |
+| worlds | `worlds.idol.id` | public World Atlas, foreign candidate boundaries and exact manifest comparison |
 | platform | `platform.idol.id` | honest public frontier for the authenticated platform programs |
 
-A push to `main` runs tests, builds every surface once, validates the Worker bundle, snapshots the public world projection, and deploys the same immutable version across all ten hosts.
+A push to `main` runs tests, builds every surface once, validates the Worker bundle, snapshots the public world projection, builds the authority-pinned foreign projection, and deploys the same immutable version across all ten hosts.
 
 ## authority
 
@@ -21,7 +21,7 @@ The authority manifest pins:
 - language and semantic authority: `clpi/idol@f33bb3773484e7d954a2975211e683dfa89edab5`
 - native realization/evidence: `clpi/idol-native@d422ef33c88811b99523ef0cc19a03bd158dd3c0`
 
-Source spelling, package coordinates and hostnames are provenance. They do not mint relation, application, value, world, demand or realization identity.
+Source spelling, package coordinates, foreign provenance slugs and hostnames are provenance. They do not mint relation, application, value, world, demand or realization identity.
 
 ## architecture
 
@@ -31,21 +31,21 @@ browser request
     -> host selects one static face
     -> existing Route hosts preserve the Cloudflare Tunnel compiler origin
     -> worlds/platform Custom Domains are Worker-origin static surfaces
-    -> exact deployment/authority/runtime/world snapshots remain inspectable
+    -> exact deployment/authority/runtime/world/foreign projections remain inspectable
 ```
 
 Current static faces live in:
 
 ```text
 apps/{site,docs,lib,api,graph,worlds,platform}/index.html
-shared/{theme.css,surface.css,shell.js,idol.js,graph.js,worlds.js,web.js,wasm.js}
-content/docs/*.md
+shared/{theme.css,surface.css,shell.js,idol.js,graph.js,worlds.js,foreign.js,web.js,wasm.js}
+content/{docs/*.md,foreign.json}
 runtime/{authority.json,worlds.json}
 ```
 
 The legacy Python server remains the dynamic compiler and R2-registry origin for the established Route-backed hosts. `/api/*`, `/health`, `/info`, write operations and dynamic fallbacks continue to that Tunnel origin.
 
-`worlds.idol.id` and `platform.idol.id` are Cloudflare Worker Custom Domains. They deliberately have no same-host dynamic origin. The Worker refuses dynamic fallthrough there instead of recursively fetching itself.
+`worlds.idol.id` and `platform.idol.id` are Cloudflare Worker Custom Domains. They deliberately have no same-host dynamic origin. The Worker refuses generic dynamic fallthrough there instead of recursively fetching itself. Explicit `/v1/world/*` endpoints are implemented inside the Worker and consume immutable deployment projections only.
 
 ## World Atlas boundary
 
@@ -60,7 +60,53 @@ provenance · tags · extent · mirror · publication time
 
 Its `provided`, `published` and `foreign` labels are presentation qualifications only. The browser does not infer semantic compatibility, composition, injection witnesses, authority grants or equivalence. Those appear only when an authoritative compiler or registry producer publishes them.
 
-`platform.idol.id` is currently a read-only capability frontier. Account sign-in, API-token creation, provider connection, repository mutation, browser-IDE writes and shell execution are explicitly marked **not yet enabled** rather than simulated.
+## Foreign candidates and integration projections
+
+`content/foreign.json` is a version-controlled **product projection**, not a second world registry or compiler authority. The build validates it and emits `/runtime/foreign.json` with the exact language/native authority pins.
+
+The first public projection includes provenance-qualified candidates for:
+
+```text
+C17
+Wasm / WASI
+browser web platform
+Python
+Rust
+Go
+```
+
+Every candidate publishes:
+
+```text
+semantic_id = null
+identity_status = not-published
+origin and version provenance
+uncertainty and missing facts
+selected target projections
+ABI / ownership / failure / threading / effect / world obligations
+required evidence
+exact refusal
+```
+
+All initial integration projections are `not-admitted`. They have no artifact and therefore emit no copy/install command. The Atlas exposes these gaps directly rather than presenting design intent as compatibility or availability.
+
+The public plan endpoint accepts `repository`, `schema`, `api`, and `binary` locators:
+
+```text
+POST /v1/world/import-plan
+```
+
+It returns a deterministic `plan-only` document containing stages, required grants, missing facts, and refusal. It performs **no** source fetch, network probe, checkout, upload, binary execution, transformation, semantic identity publication, world formation, or repository mutation.
+
+Public read endpoints:
+
+```text
+GET  /v1/world/foreign
+GET  /v1/world/:slug/integration
+POST /v1/world/import-plan
+```
+
+`platform.idol.id` remains a read-only capability frontier. Account sign-in, API-token creation, provider connection, repository mutation, browser-IDE writes and shell execution are explicitly marked **not yet enabled** rather than simulated.
 
 ## idol web runtime
 
@@ -72,7 +118,7 @@ Its `provided`, `published` and `foreign` labels are presentation qualifications
 IDOL_WASM_PATH=/path/to/idol-web.wasm npm run build
 ```
 
-The build publishes `/runtime/manifest.json`, including authority commit, artifact hash, bytes and whether Wasm is actually present. No React, Wasmtime or other performance claim is valid unless that manifest proves the intended artifact was deployed and a reproducible benchmark records startup, payload, update work, memory, runtime and compile cost.
+The build publishes `/runtime/manifest.json`, including authority commit, artifact hash, bytes, the world snapshot path, the foreign projection path, and whether Wasm is actually present. No React, Wasmtime or other performance claim is valid unless that manifest proves the intended artifact was deployed and a reproducible benchmark records startup, payload, update work, memory, runtime and compile cost.
 
 ## local verification
 
@@ -121,6 +167,7 @@ Every deployed version exposes:
 - `/__idol/manifest`
 - `/runtime/manifest.json`
 - `/runtime/worlds.json`
+- `/runtime/foreign.json`
 
 On Route-backed hosts, `/health` and `/info` deliberately remain origin checks so compiler monitoring cannot become a false edge-only green. Originless hosts use `/__idol/health` for their edge liveness.
 
