@@ -10,6 +10,7 @@ export const PLATFORM_SCOPES = Object.freeze([
   "repository:observe",
   "repository:read",
   "repository:scaffold",
+  "repository:transform",
   "world:read",
 ]);
 

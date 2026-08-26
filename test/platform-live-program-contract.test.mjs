@@ -113,6 +113,12 @@ function fixture() {
     "Connect Git providers, discover project semantics, generate reviewable Idol adoption plans and PR output.",
     ["Git providers", "project inventory", "PR output"],
   );
+  const transformation = program(
+    "N",
+    "Projection & migration",
+    "Apply projections and metaprograms across witnessed boundaries; migrate selected components with retained evidence.",
+    ["derived worlds", "semantic diff", "review evidence"],
+  );
 
   const elements = new Map([["signed-in", signedIn]]);
   const document = {
@@ -124,13 +130,13 @@ function fixture() {
       return null;
     },
     querySelectorAll(selector) {
-      if (selector === ".program") return [ide.root, repository.root];
+      if (selector === ".program") return [ide.root, repository.root, transformation.root];
       return [];
     },
     addEventListener() {},
   };
 
-  return { document, signedIn, scopeGrid, ide, repository };
+  return { document, signedIn, scopeGrid, ide, repository, transformation };
 }
 
 async function execute(path, fixtureState) {
@@ -148,7 +154,7 @@ async function execute(path, fixtureState) {
   vm.runInNewContext(source, context, { filename: path });
 }
 
-test("Platform adapters publish Programs L and M as live with exact deployed boundaries", async () => {
+test("Platform adapters publish Programs L and M as live and Program N as preview live", async () => {
   const state = fixture();
   await execute("shared/platform-ide-entry.js", state);
   await execute("shared/platform-repository-entry.js", state);
@@ -160,6 +166,13 @@ test("Platform adapters publish Programs L and M as live with exact deployed bou
   assert.doesNotMatch(state.repository.paragraph.textContent, /Connect Git providers|PR output/i);
   assert.match(state.repository.paragraph.textContent, /exact public .* revision/i);
   assert.match(state.repository.paragraph.textContent, /review-only/i);
+
+  assert.equal(state.transformation.status.textContent, "preview live");
+  assert.equal(state.transformation.status.classList.contains("live"), true);
+  assert.equal(state.transformation.heading.textContent, "Derived-world transformation previews");
+  assert.match(state.transformation.paragraph.textContent, /isolated derived-world preview/i);
+  assert.match(state.transformation.paragraph.textContent, /Nothing executes/i);
+  assert.match(state.transformation.paragraph.textContent, /publishes a world/i);
 });
 
 test("repository token controls use the singular scope name consumed by submission", async () => {
@@ -176,15 +189,16 @@ test("repository token controls use the singular scope name consumed by submissi
       "repository:observe",
       "repository:read",
       "repository:scaffold",
+      "repository:transform",
       "world:read",
     ],
   );
   assert.equal(state.scopeGrid.inputs.every((input) => input.name === "scope"), true);
 
-  const selected = state.scopeGrid.inputs.find((input) => input.value === "repository:read");
+  const selected = state.scopeGrid.inputs.find((input) => input.value === "repository:transform");
   selected.checked = true;
   const submitted = state.scopeGrid
     .querySelectorAll('input[name="scope"]:checked')
     .map((input) => input.value);
-  assert.deepEqual(submitted, ["repository:read"]);
+  assert.deepEqual(submitted, ["repository:transform"]);
 });

@@ -1,4 +1,5 @@
 import { repositoryObservationSummary, repositoryScaffoldSummary } from "./repository-core.js";
+import { repositoryTransformationSummary } from "./repository-transform.js";
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
@@ -12,6 +13,7 @@ function newestFirst(left, right) {
 export function createMemoryRepositoryStore() {
   const observations = new Map();
   const scaffolds = new Map();
+  const transformations = new Map();
   const audits = [];
   let sequence = 0;
   return Object.freeze({
@@ -61,6 +63,44 @@ export function createMemoryRepositoryStore() {
     },
     async getScaffold(subject, id) {
       const record = scaffolds.get(id);
+      return record?.subject === subject ? record.document : null;
+    },
+    async commitTransformation(record, event) {
+      const document = Object.freeze({
+        ...clone(record.document),
+        id: record.id,
+        observation_id: record.observation_id,
+        scaffold_id: record.scaffold_id,
+        created_at: record.created_at,
+      });
+      const audit = Object.freeze(clone(event));
+      transformations.set(record.id, {
+        subject: record.subject,
+        document,
+        status: record.status,
+        selected_file_count: record.selected_file_count,
+        evidence_status: record.evidence_status,
+        refusal_code: record.refusal_code,
+        sequence: ++sequence,
+      });
+      audits.push(audit);
+      return document;
+    },
+    async listTransformations(subject, limit = 50) {
+      return [...transformations.values()]
+        .filter((record) => record.subject === subject)
+        .sort(newestFirst)
+        .slice(0, limit)
+        .map((record) => repositoryTransformationSummary({
+          ...record.document,
+          status: record.status,
+          selected_file_count: record.selected_file_count,
+          evidence_status: record.evidence_status,
+          refusal_code: record.refusal_code,
+        }));
+    },
+    async getTransformation(subject, id) {
+      const record = transformations.get(id);
       return record?.subject === subject ? record.document : null;
     },
     async listAudit(subject, limit = 100) {

@@ -1,4 +1,5 @@
 import { repositoryObservationSummary, repositoryScaffoldSummary } from "./repository-core.js";
+import { repositoryTransformationSummary } from "./repository-transform.js";
 
 function rows(result) {
   return Array.isArray(result?.results) ? result.results : [];
@@ -16,6 +17,17 @@ function decodeObservation(row) {
 function decodeScaffold(row) {
   if (!row) return null;
   return Object.freeze({ ...decodeJson(row.document, {}), id: row.id, observation_id: row.observation_id, created_at: row.created_at });
+}
+
+function decodeTransformation(row) {
+  if (!row) return null;
+  return Object.freeze({
+    ...decodeJson(row.document, {}),
+    id: row.id,
+    observation_id: row.observation_id,
+    scaffold_id: row.scaffold_id,
+    created_at: row.created_at,
+  });
 }
 
 function auditStatement(database, event) {
@@ -128,6 +140,53 @@ export function createD1RepositoryStore(database) {
     async getScaffold(subject, id) {
       return decodeScaffold(await database.prepare(
         "SELECT id, observation_id, document, created_at FROM platform_repository_scaffold WHERE subject = ?1 AND id = ?2",
+      ).bind(subject, id).first());
+    },
+
+    async commitTransformation(record, event) {
+      const insert = database.prepare(`
+        INSERT INTO platform_repository_transformation(
+          id, subject, observation_id, scaffold_id, status,
+          selected_file_count, evidence_status, refusal_code,
+          document, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+      `).bind(
+        record.id,
+        record.subject,
+        record.observation_id,
+        record.scaffold_id,
+        record.status,
+        record.selected_file_count,
+        record.evidence_status,
+        record.refusal_code,
+        JSON.stringify(record.document),
+        record.created_at,
+      );
+      await atomicBatch(database, [insert, auditStatement(database, event)]);
+      return decodeTransformation({
+        id: record.id,
+        observation_id: record.observation_id,
+        scaffold_id: record.scaffold_id,
+        document: JSON.stringify(record.document),
+        created_at: record.created_at,
+      });
+    },
+
+    async listTransformations(subject, limit = 50) {
+      const result = await database.prepare(`
+        SELECT id, observation_id, scaffold_id, status,
+               selected_file_count, evidence_status, refusal_code, created_at
+        FROM platform_repository_transformation
+        WHERE subject = ?1
+        ORDER BY created_at DESC, rowid DESC
+        LIMIT ?2
+      `).bind(subject, limit).all();
+      return rows(result).map(repositoryTransformationSummary);
+    },
+
+    async getTransformation(subject, id) {
+      return decodeTransformation(await database.prepare(
+        "SELECT id, observation_id, scaffold_id, document, created_at FROM platform_repository_transformation WHERE subject = ?1 AND id = ?2",
       ).bind(subject, id).first());
     },
   });

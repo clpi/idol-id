@@ -1,4 +1,8 @@
-import { createRepositoryScaffold, RepositoryError } from "./repository.js";
+import {
+  createRepositoryScaffold,
+  createRepositoryTransformation,
+  RepositoryError,
+} from "./repository.js";
 
 function instant(value) {
   const date = value instanceof Date ? value : new Date(value);
@@ -135,5 +139,84 @@ export function createRepositoryService({
     return scaffold;
   }
 
-  return Object.freeze({ saveObservation, listObservations, getObservation, createScaffold, listScaffolds, getScaffold });
+  async function createTransformation(rawIdentity, scaffoldId, input) {
+    const identity = identityOf(rawIdentity);
+    if (typeof store.commitTransformation !== "function") {
+      throw new RepositoryError("TRANSFORMATION_STORAGE_UNAVAILABLE", "transformation storage unavailable", 503);
+    }
+    const scaffold = await getScaffold(identity, scaffoldId);
+    const observation = await getObservation(identity, scaffold.observation_id);
+    const createdAt = nowIso();
+    const draft = await createRepositoryTransformation(observation, scaffold, input, { createdAt: () => createdAt });
+    const id = randomIdentifier("trn", randomBytes);
+    const selectedFileCount = draft.selected_files?.length || 0;
+    const evidenceStatus = draft.evidence?.status || "unexecuted";
+    const refusalCode = draft.refusal?.code || null;
+    const document = Object.freeze({
+      ...draft,
+      id,
+      observation_id: observation.id,
+      scaffold_id: scaffold.id,
+      created_at: draft.created_at || createdAt,
+    });
+    const record = Object.freeze({
+      id,
+      subject: identity.subject,
+      observation_id: observation.id,
+      scaffold_id: scaffold.id,
+      status: draft.status,
+      selected_file_count: selectedFileCount,
+      evidence_status: evidenceStatus,
+      refusal_code: refusalCode,
+      document,
+      created_at: document.created_at,
+    });
+    const event = auditEvent(
+      identity,
+      draft.status === "preview"
+        ? "repository.transformation.previewed"
+        : "repository.transformation.refused",
+      id,
+      {
+        observation_id: observation.id,
+        scaffold_id: scaffold.id,
+        status: draft.status,
+        selected_file_count: selectedFileCount,
+        patch_sha256: draft.patch_sha256 || null,
+        evidence: draft.evidence?.requested || [],
+        evidence_status: evidenceStatus,
+        refusal: refusalCode,
+      },
+      document.created_at,
+    );
+    return store.commitTransformation(record, event);
+  }
+
+  async function listTransformations(rawIdentity, limit = 50) {
+    const identity = identityOf(rawIdentity);
+    if (typeof store.listTransformations !== "function") return [];
+    return store.listTransformations(identity.subject, Math.max(1, Math.min(50, Number(limit) || 50)));
+  }
+
+  async function getTransformation(rawIdentity, id) {
+    const identity = identityOf(rawIdentity);
+    if (typeof store.getTransformation !== "function") {
+      throw new RepositoryError("TRANSFORMATION_STORAGE_UNAVAILABLE", "transformation storage unavailable", 503);
+    }
+    const transformation = await store.getTransformation(identity.subject, String(id));
+    if (!transformation) throw new RepositoryError("REPOSITORY_TRANSFORMATION_NOT_FOUND", "repository transformation not found", 404);
+    return transformation;
+  }
+
+  return Object.freeze({
+    saveObservation,
+    listObservations,
+    getObservation,
+    createScaffold,
+    listScaffolds,
+    getScaffold,
+    createTransformation,
+    listTransformations,
+    getTransformation,
+  });
 }
