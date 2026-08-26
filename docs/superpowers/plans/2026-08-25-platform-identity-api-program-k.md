@@ -11,8 +11,8 @@ Ship the first production identity/API-access slice for `platform.idol.id` witho
 
 The slice uses:
 
-- Cloudflare Access as the browser identity ingress;
-- explicit JWT verification in the Worker;
+- Cloudflare Access as browser identity ingress;
+- explicit Access JWT verification in the Worker;
 - D1 for profiles, API-token digests, and append-only audit events;
 - bearer API tokens for non-browser clients;
 - a public Platform shell that becomes an authenticated account/token console only after Access admits the request;
@@ -45,7 +45,7 @@ API token
     -> does not grant filesystem/network/process/device/world authority
 ```
 
-The Worker validates Access application JWT signature, issuer, audience, expiry, and email-domain policy before using claims. It never trusts an unverified `Cf-Access-*` header.
+The Worker validates Access application JWT signature, issuer, audience, expiry, not-before, subject, email, and email-domain policy before using claims. It never trusts an unverified `Cf-Access-*` identity header.
 
 ## API surface
 
@@ -55,25 +55,26 @@ Public:
 GET /v1/platform/status
 ```
 
-Access-session protected:
+Access-session protected on `platform.idol.id`:
 
 ```text
-GET   /v1/platform/session
-GET   /v1/platform/profile
-PATCH /v1/platform/profile
-GET   /v1/platform/tokens
-POST  /v1/platform/tokens
-POST  /v1/platform/tokens/:id/revoke
-GET   /v1/platform/audit
+GET   /v1/platform/browser/login
+GET   /v1/platform/browser/session
+GET   /v1/platform/browser/profile
+PATCH /v1/platform/browser/profile
+GET   /v1/platform/browser/tokens
+POST  /v1/platform/browser/tokens
+POST  /v1/platform/browser/tokens/:id/revoke
+GET   /v1/platform/browser/audit
 ```
 
 API-token protected:
 
 ```text
-GET /v1/platform/whoami
+GET /v1/platform/api/whoami
 ```
 
-A token may carry only allowlisted transport scopes. The first slice issues:
+A token may carry only allowlisted transport scopes:
 
 ```text
 profile:read
@@ -82,7 +83,7 @@ registry:read
 analysis:read
 ```
 
-Only `profile:read` is consumed by Program K. Other scopes reserve stable transport vocabulary for later programs and confer no capability until a producer explicitly consumes them.
+Only `profile:read` is consumed by Program K. Other scopes reserve stable transport vocabulary and confer no capability until a producer explicitly consumes them.
 
 ## Storage
 
@@ -95,6 +96,16 @@ D1 migration `migrations/0001_platform_identity.sql` creates:
 
 Plaintext API tokens are returned exactly once and never stored.
 
+Audit event vocabulary:
+
+```text
+profile.created
+profile.updated
+token.created
+token.used
+token.revoked
+```
+
 ## Browser security
 
 Browser-authenticated mutation requires:
@@ -102,7 +113,7 @@ Browser-authenticated mutation requires:
 - a verified Access JWT;
 - exact `Origin: https://platform.idol.id`;
 - `X-Idol-Request: browser`;
-- JSON content type;
+- JSON content type when a body is parsed;
 - bounded request bodies.
 
 Bearer-token requests do not use browser cookies and therefore do not use the browser mutation path.
@@ -114,7 +125,7 @@ Bearer-token requests do not use browser cookies and therefore do not use the br
 1. lists or creates D1 database `idol-platform` in western North America;
 2. ensures a Zero Trust organization exists;
 3. ensures a one-time-PIN identity provider exists;
-4. ensures a self-hosted Access application protects `platform.idol.id/v1/platform/*`;
+4. ensures a self-hosted Access application protects `platform.idol.id/v1/platform/browser/*`;
 5. ensures an Allow policy for the bootstrap email domain;
 6. generates `.wrangler.production.jsonc` with:
    - `PLATFORM_DB` D1 binding;
@@ -127,36 +138,28 @@ The workflow applies D1 migrations, then deploys with the generated config. Prov
 
 ## Test sequence
 
-1. Commit RED tests for:
-   - JWT validation and claim rejection;
-   - bearer-token hashing and scope parsing;
-   - session/profile/token/audit routes;
-   - plaintext token non-persistence;
-   - revocation and expiry;
-   - CSRF/origin refusal;
-   - missing binding and missing Access configuration;
-   - build packaging and platform UI controls;
-   - provisioning document generation from mocked Cloudflare API responses.
+1. Commit RED tests for JWT validation, token hashing/scopes, service behavior, routes, CSRF, bindings, provisioning, build packaging, and responsive UI.
 2. Observe RED in Actions.
-3. Implement pure auth/token/storage modules and a fake D1 adapter for tests.
+3. Implement pure auth/token/storage modules and fake repository coverage.
 4. Implement Worker transport.
 5. Add D1 migration and production provisioning.
 6. Implement responsive authenticated Platform console.
 7. Run full Node suite, immutable build, and Wrangler dry run.
-8. Request review and fix all critical/important findings.
-9. Merge only after current-main reconciliation and production-resource dry provisioning.
-10. Verify live Access challenge, authenticated session, token create/use/revoke, audit entry, and deployment version.
+8. Request review and fix every critical/important finding.
+9. Reconcile current `main` without discarding concurrent work.
+10. Merge only after fresh merge-candidate verification.
+11. Verify live Access challenge, status, D1 migration, deployment version, and—where interactive OTP permits—session/token/audit behavior.
 
 ## Acceptance criteria
 
 1. Public Platform remains readable without login.
-2. Private platform APIs are protected by Access and independently verify JWTs.
-3. Missing/invalid JWTs fail with exact 401/403 outcomes.
+2. Private browser APIs are protected by Access and independently verify JWTs.
+3. Missing/invalid JWTs fail with exact 401/403 outcomes behind the Access boundary.
 4. Profiles derive only from verified identity claims.
 5. API tokens are random, prefix-identifiable, SHA-256-digested, scoped, expirable, revocable, and returned plaintext once.
 6. Revoked/expired tokens fail closed.
 7. Browser mutations require same-origin/custom-header CSRF evidence.
-8. Every token/profile mutation appends an audit event.
+8. Profile changes and token create/use/revoke append audit events.
 9. D1 and Access resources are provisioned idempotently from protected deployment credentials.
 10. No credential becomes an Idol semantic/world authority.
 11. UI works at 320px, touch, keyboard, and reduced motion.
