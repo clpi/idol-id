@@ -15,6 +15,7 @@ class FakeElement {
     this.style = { cssText: "" };
     this.lookup = new Map();
     this.inputs = [];
+    this.checked = false;
     this.classList = {
       add: (...names) => {
         const current = new Set(this.className.split(/\s+/).filter(Boolean));
@@ -52,7 +53,10 @@ class FakeElement {
   }
 
   querySelectorAll(selector) {
-    if (selector === 'input[name="scopes"]') return this.inputs;
+    if (selector === 'input[name="scope"]') return this.inputs.filter((input) => input.name === "scope");
+    if (selector === 'input[name="scope"]:checked') {
+      return this.inputs.filter((input) => input.name === "scope" && input.checked);
+    }
     return [];
   }
 }
@@ -92,7 +96,7 @@ function fixture() {
   const scopeGrid = new FakeElement("div");
   for (const value of ["profile:read", "registry:read", "world:read", "analysis:read"]) {
     const input = new FakeElement("input");
-    input.name = "scopes";
+    input.name = "scope";
     input.value = value;
     scopeGrid.inputs.push(input);
   }
@@ -144,7 +148,7 @@ async function execute(path, fixtureState) {
   vm.runInNewContext(source, context, { filename: path });
 }
 
-test("Platform adapters publish Programs L and M as live and expose repository token scopes", async () => {
+test("Platform adapters publish Programs L and M as live with exact deployed boundaries", async () => {
   const state = fixture();
   await execute("shared/platform-ide-entry.js", state);
   await execute("shared/platform-repository-entry.js", state);
@@ -156,6 +160,11 @@ test("Platform adapters publish Programs L and M as live and expose repository t
   assert.doesNotMatch(state.repository.paragraph.textContent, /Connect Git providers|PR output/i);
   assert.match(state.repository.paragraph.textContent, /exact public .* revision/i);
   assert.match(state.repository.paragraph.textContent, /review-only/i);
+});
+
+test("repository token controls use the singular scope name consumed by submission", async () => {
+  const state = fixture();
+  await execute("shared/platform-repository-entry.js", state);
 
   const scopes = state.scopeGrid.inputs.map((input) => input.value).sort();
   assert.deepEqual(
@@ -170,4 +179,12 @@ test("Platform adapters publish Programs L and M as live and expose repository t
       "world:read",
     ],
   );
+  assert.equal(state.scopeGrid.inputs.every((input) => input.name === "scope"), true);
+
+  const selected = state.scopeGrid.inputs.find((input) => input.value === "repository:read");
+  selected.checked = true;
+  const submitted = state.scopeGrid
+    .querySelectorAll('input[name="scope"]:checked')
+    .map((input) => input.value);
+  assert.deepEqual(submitted, ["repository:read"]);
 });
