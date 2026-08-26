@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Repository authority and transport security
+        run: node --test test/repository-platform-errors.test.mjs test/repository-worker.test.mjs
       - name: Test and build every surface
         run: npm run check
       - name: Validate Worker bundle
