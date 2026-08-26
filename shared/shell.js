@@ -5,10 +5,12 @@
 "use strict";
 
 const APPS = [
-  { id: "graph", label: "explorer", href: "https://graph.idol.id/", title: "Explorer" },
-  { id: "lib",   label: "lib",      href: "https://lib.idol.id/",   title: "World Registry" },
-  { id: "docs",  label: "docs",     href: "https://docs.idol.id/",  title: "Docs" },
-  { id: "api",   label: "api",      href: "https://api.idol.id/",   title: "API" },
+  { id: "graph",    label: "explorer", href: "https://graph.idol.id/",    title: "Explorer" },
+  { id: "worlds",   label: "worlds",   href: "https://worlds.idol.id/",   title: "World Atlas" },
+  { id: "lib",      label: "lib",      href: "https://lib.idol.id/",      title: "Registry" },
+  { id: "docs",     label: "docs",     href: "https://docs.idol.id/",     title: "Docs" },
+  { id: "api",      label: "api",      href: "https://api.idol.id/",      title: "API" },
+  { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Platform" },
 ];
 
 function boot(app, opts) {
@@ -20,14 +22,13 @@ function boot(app, opts) {
     document.querySelector(".app").prepend(b); return b;
   })();
 
-  const here = APPS.find((a) => a.id === app);
   bar.innerHTML = `
     <div class="brand"><span class="dot"></span><a href="https://idol.id/" style="border:0;color:inherit">IDOL</a></div>
     <div class="crumbs" id="crumbs"></div>
     <div class="spacer"></div>
-    <div class="nav">
-      ${APPS.map((a) => `<a href="${a.href}" class="${a.id === app ? "here" : ""}">${a.label}</a>`).join("")}
-    </div>`;
+    <nav class="nav" aria-label="Idol surfaces">
+      ${APPS.map((a) => `<a href="${a.href}" class="${a.id === app ? "here" : ""}" title="${a.title}">${a.label}</a>`).join("")}
+    </nav>`;
 
   const sb = document.querySelector(".statusbar");
   if (sb) {
@@ -44,9 +45,11 @@ function boot(app, opts) {
     live.className = "live"; live.textContent = "●";
     sb.appendChild(live);
     const inst = document.createElement("span");
-    inst.textContent = (window.IDOL && window.IDOL.instance) || "";
+    inst.className = "identity";
+    inst.textContent = (window.IDOL && (window.IDOL.instance || window.IDOL.surface)) || "";
     sb.appendChild(inst);
-    fetch("/health").then((r) => r.json()).then((h) => {
+    const health = window.IDOL && window.IDOL.origin === false ? "/__idol/health" : "/health";
+    fetch(health).then((r) => r.json()).then((h) => {
       live.textContent = h.status === "healthy" ? "● live" : "○";
       live.style.color = h.status === "healthy" ? "var(--signal)" : "var(--danger)";
     }).catch(() => { live.textContent = "○"; live.style.color = "var(--danger)"; });
@@ -71,6 +74,6 @@ function boot(app, opts) {
   return global.IdolShell;
 }
 
-global.Shell = { boot };
+global.Shell = { boot, apps: APPS };
 
 })(window);
