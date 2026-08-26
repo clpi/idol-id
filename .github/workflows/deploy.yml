@@ -12,6 +12,8 @@ permissions:
 
 env:
   CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  IDOL_ACCESS_EMAIL_DOMAIN: pecunies.com
+  IDOL_ACCESS_TEAM_NAME: idol-clpi
 
 concurrency:
   group: idol-id-production
@@ -40,21 +42,30 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Snapshot the public world projection
-        run: node scripts/snapshot-worlds.mjs
-      - name: Build one immutable deployment
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-        run: npm run build
       - name: Require Cloudflare deployment token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo 'missing CLOUDFLARE_API_TOKEN'; exit 2; }
+      - name: Snapshot the public world projection
+        run: node scripts/snapshot-worlds.mjs
+      - name: Provision D1 and Access identity boundary
+        id: platform
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/provision-platform.mjs
+      - name: Apply platform identity migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4.125.0 d1 migrations apply PLATFORM_DB --remote --config .wrangler.production.jsonc
+      - name: Build one immutable deployment
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: npm run build
       - name: Deploy root and every subdomain atomically
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx --yes wrangler@4.125.0 deploy --var "IDOL_COMMIT:${GITHUB_SHA}" --var "IDOL_AUTHORITY:f33bb3773484e7d954a2975211e683dfa89edab5"
+        run: npx --yes wrangler@4.125.0 deploy --config .wrangler.production.jsonc --var "IDOL_COMMIT:${GITHUB_SHA}" --var "IDOL_AUTHORITY:f33bb3773484e7d954a2975211e683dfa89edab5"
       - name: Deployment summary
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
@@ -79,4 +90,11 @@ jobs:
           - GET /v1/world/foreign
           - GET /v1/world/:slug/integration
           - POST /v1/world/import-plan (plan-only; no source access or execution)
+
+          Platform identity/API access:
+          - Cloudflare Access protects /v1/platform/browser/*
+          - D1 stores profiles, digest-only API tokens, and append-only audit events
+          - GET /v1/platform/status remains public
+          - GET /v1/platform/api/whoami accepts scoped Idol bearer tokens
+          - transport identity never grants an Idol world capability
           SUMMARY
