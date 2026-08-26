@@ -1,0 +1,111 @@
+{
+  "schema": "idol.web.worlds.v1",
+  "captured_at": "2026-08-25T12:30:05Z",
+  "source": "https://api.idol.id/api/worlds",
+  "worlds": [
+    {
+      "name": "bench",
+      "version": "0.1.0",
+      "summary": "measurement — FTCFTW observation harness",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:29:59Z",
+      "provenance": {},
+      "stats": { "lines": 25, "bytes": 971, "source_hash": "c598aae358c46d85" },
+      "graph_id": "18072376802677268630",
+      "tags": ["measure", "ftcftw"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "bytes",
+      "version": "0.1.0",
+      "summary": "byte sequences — binary provenance",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:30:03Z",
+      "provenance": {},
+      "stats": { "lines": 96, "bytes": 2320, "source_hash": "68bd498c5077c3a9" },
+      "graph_id": "1057700846685095578",
+      "tags": ["binary"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "check",
+      "version": "0.1.0",
+      "summary": "proof checks — the testing law as a world",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:29:57Z",
+      "provenance": {},
+      "stats": { "lines": 292, "bytes": 10888, "source_hash": "2932fd966f556ff8" },
+      "graph_id": "13421529361606461235",
+      "tags": ["test", "law"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "fmt",
+      "version": "0.1.0",
+      "summary": "formatting — structure to text",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:30:01Z",
+      "provenance": {},
+      "stats": { "lines": 175, "bytes": 3839, "source_hash": "ddfe3aaef7b9ce65" },
+      "graph_id": "13561721817667202698",
+      "tags": ["text"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "io",
+      "version": "0.1.0",
+      "summary": "input/output faces — print, read",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:29:55Z",
+      "provenance": {},
+      "stats": { "lines": 27, "bytes": 500, "source_hash": "e05390f3de9738d7" },
+      "graph_id": "9691001017719621744",
+      "tags": ["world", "effect"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "math",
+      "version": "0.1.0",
+      "summary": "numeric relations",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:30:05Z",
+      "provenance": {},
+      "stats": { "lines": 177, "bytes": 3468, "source_hash": "11720398b0bc09ea" },
+      "graph_id": "5646163407124647803",
+      "tags": ["numeric"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "std",
+      "version": "0.1.0",
+      "summary": "the standard world — base relations every other world assumes",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:29:51Z",
+      "provenance": {},
+      "stats": { "lines": 8, "bytes": 237, "source_hash": "31b98047ef57a4b5" },
+      "graph_id": "9743628594386547574",
+      "tags": ["core", "base"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    },
+    {
+      "name": "str",
+      "version": "0.1.0",
+      "summary": "text relations — slice, find, transform",
+      "publisher": "idol.id",
+      "published_at": "2026-08-25T12:29:53Z",
+      "provenance": {},
+      "stats": { "lines": 22, "bytes": 1326, "source_hash": "f766aafcd6622cbd" },
+      "graph_id": "15661378039493691287",
+      "tags": ["text"],
+      "versions": ["0.1.0"],
+      "mirror": "r2"
+    }
+  ]
+}

@@ -39,6 +39,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Snapshot the public world projection
+        run: node scripts/snapshot-worlds.mjs
       - name: Build one immutable deployment
         env:
           GITHUB_SHA: ${{ github.sha }}
@@ -62,6 +64,8 @@ jobs:
           - lib.idol.id
           - api.idol.id
           - graph.idol.id
+          - worlds.idol.id
+          - platform.idol.id
           - r8a.idol.id
           - r8b.idol.id
           - r16.idol.id

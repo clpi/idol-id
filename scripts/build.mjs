@@ -32,7 +32,7 @@ const runtimeScripts = [
   '<script src="/shared/wasm.js" defer></script>',
 ].join("\n    ");
 
-for (const app of ["site", "docs", "lib", "api", "graph"]) {
+for (const app of ["site", "docs", "lib", "api", "graph", "worlds", "platform"]) {
   const path = join(dist, "apps", app, "index.html");
   let html = await readFile(path, "utf8");
   if (!html.includes("/shared/web.js")) {
@@ -42,6 +42,7 @@ for (const app of ["site", "docs", "lib", "api", "graph"]) {
 }
 
 await mkdir(join(dist, "runtime"), { recursive: true });
+await cp(join(root, "runtime", "worlds.json"), join(dist, "runtime", "worlds.json"));
 const configured = process.env.IDOL_WASM_PATH ? resolve(process.env.IDOL_WASM_PATH) : join(root, "runtime", "idol-web.wasm");
 let wasm = { available: false, file: null, bytes: 0, sha256: null };
 if (await exists(configured)) {
@@ -78,6 +79,8 @@ const manifest = {
     "lib.idol.id": "lib",
     "api.idol.id": "api",
     "graph.idol.id": "graph",
+    "worlds.idol.id": "worlds",
+    "platform.idol.id": "platform",
     "r8a.idol.id": "graph:r8a",
     "r8b.idol.id": "graph:r8b",
     "r16.idol.id": "graph:r16",
