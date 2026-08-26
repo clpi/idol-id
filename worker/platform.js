@@ -5,6 +5,7 @@ import { createPlatformService, PLATFORM_AUTHORITY_BOUNDARY, PlatformError } fro
 const BODY_LIMIT = 16 * 1024;
 const BROWSER_PREFIX = "/v1/platform/browser/";
 const API_PREFIX = "/v1/platform/api/";
+const REVOKE_PATH = /^\/v1\/platform\/browser\/tokens\/([A-Za-z0-9_-]{12,})\/revoke$/;
 
 function json(value, status = 200, headers = {}) {
   return new Response(JSON.stringify(value), {
@@ -91,6 +92,10 @@ async function browserTransport(request, env, pathname, info, dependencies) {
   if (!identity) return json({ error: "ACCESS_IDENTITY_REQUIRED" }, 401);
 
   try {
+    if (request.method === "GET" && pathname === `${BROWSER_PREFIX}login`) {
+      await platform.session(identity);
+      return new Response(null, { status: 303, headers: { location: "https://platform.idol.id/#account", "cache-control": "no-store" } });
+    }
     if (request.method === "GET" && pathname === `${BROWSER_PREFIX}session`) {
       return json(await platform.session(identity));
     }
@@ -108,7 +113,7 @@ async function browserTransport(request, env, pathname, info, dependencies) {
       requireBrowserProof(request);
       return json(await platform.createToken(identity, await readJson(request)), 201);
     }
-    const revoke = new RegExp(`^${BROWSER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([A-Za-z0-9_-]{12,})/revoke$`).exec(pathname);
+    const revoke = REVOKE_PATH.exec(pathname);
     if (request.method === "POST" && revoke) {
       requireBrowserProof(request);
       return json(await platform.revokeToken(identity, revoke[1]));
