@@ -76,6 +76,10 @@ async function asset(env, request, pathname, options = {}) {
   return secure(response, options);
 }
 
+function assetFound(response) {
+  return response.ok || response.status === 304;
+}
+
 async function appShell(env, request, app) {
   return asset(env, request, `/apps/${app}/index.html`, { html: true });
 }
@@ -152,14 +156,14 @@ export async function handle(request, env) {
 
   if (SHARED_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
     const response = await asset(env, request, url.pathname, { immutable: CACHEABLE_EXT.test(url.pathname) });
-    if (response.ok) return response;
+    if (assetFound(response)) return response;
   }
 
   if (CACHEABLE_EXT.test(url.pathname)) {
     let response = await asset(env, request, url.pathname, { immutable: true });
-    if (response.ok) return response;
+    if (assetFound(response)) return response;
     response = await asset(env, request, `/apps/${info.app}${url.pathname}`, { immutable: true });
-    if (response.ok) return response;
+    if (assetFound(response)) return response;
     if (originless(info)) return noOrigin(info);
     return secure(await fetch(request));
   }
