@@ -1,0 +1,174 @@
+const ACCESS_CERT_CACHE = new Map();
+const ACCESS_CERT_TTL_MS = 5 * 60 * 1000;
+const ACCESS_JWT_MAX_BYTES = 16 * 1024;
+const TOKEN_PATTERN = /^idol_pat_([A-Za-z0-9_-]{12,})\.([A-Za-z0-9_-]{32,})$/;
+
+export const PLATFORM_SCOPES = Object.freeze([
+  "analysis:read",
+  "profile:read",
+  "registry:read",
+  "world:read",
+]);
+
+const encoder = new TextEncoder();
+
+function bytesToBase64url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64urlToBytes(value) {
+  const source = String(value).replace(/-/g, "+").replace(/_/g, "/");
+  const padded = source + "=".repeat((4 - source.length % 4) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+function base64urlJson(value, label) {
+  try {
+    return JSON.parse(new TextDecoder().decode(base64urlToBytes(value)));
+  } catch {
+    throw new Error(`invalid Access JWT ${label}`);
+  }
+}
+
+function toHex(bytes) {
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function includesAudience(claim, expected) {
+  return Array.isArray(claim) ? claim.includes(expected) : claim === expected;
+}
+
+async function fetchAccessKeys(teamDomain, fetcher, now, force = false) {
+  const key = teamDomain.toLowerCase();
+  const useCache = fetcher === globalThis.fetch;
+  const cached = useCache ? ACCESS_CERT_CACHE.get(key) : null;
+  if (!force && cached && cached.expiresAt > now) return cached.keys;
+
+  const response = await fetcher(`https://${teamDomain}/cdn-cgi/access/certs`, {
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`Access signing keys unavailable (${response.status})`);
+  const document = await response.json();
+  if (!Array.isArray(document.keys) || !document.keys.length) throw new Error("Access signing keys are empty");
+  if (useCache) ACCESS_CERT_CACHE.set(key, { keys: document.keys, expiresAt: now + ACCESS_CERT_TTL_MS });
+  return document.keys;
+}
+
+async function signingKey(teamDomain, keyId, fetcher, now) {
+  let keys = await fetchAccessKeys(teamDomain, fetcher, now);
+  let jwk = keys.find((candidate) => candidate.kid === keyId);
+  if (!jwk && fetcher === globalThis.fetch) {
+    keys = await fetchAccessKeys(teamDomain, fetcher, now, true);
+    jwk = keys.find((candidate) => candidate.kid === keyId);
+  }
+  if (!jwk) throw new Error("Access JWT signing key not found");
+  return jwk;
+}
+
+export async function verifyAccessJwt(token, {
+  teamDomain,
+  audience,
+  email,
+  emailDomain,
+  fetcher = globalThis.fetch,
+  now = () => Date.now(),
+} = {}) {
+  const admittedEmail = String(email || "").trim().toLowerCase();
+  const admittedDomain = String(emailDomain || "").trim().toLowerCase();
+  if (!teamDomain || !audience || (!admittedEmail && !admittedDomain)) throw new Error("Access verification is not configured");
+  const source = String(token || "");
+  if (encoder.encode(source).byteLength > ACCESS_JWT_MAX_BYTES) throw new Error("Access JWT is too large");
+  const parts = source.split(".");
+  if (parts.length !== 3) throw new Error("invalid Access JWT shape");
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const header = base64urlJson(encodedHeader, "header");
+  const payload = base64urlJson(encodedPayload, "payload");
+  if (header.alg !== "RS256") throw new Error("unsupported Access JWT algorithm");
+  if (!header.kid) throw new Error("Access JWT has no key id");
+
+  const currentMs = Number(now());
+  const currentSeconds = Math.floor(currentMs / 1000);
+  const issuer = `https://${teamDomain}`;
+  if (payload.iss !== issuer) throw new Error("Access JWT issuer mismatch");
+  if (!includesAudience(payload.aud, audience)) throw new Error("Access JWT audience mismatch");
+  if (!Number.isFinite(payload.exp) || payload.exp <= currentSeconds) throw new Error("Access JWT expired");
+  if (Number.isFinite(payload.nbf) && payload.nbf > currentSeconds + 30) throw new Error("Access JWT is not active");
+  if (Number.isFinite(payload.iat) && payload.iat > currentSeconds + 60) throw new Error("Access JWT issued-at is in the future");
+  if (!payload.sub || !payload.email) throw new Error("Access JWT identity claims missing");
+  const claimedEmail = String(payload.email).trim().toLowerCase();
+  if (admittedEmail && claimedEmail !== admittedEmail) throw new Error("Access JWT email refused");
+  if (!admittedEmail && !claimedEmail.endsWith(`@${admittedDomain}`)) throw new Error("Access JWT email domain refused");
+
+  const jwk = await signingKey(teamDomain, header.kid, fetcher, currentMs);
+  const publicKey = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const verified = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    publicKey,
+    base64urlToBytes(encodedSignature),
+    encoder.encode(`${encodedHeader}.${encodedPayload}`),
+  );
+  if (!verified) throw new Error("Access JWT signature invalid");
+
+  return Object.freeze({
+    subject: String(payload.sub),
+    email: claimedEmail,
+    displayName: String(payload.name || payload.email).trim(),
+    issuer,
+    audience,
+  });
+}
+
+export function normalizeScopes(scopes) {
+  if (!Array.isArray(scopes) || !scopes.length) throw new TypeError("at least one API token scope is required");
+  const allowed = new Set(PLATFORM_SCOPES);
+  const normalized = [...new Set(scopes.map((scope) => String(scope).trim()).filter(Boolean))].sort();
+  for (const scope of normalized) if (!allowed.has(scope)) throw new RangeError(`unsupported scope: ${scope}`);
+  return Object.freeze(normalized);
+}
+
+export async function hashApiToken(token) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(String(token)));
+  return toHex(new Uint8Array(digest));
+}
+
+export function parseApiToken(token) {
+  const match = TOKEN_PATTERN.exec(String(token || ""));
+  if (!match) throw new Error("invalid API token format");
+  return Object.freeze({ id: match[1], secret: match[2] });
+}
+
+export async function createApiToken({ randomBytes = (length) => crypto.getRandomValues(new Uint8Array(length)) } = {}) {
+  const id = bytesToBase64url(randomBytes(12));
+  const secret = bytesToBase64url(randomBytes(32));
+  const token = `idol_pat_${id}.${secret}`;
+  return Object.freeze({
+    id,
+    token,
+    prefix: token.slice(0, 22),
+    digest: await hashApiToken(token),
+  });
+}
+
+export function bearerToken(request) {
+  const header = request.headers.get("authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(header);
+  return match ? match[1].trim() : null;
+}
+
+export function constantTimeTextEqual(left, right) {
+  const a = encoder.encode(String(left));
+  const b = encoder.encode(String(right));
+  const length = Math.max(a.length, b.length);
+  let difference = a.length ^ b.length;
+  for (let index = 0; index < length; index += 1) difference |= (a[index] || 0) ^ (b[index] || 0);
+  return difference === 0;
+}

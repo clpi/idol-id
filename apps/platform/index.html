@@ -8,87 +8,163 @@
 <script src="/config.js"></script>
 <style>
   :root {
-    --platform-cyan: #6fc7d2;
-    --platform-gold: #d7ad61;
-    --platform-violet: #a799d8;
-    --platform-green: #86aa86;
+    --platform-cyan: #72c8d0;
+    --platform-gold: #d8b16b;
+    --platform-violet: #a99bdd;
+    --platform-green: #8eaf91;
+    --platform-red: #d88787;
+    --platform-panel: rgba(11, 12, 13, .82);
   }
   body { overflow: auto; background: #050607; }
-  .platform { min-height: 100%; position: relative; padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  .platform { min-height: 100%; position: relative; padding-bottom: calc(42px + env(safe-area-inset-bottom)); }
   .platform::before {
     content: ""; position: fixed; inset: 0; pointer-events: none;
     background:
-      radial-gradient(circle at 12% 10%, rgba(167,153,216,.07), transparent 26%),
-      radial-gradient(circle at 86% 8%, rgba(111,199,210,.07), transparent 30%),
-      linear-gradient(rgba(255,255,255,.016) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.016) 1px, transparent 1px);
+      radial-gradient(circle at 10% 7%, rgba(169,155,221,.07), transparent 25%),
+      radial-gradient(circle at 88% 10%, rgba(114,200,208,.065), transparent 29%),
+      linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px);
     background-size: auto, auto, 56px 56px, 56px 56px;
   }
-  .wrap { position: relative; max-width: 1280px; margin: 0 auto; padding: clamp(34px, 6vw, 90px) clamp(18px, 5vw, 72px); }
-  .hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr); gap: clamp(28px, 7vw, 96px); align-items: end; }
+  .wrap { position: relative; max-width: 1320px; margin: 0 auto; padding: clamp(30px, 5vw, 76px) clamp(16px, 4vw, 62px); }
+  .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: clamp(28px, 6vw, 84px); align-items: end; }
   .eyebrow { color: var(--platform-cyan); font: 10px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
-  h1 { margin-top: 18px; font: 520 clamp(58px, 10vw, 138px)/.82 var(--sans); letter-spacing: -.072em; }
-  .lede { margin-top: 28px; max-width: 65ch; color: var(--ink-2); font-size: clamp(15px, 1.6vw, 19px); line-height: 1.68; }
-  .frontier {
-    border: 1px solid var(--rule-2); border-radius: 16px; padding: 18px;
-    background: rgba(12,13,14,.75); box-shadow: 0 30px 90px rgba(0,0,0,.35);
+  h1 { margin-top: 18px; font: 520 clamp(58px, 9vw, 126px)/.84 var(--sans); letter-spacing: -.071em; }
+  .lede { margin-top: 26px; max-width: 65ch; color: var(--ink-2); font-size: clamp(15px, 1.55vw, 19px); line-height: 1.7; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 27px; }
+  .button, .actions a, button.action {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    padding: 9px 15px; border: 1px solid var(--rule-2); border-radius: 999px;
+    color: var(--ink-2); background: rgba(255,255,255,.018); font: 12px/1 var(--sans);
   }
-  .frontier-head { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--ink-2); }
-  .frontier-head .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--platform-gold); box-shadow: 0 0 0 5px rgba(215,173,97,.08); }
-  .frontier p { margin-top: 13px; color: var(--ink-3); line-height: 1.6; font-size: 12px; }
-  .frontier .identity { display: block; margin-top: 18px; padding-top: 13px; border-top: 1px solid var(--rule); color: var(--ink-4); }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 28px; }
-  .actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 15px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-2); }
-  .actions a.primary { background: var(--ink); color: #050607; border-color: var(--ink); }
-  .actions a:hover { border-color: var(--rule-3); color: var(--ink); }
-  .actions a.primary:hover { color: #050607; }
+  .button:hover, .actions a:hover, button.action:hover { color: var(--ink); border-color: var(--rule-3); }
+  .primary { background: var(--ink) !important; color: #050607 !important; border-color: var(--ink) !important; }
+  .danger { color: var(--platform-red) !important; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
 
-  .section { margin-top: clamp(64px, 10vw, 140px); }
+  .frontier { border: 1px solid var(--rule-2); border-radius: 18px; padding: 20px; background: var(--platform-panel); box-shadow: 0 32px 100px rgba(0,0,0,.36); }
+  .frontier-head { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 12px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--platform-gold); box-shadow: 0 0 0 5px rgba(216,177,107,.08); }
+  .pulse.live { background: var(--platform-green); box-shadow: 0 0 0 5px rgba(142,175,145,.09); }
+  .frontier p { margin-top: 13px; color: var(--ink-3); font-size: 12px; line-height: 1.65; }
+  .frontier .identity { display: block; margin-top: 17px; padding-top: 13px; border-top: 1px solid var(--rule); color: var(--ink-4); }
+
+  .console { margin-top: clamp(54px, 8vw, 110px); border: 1px solid var(--rule-2); border-radius: 20px; overflow: hidden; background: rgba(8,9,10,.78); box-shadow: 0 42px 130px rgba(0,0,0,.28); }
+  .console-head { min-height: 76px; padding: 15px 18px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--rule); }
+  .console-title { min-width: 0; }
+  .console-title h2 { font: 520 23px/1 var(--sans); letter-spacing: -.035em; }
+  .console-title p { margin-top: 7px; color: var(--ink-4); font-size: 11px; }
+  .console-head .spacer { flex: 1; }
+  .identity-chip { max-width: min(44vw, 440px); padding: 7px 10px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .console-grid { display: grid; grid-template-columns: 220px minmax(0,1fr); min-height: 480px; }
+  .console-nav { padding: 10px; border-right: 1px solid var(--rule); background: rgba(3,4,5,.52); }
+  .console-nav button { width: 100%; min-height: 46px; padding: 0 12px; display: flex; align-items: center; gap: 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--ink-3); text-align: left; }
+  .console-nav button.here { color: var(--ink); border-color: var(--rule-2); background: rgba(255,255,255,.035); }
+  .nav-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--rule-3); }
+  .here .nav-mark { background: var(--platform-cyan); }
+  .console-body { min-width: 0; padding: clamp(20px, 4vw, 44px); }
+  .signed-out { min-height: 390px; display: grid; place-items: center; text-align: center; }
+  .signed-out-inner { max-width: 520px; }
+  .signed-out .glyph { width: 64px; height: 64px; margin: 0 auto 22px; display: grid; place-items: center; border: 1px solid var(--rule-2); border-radius: 50%; color: var(--platform-cyan); font: 22px/1 var(--mono); }
+  .signed-out h3 { font: 520 clamp(28px, 4vw, 42px)/1 var(--sans); letter-spacing: -.045em; }
+  .signed-out p { margin-top: 13px; color: var(--ink-3); line-height: 1.7; }
+  .signed-out .button { margin-top: 24px; }
+
+  .panel[hidden] { display: none; }
+  .panel-head { display: flex; align-items: end; gap: 18px; padding-bottom: 17px; border-bottom: 1px solid var(--rule); }
+  .panel-head h3 { font: 520 clamp(25px, 3.5vw, 38px)/1 var(--sans); letter-spacing: -.045em; }
+  .panel-head p { margin-left: auto; max-width: 46ch; color: var(--ink-4); font-size: 11px; line-height: 1.55; text-align: right; }
+  .profile-grid { margin-top: 24px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+  .card { padding: 16px; border: 1px solid var(--rule-2); border-radius: 13px; background: rgba(255,255,255,.018); }
+  .card .label { color: var(--ink-4); font-size: 10px; letter-spacing: .11em; text-transform: uppercase; }
+  .card .value { margin-top: 10px; color: var(--ink-2); overflow-wrap: anywhere; }
+  .field { display: grid; gap: 8px; }
+  .field label { color: var(--ink-3); font-size: 11px; }
+  .field input, .field select { width: 100%; min-height: 44px; border-radius: 10px; padding-inline: 12px; }
+  .form-row { margin-top: 20px; display: grid; grid-template-columns: minmax(0,1fr) 180px auto; gap: 10px; align-items: end; }
+  .scope-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .scope { min-height: 46px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; border: 1px solid var(--rule-2); border-radius: 10px; color: var(--ink-3); }
+  .scope input { width: 17px; height: 17px; }
+  .scope code { color: var(--ink-2); }
+
+  .token-list, .audit-list { margin-top: 20px; display: grid; gap: 8px; }
+  .token-row, .audit-row { padding: 14px; border: 1px solid var(--rule-2); border-radius: 11px; background: rgba(255,255,255,.016); }
+  .token-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; }
+  .token-name { color: var(--ink); font-weight: 560; }
+  .token-meta { margin-top: 7px; display: flex; gap: 10px; flex-wrap: wrap; color: var(--ink-4); font: 10px/1.4 var(--mono); }
+  .scope-pills { margin-top: 9px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .pill { padding: 4px 7px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-3); font: 9.5px/1 var(--mono); }
+  .audit-row { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 14px; }
+  .audit-time { color: var(--ink-4); font: 10px/1.5 var(--mono); }
+  .audit-type { color: var(--ink-2); font: 11px/1.5 var(--mono); }
+  .audit-target { margin-top: 4px; color: var(--ink-4); overflow-wrap: anywhere; }
+  .empty-state { min-height: 180px; display: grid; place-items: center; text-align: center; color: var(--ink-4); border: 1px dashed var(--rule-2); border-radius: 12px; }
+  .notice { margin-top: 18px; padding: 13px 14px; border: 1px solid rgba(216,177,107,.24); border-radius: 11px; color: var(--ink-3); background: rgba(216,177,107,.045); line-height: 1.55; }
+  .error { border-color: rgba(216,135,135,.35); background: rgba(216,135,135,.055); color: var(--platform-red); }
+
+  .reveal { position: fixed; z-index: 80; inset: 0; display: none; place-items: center; padding: 16px; background: rgba(0,0,0,.72); }
+  .reveal.open { display: grid; }
+  .reveal-card { width: min(640px,100%); padding: 22px; border: 1px solid var(--rule-3); border-radius: 17px; background: #0b0c0d; box-shadow: 0 40px 120px rgba(0,0,0,.65); }
+  .reveal-card h3 { font: 520 28px/1 var(--sans); letter-spacing: -.04em; }
+  .reveal-card p { margin-top: 10px; color: var(--ink-3); line-height: 1.6; }
+  .secret { margin-top: 18px; padding: 14px; border: 1px solid var(--rule-2); border-radius: 10px; color: var(--platform-cyan); background: #050607; overflow-wrap: anywhere; user-select: all; }
+  .reveal-actions { margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+  .section { margin-top: clamp(64px, 10vw, 130px); }
   .section-head { display: flex; align-items: end; gap: 22px; border-bottom: 1px solid var(--rule); padding-bottom: 16px; }
-  .section-head h2 { font: 520 clamp(25px, 4vw, 44px)/1 var(--sans); letter-spacing: -.04em; }
+  .section-head h2 { font: 520 clamp(25px,4vw,44px)/1 var(--sans); letter-spacing: -.04em; }
   .section-head p { margin-left: auto; max-width: 54ch; color: var(--ink-3); font-size: 12px; line-height: 1.6; text-align: right; }
-  .live-grid, .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); border-left: 1px solid var(--rule); }
-  .surface, .program { min-height: 210px; padding: 22px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); position: relative; background: rgba(8,9,10,.4); }
-  .surface { color: inherit; border-top: 0; }
-  .surface:hover { background: rgba(255,255,255,.028); }
-  .surface .mark, .program .mark { font: 10px/1 var(--mono); letter-spacing: .13em; text-transform: uppercase; }
-  .surface .mark { color: var(--platform-green); }
-  .program .mark { color: var(--platform-gold); }
-  .surface h3, .program h3 { margin-top: 36px; font: 520 22px/1.05 var(--sans); letter-spacing: -.03em; }
-  .surface p, .program p { margin-top: 10px; color: var(--ink-3); font-size: 12px; line-height: 1.6; max-width: 38ch; }
-  .surface .arrow { position: absolute; right: 18px; top: 18px; color: var(--ink-4); font-size: 16px; }
-  .surface:hover .arrow { color: var(--ink); transform: translate(2px,-2px); }
-  .program .status { position: absolute; right: 16px; top: 16px; padding: 5px 8px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-4); font-size: 9px; }
-  .program .facts { margin-top: 28px; display: flex; gap: 6px; flex-wrap: wrap; }
-  .fact { padding: 5px 8px; border-radius: 999px; border: 1px solid var(--rule-2); color: var(--ink-4); font-size: 10px; }
-
-  .policy { margin-top: clamp(54px, 8vw, 100px); display: grid; grid-template-columns: minmax(0,.7fr) minmax(0,1.3fr); gap: 30px; padding: clamp(24px,4vw,44px); border: 1px solid var(--rule-2); border-radius: 18px; background: rgba(11,12,13,.72); }
+  .program-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-left: 1px solid var(--rule); }
+  .program { min-height: 208px; padding: 21px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); position: relative; background: rgba(8,9,10,.4); }
+  .program .mark { color: var(--platform-gold); font: 10px/1 var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+  .program .status { position: absolute; right: 15px; top: 15px; padding: 5px 8px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-4); font-size: 9px; }
+  .program .status.live { color: var(--platform-green); }
+  .program h3 { margin-top: 36px; font: 520 22px/1.05 var(--sans); letter-spacing: -.03em; }
+  .program p { margin-top: 10px; color: var(--ink-3); font-size: 12px; line-height: 1.6; }
+  .facts { margin-top: 25px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .fact { padding: 5px 8px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-4); font-size: 10px; }
+  .policy { margin-top: 58px; padding: clamp(22px,4vw,42px); display: grid; grid-template-columns: minmax(0,.7fr) minmax(0,1.3fr); gap: 28px; border: 1px solid var(--rule-2); border-radius: 18px; background: rgba(11,12,13,.7); }
   .policy h2 { font: 520 30px/1 var(--sans); letter-spacing: -.04em; }
   .policy p { color: var(--ink-2); font-size: 14px; line-height: 1.72; }
-  .policy code { color: var(--platform-cyan); }
-
-  footer { margin-top: 54px; display: flex; gap: 16px; color: var(--ink-4); font-size: 11px; flex-wrap: wrap; }
+  footer { margin-top: 50px; display: flex; gap: 14px; flex-wrap: wrap; color: var(--ink-4); font-size: 11px; }
   footer .spacer { flex: 1; }
 
   @media (max-width: 960px) {
     .hero { grid-template-columns: 1fr; align-items: start; }
-    .frontier { max-width: 620px; }
-    .live-grid, .program-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .frontier { max-width: 650px; }
+    .program-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .policy { grid-template-columns: 1fr; }
   }
-
+  @media (max-width: 760px) {
+    .console-grid { grid-template-columns: 1fr; }
+    .console-nav { display: flex; gap: 5px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); }
+    .console-nav button { width: auto; flex: 1 0 auto; min-width: 104px; }
+    .identity-chip { max-width: 40vw; }
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .form-row .action { grid-column: 1 / -1; }
+  }
   @media (max-width: 699px) {
-    .wrap { padding: 28px 14px calc(34px + env(safe-area-inset-bottom)); }
-    h1 { font-size: 68px; }
-    .lede { margin-top: 22px; font-size: 15px; }
-    .frontier { padding: 16px; }
+    .wrap { padding: 27px 13px calc(34px + env(safe-area-inset-bottom)); }
+    h1 { font-size: 66px; }
+    .lede { font-size: 15px; }
     .actions a { flex: 1 1 44%; }
-    .section { margin-top: 72px; }
+    .console { border-radius: 15px; }
+    .console-head { min-height: 66px; padding: 12px; }
+    .console-title p { display: none; }
+    .identity-chip { max-width: 46vw; font-size: 9px; }
+    .console-body { padding: 17px 13px 24px; }
+    .panel-head { display: block; }
+    .panel-head p { margin: 9px 0 0; text-align: left; }
+    .profile-grid, .scope-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-row .action { grid-column: auto; }
+    .token-row { grid-template-columns: 1fr; }
+    .token-row .action { width: 100%; }
+    .audit-row { grid-template-columns: 1fr; gap: 5px; }
+    .program-grid { grid-template-columns: 1fr; }
+    .program { min-height: 180px; }
     .section-head { display: block; }
     .section-head p { margin: 10px 0 0; text-align: left; }
-    .live-grid, .program-grid { grid-template-columns: 1fr; }
-    .surface, .program { min-height: 180px; padding: 19px; }
-    .policy { padding: 22px 18px; border-radius: 14px; }
     footer .spacer { display: none; }
   }
 </style>
@@ -100,125 +176,249 @@
     <div class="wrap">
       <section class="hero">
         <div>
-          <div class="eyebrow">authenticated product frontier</div>
+          <div class="eyebrow">identity · api access · provenance</div>
           <h1>Platform</h1>
-          <p class="lede">The eventual control surface for API access, connected repositories, the Idol browser IDE, world and universe views, projection and injection workflows, metaprogramming, evidence, and a capability-explicit web shell.</p>
+          <p class="lede">A verified control surface for profiles, scoped API access, audit, repositories, worlds, transformations, and the browser IDE. Transport identity is explicit provenance—it never manufactures an Idol world grant.</p>
           <div class="actions">
-            <a class="primary" href="https://graph.idol.id/">Open Explorer</a>
+            <a class="primary" href="#account">Open account console</a>
             <a href="https://worlds.idol.id/">Browse Worlds</a>
-            <a href="https://lib.idol.id/">Browse Lib</a>
+            <a href="https://graph.idol.id/">Open Explorer</a>
           </div>
         </div>
         <aside class="frontier">
-          <div class="frontier-head"><span class="pulse"></span><strong>Public frontier</strong></div>
-          <p>Account sign-in, API-token creation, provider connections, repository writes, remote shell execution, and private workspaces are <strong>not yet enabled</strong>. This surface reports the implementation boundary instead of simulating authority.</p>
-          <span class="identity">surface platform · read-only · authority <span id="authority">loading</span></span>
+          <div class="frontier-head"><span class="pulse" id="provision-pulse"></span><strong id="provision-title">Checking identity boundary</strong></div>
+          <p id="provision-copy">Cloudflare Access and D1 are checked independently. Missing identity or storage is an exact refusal, never a public fallback.</p>
+          <span class="identity">surface platform · authority <span id="authority">loading</span></span>
         </aside>
       </section>
 
-      <section class="section">
-        <header class="section-head">
-          <h2>Usable now</h2>
-          <p>These are deployed capabilities, not roadmap cards. Every link crosses into an independently inspectable Idol surface.</p>
+      <section class="console" id="account" aria-label="Idol Platform account console">
+        <header class="console-head">
+          <div class="console-title"><h2>Account console</h2><p>Verified Access identity, digest-only transport credentials, append-only audit.</p></div>
+          <span class="spacer"></span>
+          <span class="identity-chip mono" id="identity-chip">signed out</span>
+          <a class="button" id="logout" href="/cdn-cgi/access/logout?returnTo=https%3A%2F%2Fplatform.idol.id%2F" hidden>Sign out</a>
         </header>
-        <div class="live-grid">
-          <a class="surface" href="https://graph.idol.id/">
-            <span class="mark">live</span><span class="arrow">↗</span>
-            <h3>Semantic Explorer</h3><p>Analyze source, inspect graphs and facts, lower targets, run code, and traverse token provenance.</p>
-          </a>
-          <a class="surface" href="https://worlds.idol.id/">
-            <span class="mark">live</span><span class="arrow">↗</span>
-            <h3>World Atlas</h3><p>Search and compare published world identities, provenance, graph hashes, tags, versions, and registry links.</p>
-          </a>
-          <a class="surface" href="https://lib.idol.id/">
-            <span class="mark">live</span><span class="arrow">↗</span>
-            <h3>Registry</h3><p>Explore public homes and published worlds with source, graph, versions, uses, dependents, and R2 artifacts.</p>
-          </a>
-          <a class="surface" href="https://docs.idol.id/">
-            <span class="mark">live</span><span class="arrow">↗</span>
-            <h3>Documentation</h3><p>Read the language law, source faces, world model, graph reference, and current architecture.</p>
-          </a>
-          <a class="surface" href="https://api.idol.id/">
-            <span class="mark">live</span><span class="arrow">↗</span>
-            <h3>Public API</h3><p>Use the existing open read and compiler endpoints with exact authority and runtime inspection.</p>
-          </a>
-          <a class="surface" href="https://idol.id/">
-            <span class="mark">live</span><span class="arrow">↗</span>
-            <h3>Idol</h3><p>Return to the language surface, installation frontier, authority edition, and ecosystem entry points.</p>
-          </a>
+        <div class="signed-out" id="signed-out">
+          <div class="signed-out-inner">
+            <div class="glyph">@</div>
+            <h3>Identity before authority.</h3>
+            <p>Sign in through Cloudflare Access. The Worker verifies the application JWT again before creating a profile or allowing token operations. No password is stored by Idol.</p>
+            <a class="button primary" id="sign-in" href="/v1/platform/browser/login">Sign in with Access</a>
+            <div class="notice" id="signed-out-note">Loading platform provisioning status…</div>
+          </div>
+        </div>
+        <div class="console-grid" id="signed-in" hidden>
+          <nav class="console-nav" aria-label="Account console sections">
+            <button class="here" data-panel="profile"><span class="nav-mark"></span>Profile</button>
+            <button data-panel="tokens"><span class="nav-mark"></span>API tokens</button>
+            <button data-panel="audit"><span class="nav-mark"></span>Audit trail</button>
+          </nav>
+          <div class="console-body">
+            <section class="panel" id="panel-profile">
+              <header class="panel-head"><h3>Profile</h3><p>Identity claims originate in verified Access. Editable display data remains presentation, not semantic identity.</p></header>
+              <div class="profile-grid">
+                <div class="card"><div class="label">Access subject</div><div class="value identity" id="profile-subject">—</div></div>
+                <div class="card"><div class="label">Verified email</div><div class="value" id="profile-email">—</div></div>
+                <div class="card"><div class="label">Created</div><div class="value identity" id="profile-created">—</div></div>
+                <div class="card"><div class="label">Authority boundary</div><div class="value" id="profile-authority">transport identity only; no Idol world grant</div></div>
+              </div>
+              <form id="profile-form" class="form-row">
+                <div class="field"><label for="display-name">Display name</label><input id="display-name" maxlength="80" autocomplete="name" required></div>
+                <span></span>
+                <button class="action primary" type="submit">Save profile</button>
+              </form>
+              <div class="notice" id="profile-message" hidden></div>
+            </section>
+
+            <section class="panel" id="panel-tokens" hidden>
+              <header class="panel-head"><h3>API tokens</h3><p>Plaintext appears once. Idol stores only a SHA-256 digest, prefix, scopes, expiry, revocation, and use metadata.</p></header>
+              <form id="token-form">
+                <div class="form-row">
+                  <div class="field"><label for="token-name">Token name</label><input id="token-name" maxlength="80" placeholder="local CLI" required></div>
+                  <div class="field"><label for="token-expiry">Expires</label><select id="token-expiry"><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option></select></div>
+                  <button class="action primary" type="submit">Create token</button>
+                </div>
+                <div class="scope-grid" aria-label="Token scopes">
+                  <label class="scope"><input type="checkbox" name="scope" value="profile:read" checked><code>profile:read</code></label>
+                  <label class="scope"><input type="checkbox" name="scope" value="world:read" checked><code>world:read</code></label>
+                  <label class="scope"><input type="checkbox" name="scope" value="registry:read"><code>registry:read</code></label>
+                  <label class="scope"><input type="checkbox" name="scope" value="analysis:read"><code>analysis:read</code></label>
+                </div>
+              </form>
+              <div class="notice">Scopes are transport permissions only. A token cannot create another token and does not grant filesystem, process, network, device, repository, runner, or world authority.</div>
+              <div class="token-list" id="token-list"></div>
+            </section>
+
+            <section class="panel" id="panel-audit" hidden>
+              <header class="panel-head"><h3>Audit trail</h3><p>Profile and credential mutations are appended with actor, target, exact event type, and time.</p></header>
+              <div class="audit-list" id="audit-list"></div>
+            </section>
+          </div>
         </div>
       </section>
 
       <section class="section">
-        <header class="section-head">
-          <h2>Implementation programs</h2>
-          <p>Each program must land behind real identity, world, evidence, and refusal gates. Cards below do not grant capability.</p>
-        </header>
+        <header class="section-head"><h2>Implementation programs</h2><p>Identity and API access are now the live foundation. Later programs remain separately gated.</p></header>
         <div class="program-grid">
-          <article class="program">
-            <span class="mark">program K</span><span class="status">planned</span>
-            <h3>Identity & API access</h3><p>Profiles, organizations, passkeys, device login, scoped tokens, service identities, usage, audit, and revocation.</p>
-            <div class="facts"><span class="fact">no web password</span><span class="fact">scoped tokens</span><span class="fact">audit</span></div>
-          </article>
-          <article class="program">
-            <span class="mark">program L</span><span class="status">planned</span>
-            <h3>Browser IDE</h3><p>Local files, compiler diagnostics, semantic graph, lowering, tests, benchmarks, evidence, and admitted Idol Wasm compute.</p>
-            <div class="facts"><span class="fact">local-first</span><span class="fact">Wasm</span><span class="fact">mobile</span></div>
-          </article>
-          <article class="program">
-            <span class="mark">program M</span><span class="status">planned</span>
-            <h3>Repository observation</h3><p>Connect GitHub, GitLab, Bitbucket, or Git; observe arbitrary repos; scaffold Idol build, test, bench, graph, and CI surfaces.</p>
-            <div class="facts"><span class="fact">read before write</span><span class="fact">PR output</span></div>
-          </article>
-          <article class="program">
-            <span class="mark">program N</span><span class="status">planned</span>
-            <h3>Projection & migration</h3><p>Generate foreign boundaries, add projection/injection workflows, run metaprogramming, migrate selected slices, and publish evidence.</p>
-            <div class="facts"><span class="fact">derived worlds</span><span class="fact">semantic diff</span></div>
-          </article>
-          <article class="program">
-            <span class="mark">program O</span><span class="status">planned</span>
-            <h3>Universe views</h3><p>Save and compare operational views over worlds, projects, policies, reach, injections, graph queries, and evidence—without minting another semantic universe.</p>
-            <div class="facts"><span class="fact">one universe</span><span class="fact">saved views</span></div>
-          </article>
-          <article class="program">
-            <span class="mark">program P</span><span class="status">planned</span>
-            <h3>Idol web shell</h3><p>A shell world with explicit process, filesystem, environment, secret, network, and device grants; compatibility shell text normalizes into the same graph.</p>
-            <div class="facts"><span class="fact">explicit grants</span><span class="fact">outcome evidence</span></div>
-          </article>
+          <article class="program"><span class="mark">program K</span><span class="status live">live foundation</span><h3>Identity & API access</h3><p>Access-verified profiles, scoped digest-only API tokens, expiry, revocation, D1 storage, and audit.</p><div class="facts"><span class="fact">no password DB</span><span class="fact">JWT verified</span><span class="fact">D1 audit</span></div></article>
+          <article class="program"><span class="mark">program L</span><span class="status">planned</span><h3>Browser IDE</h3><p>Local files, diagnostics, exact token graph binding, lowering, evidence, and admitted Idol Wasm compute.</p><div class="facts"><span class="fact">local-first</span><span class="fact">mobile</span></div></article>
+          <article class="program"><span class="mark">program M</span><span class="status">planned</span><h3>Repository observation</h3><p>Connect Git providers, observe arbitrary repositories, and scaffold Idol build, test, bench, graph, and CI surfaces.</p><div class="facts"><span class="fact">read before write</span><span class="fact">PR output</span></div></article>
+          <article class="program"><span class="mark">program N</span><span class="status">planned</span><h3>Projection & migration</h3><p>Generate witnessed boundaries, run transactional metaprograms, migrate selected slices, and publish evidence.</p><div class="facts"><span class="fact">derived worlds</span><span class="fact">semantic diff</span></div></article>
+          <article class="program"><span class="mark">program O</span><span class="status">planned</span><h3>Universe views</h3><p>Save views over worlds, projects, policies, reach, injections, graph queries, and evidence without minting another universe.</p><div class="facts"><span class="fact">one universe</span><span class="fact">saved views</span></div></article>
+          <article class="program"><span class="mark">program P</span><span class="status">planned</span><h3>Idol web shell</h3><p>Canonical Idol under explicit process, filesystem, environment, secret, network, and device grants.</p><div class="facts"><span class="fact">explicit grants</span><span class="fact">outcome evidence</span></div></article>
         </div>
       </section>
 
-      <section class="policy">
-        <h2>Authority before convenience.</h2>
-        <p>The platform will not silently infer provider access, mutate repositories, run lifecycle scripts, or grant shell worlds. Transformations occur in derived worlds, produce inspectable semantic diffs and evidence, and default to reviewable pull or merge requests. Missing authority is a refusal—not a hidden fallback.</p>
-      </section>
-
-      <footer>
-        <span class="identity" id="commit">web commit loading</span>
-        <span class="identity" id="runtime">runtime loading</span>
-        <span class="spacer"></span>
-        <a href="https://docs.idol.id/worlds">world law</a>
-        <a href="https://github.com/clpi/idol-id">source</a>
-      </footer>
+      <section class="policy"><h2>Authority before convenience.</h2><p>Cloudflare Access proves account ingress. Idol API tokens authorize bounded HTTP transport. Neither creates semantic identity, repository ownership, execution capability, or a world grant. Every later operation must still publish and satisfy its own world, policy, demand, provenance, and evidence facts.</p></section>
+      <footer><span class="identity" id="commit">web commit loading</span><span class="spacer"></span><span>Access JWT verified in Worker</span><span>·</span><span>D1 digest-only tokens</span></footer>
     </div>
   </main>
   <div class="statusbar"></div>
 </div>
 
+<div class="reveal" id="token-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-title">
+  <div class="reveal-card">
+    <h3 id="reveal-title">Copy this token now.</h3>
+    <p>It will never be shown again. Only its digest and prefix are stored.</p>
+    <div class="secret mono" id="revealed-token"></div>
+    <div class="reveal-actions"><button class="action" id="copy-token">Copy token</button><button class="action primary" id="close-reveal">I stored it</button></div>
+  </div>
+</div>
+
 <script src="/shared/shell.js"></script>
 <script>
-(function () {
-  Shell.boot("platform", { title: "Platform", keys: [["read-only", "public frontier"], ["↗", "open live surface"]] });
-  IdolShell.crumbs([{ label: "platform" }, { label: "frontier" }]);
-  const cfg = window.IDOL || {};
-  document.getElementById("authority").textContent = cfg.authority || "unknown";
-  document.getElementById("commit").textContent = "web " + (cfg.commit || "development");
-  fetch("/runtime/manifest.json").then((response) => response.json()).then((manifest) => {
-    document.getElementById("runtime").textContent = manifest.wasm && manifest.wasm.available
-      ? `Idol Wasm ${manifest.wasm.bytes} bytes`
-      : "Idol Wasm boundary explicit · artifact not admitted";
-  }).catch(() => { document.getElementById("runtime").textContent = "runtime unavailable"; });
-})();
+Shell.boot("platform", { title: "Platform", keys: [["1–3", "account panels"], ["Esc", "close"]] });
+IdolShell.crumbs([{ label: "platform" }, { label: "identity" }]);
+
+const $ = (id) => document.getElementById(id);
+const state = { status: null, session: null, panel: "profile", tokens: [], audit: [] };
+
+function text(node, value) { node.textContent = value == null || value === "" ? "—" : String(value); }
+function showMessage(node, message, error = false) { node.hidden = false; node.textContent = message; node.classList.toggle("error", error); }
+function formatTime(value) { if (!value) return "never"; const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString() : value; }
+
+async function request(path, init = {}) {
+  const headers = new Headers(init.headers || {});
+  if (init.body) {
+    headers.set("content-type", "application/json");
+    headers.set("x-idol-request", "browser");
+  }
+  const response = await fetch(path, { ...init, headers, cache: "no-store" });
+  let body = null;
+  try { body = await response.json(); } catch { body = { error: `HTTP_${response.status}` }; }
+  if (!response.ok) {
+    const error = new Error(body.detail || body.error || `HTTP ${response.status}`);
+    error.status = response.status; error.code = body.error; throw error;
+  }
+  return body;
+}
+
+function selectPanel(name) {
+  state.panel = name;
+  document.querySelectorAll(".console-nav button").forEach((button) => button.classList.toggle("here", button.dataset.panel === name));
+  document.querySelectorAll(".panel").forEach((panel) => { panel.hidden = panel.id !== `panel-${name}`; });
+  if (name === "tokens") loadTokens();
+  if (name === "audit") loadAudit();
+}
+
+document.querySelector(".console-nav")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-panel]");
+  if (button) selectPanel(button.dataset.panel);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") $("token-reveal").classList.remove("open");
+  if (state.session && ["1", "2", "3"].includes(event.key) && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "")) {
+    selectPanel(["profile", "tokens", "audit"][Number(event.key) - 1]);
+  }
+});
+
+function renderSession() {
+  const profile = state.session.profile;
+  $("signed-out").hidden = true;
+  $("signed-in").hidden = false;
+  $("logout").hidden = false;
+  text($("identity-chip"), profile.email);
+  text($("profile-subject"), profile.subject);
+  text($("profile-email"), profile.email);
+  text($("profile-created"), formatTime(profile.created_at));
+  text($("profile-authority"), state.session.authority);
+  $("display-name").value = profile.display_name || "";
+}
+
+function renderTokens() {
+  const mount = $("token-list"); mount.innerHTML = "";
+  if (!state.tokens.length) { const empty = document.createElement("div"); empty.className = "empty-state"; empty.textContent = "No API tokens. Create one for a CLI or agent transport."; mount.appendChild(empty); return; }
+  for (const token of state.tokens) {
+    const row = document.createElement("article"); row.className = "token-row";
+    const body = document.createElement("div");
+    const name = document.createElement("div"); name.className = "token-name"; name.textContent = token.name;
+    const meta = document.createElement("div"); meta.className = "token-meta";
+    for (const value of [token.prefix, `created ${formatTime(token.created_at)}`, `expires ${formatTime(token.expires_at)}`, token.revoked_at ? `revoked ${formatTime(token.revoked_at)}` : `used ${formatTime(token.last_used_at)}`]) { const span = document.createElement("span"); span.textContent = value; meta.appendChild(span); }
+    const scopes = document.createElement("div"); scopes.className = "scope-pills";
+    for (const scope of token.scopes || []) { const pill = document.createElement("span"); pill.className = "pill"; pill.textContent = scope; scopes.appendChild(pill); }
+    body.append(name, meta, scopes); row.appendChild(body);
+    const revoke = document.createElement("button"); revoke.className = "action danger"; revoke.textContent = token.revoked_at ? "Revoked" : "Revoke"; revoke.disabled = Boolean(token.revoked_at);
+    revoke.addEventListener("click", async () => { revoke.disabled = true; try { await request(`/v1/platform/browser/tokens/${encodeURIComponent(token.id)}/revoke`, { method: "POST", body: "{}" }); await loadTokens(); await loadAudit(); } catch (error) { revoke.disabled = false; alert(error.message); } });
+    row.appendChild(revoke); mount.appendChild(row);
+  }
+}
+
+function renderAudit() {
+  const mount = $("audit-list"); mount.innerHTML = "";
+  if (!state.audit.length) { const empty = document.createElement("div"); empty.className = "empty-state"; empty.textContent = "No account mutations recorded."; mount.appendChild(empty); return; }
+  for (const event of state.audit) {
+    const row = document.createElement("article"); row.className = "audit-row";
+    const when = document.createElement("div"); when.className = "audit-time"; when.textContent = formatTime(event.created_at);
+    const body = document.createElement("div");
+    const type = document.createElement("div"); type.className = "audit-type"; type.textContent = event.type;
+    const target = document.createElement("div"); target.className = "audit-target"; target.textContent = event.target;
+    body.append(type, target); row.append(when, body); mount.appendChild(row);
+  }
+}
+
+async function loadTokens() { if (!state.session) return; try { state.tokens = (await request("/v1/platform/browser/tokens")).tokens || []; renderTokens(); } catch (error) { const mount = $("token-list"); mount.innerHTML = ""; const note = document.createElement("div"); note.className = "notice error"; note.textContent = error.message; mount.appendChild(note); } }
+async function loadAudit() { if (!state.session) return; try { state.audit = (await request("/v1/platform/browser/audit")).events || []; renderAudit(); } catch (error) { const mount = $("audit-list"); mount.innerHTML = ""; const note = document.createElement("div"); note.className = "notice error"; note.textContent = error.message; mount.appendChild(note); } }
+
+$("profile-form").addEventListener("submit", async (event) => {
+  event.preventDefault(); const button = event.submitter; button.disabled = true;
+  try { const profile = await request("/v1/platform/browser/profile", { method: "PATCH", body: JSON.stringify({ display_name: $("display-name").value }) }); state.session.profile = profile; renderSession(); showMessage($("profile-message"), "Profile updated and audit event appended."); }
+  catch (error) { showMessage($("profile-message"), error.message, true); }
+  finally { button.disabled = false; }
+});
+
+$("token-form").addEventListener("submit", async (event) => {
+  event.preventDefault(); const button = event.submitter; button.disabled = true;
+  const scopes = [...document.querySelectorAll('input[name="scope"]:checked')].map((input) => input.value);
+  try {
+    const created = await request("/v1/platform/browser/tokens", { method: "POST", body: JSON.stringify({ name: $("token-name").value, scopes, expires_in_days: Number($("token-expiry").value) }) });
+    text($("revealed-token"), created.token); $("token-reveal").classList.add("open"); $("close-reveal").focus(); $("token-form").reset(); document.querySelector('input[value="profile:read"]').checked = true; document.querySelector('input[value="world:read"]').checked = true; await loadTokens();
+  } catch (error) { alert(error.message); }
+  finally { button.disabled = false; }
+});
+
+$("copy-token").addEventListener("click", async () => { await navigator.clipboard.writeText($("revealed-token").textContent); $("copy-token").textContent = "Copied"; });
+$("close-reveal").addEventListener("click", () => { $("revealed-token").textContent = ""; $("token-reveal").classList.remove("open"); });
+$("token-reveal").addEventListener("click", (event) => { if (event.target === $("token-reveal")) $("close-reveal").click(); });
+
+async function boot() {
+  text($("commit"), `web commit ${(window.IDOL && window.IDOL.commit) || "development"}`);
+  text($("authority"), (window.IDOL && window.IDOL.authority) || "unknown");
+  try {
+    state.status = await request("/v1/platform/status");
+    const ready = state.status.configured.access && state.status.configured.storage;
+    $("provision-pulse").classList.toggle("live", ready);
+    text($("provision-title"), ready ? "Identity boundary provisioned" : "Identity boundary incomplete");
+    text($("signed-out-note"), ready ? "Access and D1 are provisioned. Sign in to initialize your profile." : `Access ${state.status.configured.access ? "ready" : "missing"} · storage ${state.status.configured.storage ? "ready" : "missing"}. Private operations fail closed.`);
+    $("sign-in").toggleAttribute("aria-disabled", !ready);
+    if (!ready) return;
+  } catch (error) { showMessage($("signed-out-note"), error.message, true); return; }
+
+  try { state.session = await request("/v1/platform/browser/session"); renderSession(); }
+  catch (error) { if (![401, 403].includes(error.status)) showMessage($("signed-out-note"), error.message, true); }
+}
+boot();
 </script>
 </body>
 </html>

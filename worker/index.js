@@ -1,4 +1,5 @@
 import { parseImportRequest, planForeignImport } from "../shared/foreign.js";
+import { handlePlatformTransport } from "./platform.js";
 
 const HOSTS = Object.freeze({
   "idol.id": { app: "site", surface: "site", origin: true },
@@ -191,7 +192,7 @@ async function worldTransport(request, env, pathname) {
   return null;
 }
 
-export async function handle(request, env) {
+export async function handle(request, env, dependencies = {}) {
   const url = new URL(request.url);
   const host = url.hostname.toLowerCase();
   let info = resolveHost(host);
@@ -219,6 +220,9 @@ export async function handle(request, env) {
       }),
     );
   }
+
+  const platformResponse = await handlePlatformTransport(request, env, url.pathname, info, dependencies);
+  if (platformResponse) return secure(platformResponse);
 
   const worldResponse = await worldTransport(request, env, url.pathname);
   if (worldResponse) return worldResponse;
