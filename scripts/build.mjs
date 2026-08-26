@@ -83,11 +83,16 @@ const runtimeScripts = [
   '<script src="/shared/wasm.js" defer></script>',
 ].join("\n    ");
 
-for (const app of ["site", "docs", "lib", "api", "graph", "worlds", "platform"]) {
+for (const app of ["site", "docs", "lib", "api", "graph", "worlds", "platform", "ide"]) {
   const path = join(dist, "apps", app, "index.html");
   let html = await readFile(path, "utf8");
   if (!html.includes("/shared/web.js")) {
     html = html.replace(/<head([^>]*)>/i, `<head$1>\n    <!-- idol runtime -->\n    ${runtimeScripts}`);
+  }
+  if (app === "platform" && !html.includes('href="/ide"')) {
+    const entry = '<a class="primary" href="/ide">Open browser IDE</a>';
+    if (/<div class="actions">/i.test(html)) html = html.replace(/<div class="actions">/i, `<div class="actions">${entry}`);
+    else html = html.replace(/<body([^>]*)>/i, `<body$1>${entry}`);
   }
   await writeFile(path, html);
 }
@@ -122,6 +127,14 @@ if (await exists(configured)) {
   };
 }
 
+const ide = {
+  route: "https://platform.idol.id/ide",
+  local_storage: "indexeddb",
+  source_upload: "explicit-remote-analysis-only",
+  remote_analysis: "/v1/ide/analyze",
+  browser_wasm: wasm.available,
+};
+
 const runtimeManifest = {
   schema: "idol.web.runtime.v1",
   authority: { repository: "clpi/idol", commit: authority },
@@ -130,6 +143,7 @@ const runtimeManifest = {
   worlds: "/runtime/worlds.json",
   foreign: "/runtime/foreign.json",
   wasm,
+  ide,
   note: wasm.available
     ? "Idol Wasm artifact is deployed and loaded as the preferred compute realization."
     : "The semantic web bridge is active; provide IDOL_WASM_PATH when the canonical Idol browser artifact is admitted.",
@@ -155,6 +169,6 @@ const manifest = {
   runtime: runtimeManifest,
 };
 await writeFile(join(dist, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-console.log(`built ${Object.keys(manifest.surfaces).length} idol.id surfaces at ${commit}`);
+console.log(`built ${Object.keys(manifest.surfaces).length} idol.id surfaces plus the protected IDE at ${commit}`);
 console.log(`foreign candidates: ${foreignManifest.worlds.length} · revision ${foreignManifest.revision}`);
 console.log(`idol wasm: ${wasm.available ? `${wasm.bytes} bytes ${wasm.sha256}` : "not supplied (bridge remains explicit)"}`);
