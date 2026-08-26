@@ -5,7 +5,7 @@ import { handleRepositoryTransport } from "../worker/repository.js";
 
 const env = {
   ACCESS_TEAM_DOMAIN: "team.example",
-  ACCESS_AUD: "aud",
+  REPOSITORY_ACCESS_AUD: "repo-aud",
   ACCESS_EMAIL: "user@example.com",
   PLATFORM_DB: {},
 };
@@ -59,4 +59,20 @@ test("repository browser preserves platform session validation status", async ()
   );
   assert.equal(response.status, 422);
   assert.deepEqual(await response.json(), { error: "PROFILE_INVALID", detail: "profile is invalid" });
+});
+
+test("repository browser does not reuse the IDE Access audience", async () => {
+  const response = await handleRepositoryTransport(
+    new Request("https://platform.idol.id/v1/repository/browser/observations"),
+    { ACCESS_TEAM_DOMAIN: "team.example", ACCESS_AUD: "ide-aud", ACCESS_EMAIL: "user@example.com", PLATFORM_DB: {} },
+    "/v1/repository/browser/observations",
+    platformInfo,
+    {
+      verifyAccess: async () => ({ subject: "user", email: "user@example.com" }),
+      platformService: {},
+      repositoryService,
+    },
+  );
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "ACCESS_NOT_CONFIGURED" });
 });
