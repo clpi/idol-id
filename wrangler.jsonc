@@ -17,6 +17,9 @@
     { "pattern": "r8b.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "r16.idol.id/*", "zone_name": "idol.id" }
   ],
-  "vars": { "IDOL_AUTHORITY": "f33bb3773484e7d954a2975211e683dfa89edab5" },
+  "vars": {
+    "IDOL_AUTHORITY": "f33bb3773484e7d954a2975211e683dfa89edab5",
+    "IDOL_LOCAL_DEVELOPMENT": "1"
+  },
   "observability": { "enabled": true }
 }
