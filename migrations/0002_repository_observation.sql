@@ -5,8 +5,11 @@ CREATE TABLE IF NOT EXISTS platform_repository_observation (
   namespace TEXT NOT NULL,
   repository TEXT NOT NULL,
   resolved_revision TEXT NOT NULL,
+  file_count INTEGER NOT NULL,
+  inventory_truncated INTEGER NOT NULL CHECK (inventory_truncated IN (0, 1)),
   document TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(subject) REFERENCES platform_profile(subject) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS platform_repository_observation_subject_created
@@ -18,7 +21,8 @@ CREATE TABLE IF NOT EXISTS platform_repository_scaffold (
   observation_id TEXT NOT NULL,
   document TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  FOREIGN KEY(observation_id) REFERENCES platform_repository_observation(id)
+  FOREIGN KEY(subject) REFERENCES platform_profile(subject) ON DELETE CASCADE,
+  FOREIGN KEY(observation_id) REFERENCES platform_repository_observation(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS platform_repository_scaffold_subject_created
