@@ -32,21 +32,27 @@ function scaffoldSummary(record) {
   });
 }
 
+function newestFirst(left, right) {
+  return String(right.document.created_at).localeCompare(String(left.document.created_at))
+    || right.sequence - left.sequence;
+}
+
 export function createMemoryRepositoryStore() {
   const observations = new Map();
   const scaffolds = new Map();
   const audits = new Map();
+  let sequence = 0;
   return Object.freeze({
     async commitObservation(record, event) {
       const document = Object.freeze({ ...clone(record.document), id: record.id, created_at: record.created_at });
-      observations.set(record.id, { subject: record.subject, document });
+      observations.set(record.id, { subject: record.subject, document, sequence: ++sequence });
       audits.set(event.id, clone(event));
       return document;
     },
     async listObservations(subject, limit = 50) {
       return [...observations.values()]
         .filter((record) => record.subject === subject)
-        .sort((left, right) => String(right.document.created_at).localeCompare(String(left.document.created_at)))
+        .sort(newestFirst)
         .slice(0, limit)
         .map(observationSummary);
     },
@@ -62,6 +68,7 @@ export function createMemoryRepositoryStore() {
         status: record.status,
         file_count: record.file_count,
         refusal_code: record.refusal_code,
+        sequence: ++sequence,
       });
       audits.set(event.id, clone(event));
       return document;
@@ -69,7 +76,7 @@ export function createMemoryRepositoryStore() {
     async listScaffolds(subject, limit = 50) {
       return [...scaffolds.values()]
         .filter((record) => record.subject === subject)
-        .sort((left, right) => String(right.document.created_at).localeCompare(String(left.document.created_at)))
+        .sort(newestFirst)
         .slice(0, limit)
         .map(scaffoldSummary);
     },
