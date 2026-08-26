@@ -1,4 +1,5 @@
 import { parseImportRequest, planForeignImport } from "../shared/foreign.js";
+import { handleIdeTransport } from "./ide.js";
 import { handlePlatformTransport } from "./platform.js";
 
 const HOSTS = Object.freeze({
@@ -80,7 +81,7 @@ function projectionRequest(request, pathname) {
   url.search = "";
   return new Request(url, {
     method: "GET",
-    headers: { "accept": "application/json" },
+    headers: { accept: "application/json" },
   });
 }
 
@@ -220,6 +221,9 @@ export async function handle(request, env, dependencies = {}) {
       }),
     );
   }
+
+  const ideResponse = await handleIdeTransport(request, env, url.pathname, info, dependencies);
+  if (ideResponse) return secure(ideResponse);
 
   const platformResponse = await handlePlatformTransport(request, env, url.pathname, info, dependencies);
   if (platformResponse) return secure(platformResponse);
