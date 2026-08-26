@@ -48,9 +48,8 @@ test("repository POST bodies are streamed and cancelled above the byte limit", a
     start(controller) {
       controller.enqueue(new Uint8Array(10_000));
       controller.enqueue(new Uint8Array(10_000));
-      controller.close();
     },
-    cancel() { cancelled = true; },
+    cancel(reason) { cancelled = reason === "repository request body too large"; },
   });
   const response = await handleRepositoryTransport(
     new Request("https://platform.idol.id/v1/repository/browser/observe", {
