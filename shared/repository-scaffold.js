@@ -84,7 +84,7 @@ export function createRepositoryScaffold(observation, input, { authorityPin, cre
       observation,
       capabilities,
       timestamp,
-      "SCAFFOLD_INVENTORY_INCOMPLETE",
+      "SCAFFOLD_INCOMPLETE_INVENTORY",
       "generated scaffold paths cannot be proven absent from an incomplete repository inventory",
     );
   }
