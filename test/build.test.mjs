@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-test("build emits worlds and platform in one deployment", async () => {
+test("build emits worlds, foreign integrations, and platform in one deployment", async () => {
   await rm("dist", { recursive: true, force: true });
   const run = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr || run.stdout);
@@ -35,4 +35,17 @@ test("build emits worlds and platform in one deployment", async () => {
   const snapshot = JSON.parse(await readFile("dist/runtime/worlds.json", "utf8"));
   assert.equal(snapshot.schema, "idol.web.worlds.v1");
   assert.ok(snapshot.worlds.length > 0);
+
+  const snapshotAuthority = JSON.parse(await readFile("runtime/authority.json", "utf8"));
+  const foreign = JSON.parse(await readFile("dist/runtime/foreign.json", "utf8"));
+  assert.equal(foreign.schema, "idol.web.foreign.v1");
+  assert.equal(foreign.authority.language.commit, snapshotAuthority.language.commit);
+  assert.equal(foreign.authority.native.commit, snapshotAuthority.native.commit);
+  assert.ok(foreign.worlds.length >= 6);
+  assert.ok(foreign.worlds.every((world) => world.semantic_id === null));
+  assert.ok(foreign.worlds.every((world) => world.identity_status === "not-published"));
+  assert.ok(foreign.worlds.flatMap((world) => world.projections).every((projection) =>
+    projection.status !== "available" || (projection.artifact?.sha256 && projection.evidence?.status === "verified")));
+  assert.ok(foreign.worlds.flatMap((world) => world.projections).every((projection) =>
+    projection.artifact || !("copy_command" in projection)));
 });
