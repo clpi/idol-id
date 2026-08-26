@@ -145,6 +145,34 @@ function refusedTransformation(observation, scaffold, timestamp, code, detail) {
   });
 }
 
+export function repositoryTransformationSummary(record) {
+  if (!record) return null;
+  const status = exact(record.status, "transformation status", 16);
+  if (status !== "preview" && status !== "refused") {
+    throw new RepositoryError("INVALID_REPOSITORY_INPUT", "transformation status must be preview or refused", 422);
+  }
+  const count = Number(record.selected_file_count ?? record.selected_files?.length ?? record.files?.length ?? 0);
+  const selectedFileCount = Number.isFinite(count) && count >= 0 ? Math.trunc(count) : 0;
+  const evidenceStatus = exact(
+    record.evidence_status ?? record.evidence?.status ?? "unexecuted",
+    "transformation evidence status",
+    32,
+  );
+  const rawRefusalCode = text(record.refusal_code ?? record.refusal?.code);
+  const refusalCode = rawRefusalCode ? exact(rawRefusalCode, "transformation refusal code", 160) : null;
+  return Object.freeze({
+    schema: "idol.web.repository.transformation.summary.v1",
+    id: exact(record.id, "transformation id", 160),
+    observation_id: exact(record.observation_id, "observation id", 160),
+    scaffold_id: exact(record.scaffold_id, "scaffold id", 160),
+    status,
+    selected_file_count: selectedFileCount,
+    evidence_status: evidenceStatus,
+    refusal_code: refusalCode,
+    created_at: exact(record.created_at, "transformation creation time", 64),
+  });
+}
+
 export async function createRepositoryTransformation(
   observation,
   scaffold,
