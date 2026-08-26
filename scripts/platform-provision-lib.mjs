@@ -2,7 +2,11 @@ const API = "https://api.cloudflare.com/client/v4";
 const DATABASE_NAME = "idol-platform";
 const APPLICATION_NAME = "Idol Platform Browser Identity";
 const POLICY_NAME = "Allow Idol owner email";
-const DESTINATION = "platform.idol.id/v1/platform/browser/*";
+const DESTINATIONS = Object.freeze([
+  Object.freeze({ type: "public", uri: "platform.idol.id/ide*" }),
+  Object.freeze({ type: "public", uri: "platform.idol.id/v1/ide/*" }),
+  Object.freeze({ type: "public", uri: "platform.idol.id/v1/platform/browser/*" }),
+]);
 
 function ensureString(value, label) {
   const text = String(value || "").trim();
@@ -84,27 +88,48 @@ function destinationsOf(app) {
   return [];
 }
 
+function destinationKey(destination) {
+  return `${String(destination?.type || "")}:${String(destination?.uri || "")}`;
+}
+
+function applicationDocument(otp) {
+  return {
+    name: APPLICATION_NAME,
+    type: "self_hosted",
+    destinations: DESTINATIONS.map((destination) => ({ ...destination })),
+    session_duration: "24h",
+    allowed_idps: [otp.id],
+    auto_redirect_to_identity: true,
+    app_launcher_visible: false,
+    skip_interstitial: true,
+    custom_deny_message: "This private Idol Platform surface requires the admitted owner identity.",
+  };
+}
+
 async function ensureApplication(context, otp) {
   const listed = await cloudflare(context, "/access/apps?per_page=100");
   const existing = Array.isArray(listed) ? listed.find((app) => app.name === APPLICATION_NAME) : null;
-  if (existing) {
-    const matches = destinationsOf(existing).some((destination) => destination.type === "public" && destination.uri === DESTINATION);
-    if (!matches) throw new Error(`${APPLICATION_NAME} exists with a different destination`);
-    return existing;
+  const document = applicationDocument(otp);
+  if (!existing) {
+    return cloudflare(context, "/access/apps", {
+      method: "POST",
+      body: JSON.stringify(document),
+    });
   }
-  return cloudflare(context, "/access/apps", {
-    method: "POST",
-    body: JSON.stringify({
-      name: APPLICATION_NAME,
-      type: "self_hosted",
-      destinations: [{ type: "public", uri: DESTINATION }],
-      session_duration: "24h",
-      allowed_idps: [otp.id],
-      auto_redirect_to_identity: true,
-      app_launcher_visible: false,
-      skip_interstitial: true,
-      custom_deny_message: "This private Idol Platform API requires the admitted owner identity.",
-    }),
+
+  const required = new Set(DESTINATIONS.map(destinationKey));
+  const present = destinationsOf(existing);
+  for (const destination of present) {
+    if (!required.has(destinationKey(destination))) {
+      throw new Error(`${APPLICATION_NAME} exists with an unknown destination: ${destination.uri || "<missing>"}`);
+    }
+  }
+  const current = new Set(present.map(destinationKey));
+  if (required.size === current.size && [...required].every((key) => current.has(key))) return existing;
+
+  return cloudflare(context, `/access/apps/${encodeURIComponent(existing.id)}`, {
+    method: "PUT",
+    body: JSON.stringify(document),
   });
 }
 
