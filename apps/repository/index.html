@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Repository Observatory — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<link rel="stylesheet" href="/shared/repository-app.css">
+</head>
+<body>
+<div class="app">
+<div class="topbar"></div>
+<main class="repo" id="repo" data-mobile="history">
+<section class="pane history">
+<header class="head"><div class="eyebrow">@ · public provenance</div><h1>Repository Observatory</h1><p>Resolve one public revision. Observe metadata and tree facts. Preview Idol adoption without writing the repository.</p></header>
+<form class="observe" id="observe-form"><input id="repo-url" type="url" required placeholder="https://github.com/owner/repository" aria-label="Public repository URL"><div class="observe-row"><input id="repo-ref" value="HEAD" placeholder="HEAD / branch / tag / commit" aria-label="Repository ref"><button class="primary" type="submit">Observe</button></div><div class="muted" id="observe-status">Public GitHub, GitLab, or Bitbucket metadata only.</div></form>
+<div class="history-list" id="history"><div class="empty">Sign-in admission established. Loading observations…</div></div>
+</section>
+<section class="pane workspace" id="workspace"><div class="empty">Select or observe a repository.</div></section>
+<aside class="pane factsrail"><div class="rail-head"><div class="eyebrow">exact record</div><h2 style="margin-top:8px;font:500 18px/1.1 var(--sans)">Authority rail</h2></div><div class="rail-content" id="rail"></div></aside>
+</main>
+<nav class="mobile-nav" aria-label="Repository Observatory navigation"><button data-view="history" class="here">repos</button><button data-view="workspace">observe</button><button data-view="facts">facts</button></nav>
+<div class="statusbar"></div>
+</div>
+<script src="/shared/idol.js"></script>
+<script src="/shared/shell.js"></script>
+<script type="module" src="/shared/repository-app.js"></script>
+</body>
+</html>

@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Repository authority and transport security
+        run: node --test test/repository-platform-errors.test.mjs test/repository-worker.test.mjs
       - name: Test and build every surface
         run: npm run check
       - name: Validate Worker bundle
@@ -45,17 +47,19 @@ jobs:
       - name: Require Cloudflare deployment token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'missing CLOUDFLARE_API_TOKEN'; exit 2; }
+        run: test -n "$CLOUDFLARE_API_TOKEN" || { echo 'missing CLOUDFLARE_API_TOKEN'; exit 2; }
       - name: Snapshot the public world projection
         run: node scripts/snapshot-worlds.mjs
-      - name: Provision D1 and exact-owner Access identity boundary
-        id: platform
+      - name: Provision D1 and Platform Access identity boundary
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: node scripts/provision-platform.mjs
-      - name: Apply platform identity migrations
+      - name: Provision Repository Observatory Access boundary
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/provision-repository-access.mjs
+      - name: Apply platform migrations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx --yes wrangler@4.125.0 d1 migrations apply PLATFORM_DB --remote --config .wrangler.production.jsonc
@@ -71,41 +75,19 @@ jobs:
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
           ## idol.id deployed
-          One Worker version now serves:
-          - idol.id
-          - docs.idol.id
-          - lib.idol.id
-          - api.idol.id
-          - graph.idol.id
-          - worlds.idol.id
-          - platform.idol.id
-          - r8a.idol.id
-          - r8b.idol.id
-          - r16.idol.id
+          One immutable Worker version serves root, docs, lib, api, graph, worlds, platform, r8a, r8b and r16.
 
-          Immutable public projections:
-          - /runtime/worlds.json
-          - /runtime/foreign.json
-          - /runtime/manifest.json includes the IDE capability contract
+          Distribution:
+          - curl -fsSL https://idol.id/install | sh
+          - irm https://idol.id/install.ps1 | iex
+          - exact pinned Zig bootstrap seed; self-hosted release remains false
 
-          Public foreign-world transport:
-          - GET /v1/world/foreign
-          - GET /v1/world/:slug/integration
-          - POST /v1/world/import-plan (plan-only; no source access or execution)
+          Repository Observatory:
+          - platform.idol.id/repo and /repo/{observation,scaffold}/:id are Access protected
+          - public GitHub/GitLab/Bitbucket metadata and tree projections only
+          - exact resolved revisions, D1 subject ownership and audit
+          - review-only scaffold/patch; no source content, provider credential or repository mutation
+          - scoped API transport on api.idol.id/v1/repository/api/*
 
-          Platform identity/API access:
-          - Cloudflare Access protects /v1/platform/browser/* for the exact bootstrap owner email
-          - the Worker independently verifies Access JWT signature and claims
-          - D1 stores profiles, digest-only API tokens, and append-only audit events
-          - GET /v1/platform/status remains public only on platform.idol.id
-          - GET /v1/platform/api/whoami accepts scoped Idol bearer tokens only on api.idol.id
-          - transport identity never grants an Idol world capability
-
-          Local-first browser IDE:
-          - platform.idol.id/ide and /ide/workspace/* are Access protected
-          - workspaces persist locally in IndexedDB; no automatic project upload
-          - lexical preview never claims semantic identity
-          - POST /v1/ide/analyze requires Access, same-origin browser proof, normalized bounded input, and audit storage
-          - source is sent only after explicit Analyze remotely action
-          - audit records hashes, sizes, path, and identities but not source text
+          Browser IDE and prior public worlds/foreign/platform routes remain in the same deployment.
           SUMMARY
