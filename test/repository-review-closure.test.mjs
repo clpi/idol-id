@@ -223,9 +223,10 @@ test("D1 observation lists select bounded summary columns instead of full docume
   }]);
 });
 
-test("repository migration stores the canonical bounded observation summary facts", async () => {
-  const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
+test("follow-up migration stores the canonical bounded observation summary facts", async () => {
+  const migration = await readFile("migrations/0003_repository_observation_summary.sql", "utf8");
   for (const column of ["coordinate", "requested_ref", "default_branch", "file_count", "truncated"]) {
-    assert.match(migration, new RegExp(`\\b${column}\\b`), column);
+    assert.match(migration, new RegExp(`ALTER TABLE platform_repository_observation\\s+ADD COLUMN ${column}\\b`), column);
   }
+  assert.match(migration, /UPDATE platform_repository_observation/);
 });
