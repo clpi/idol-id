@@ -15,7 +15,6 @@ const SCAFFOLD_CREATE_PATH = new RegExp(`^observations/(${ID})/scaffolds$`);
 const SCAFFOLD_PATH = new RegExp(`^scaffolds/(${ID})$`);
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const LOCAL_STORE = createMemoryRepositoryStore();
-const LOCAL_AUDIT = [];
 
 function json(value, status = 200, headers = {}) {
   return new Response(JSON.stringify(value), {
@@ -129,14 +128,13 @@ async function services(request, env, dependencies) {
       platform: Object.freeze({ async session(identity) { return { profile: identity }; } }),
       repository: createRepositoryService({
         store: LOCAL_STORE,
-        appendAudit: async (event) => { LOCAL_AUDIT.push(event); },
         authorityPin,
         now: dependencies.now,
         randomBytes: dependencies.randomBytes,
       }),
     };
   }
-  if (!env.PLATFORM_DB?.prepare) throw new RepositoryError("PLATFORM_STORAGE_UNAVAILABLE", "platform storage unavailable", 503);
+  if (!env.PLATFORM_DB?.prepare || !env.PLATFORM_DB?.batch) throw new RepositoryError("PLATFORM_STORAGE_UNAVAILABLE", "platform storage unavailable", 503);
   const platformRepository = createD1PlatformRepository(env.PLATFORM_DB);
   const platform = createPlatformService({
     repository: platformRepository,
@@ -145,7 +143,6 @@ async function services(request, env, dependencies) {
   });
   const repository = createRepositoryService({
     store: createD1RepositoryStore(env.PLATFORM_DB),
-    appendAudit: (event) => platformRepository.appendAudit(event),
     authorityPin,
     now: dependencies.now,
     randomBytes: dependencies.randomBytes,
