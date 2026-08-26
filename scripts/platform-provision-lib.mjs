@@ -1,7 +1,7 @@
 const API = "https://api.cloudflare.com/client/v4";
 const DATABASE_NAME = "idol-platform";
 const APPLICATION_NAME = "Idol Platform Browser Identity";
-const POLICY_NAME = "Allow Idol owner domain";
+const POLICY_NAME = "Allow Idol owner email";
 const DESTINATION = "platform.idol.id/v1/platform/browser/*";
 
 function ensureString(value, label) {
@@ -103,22 +103,22 @@ async function ensureApplication(context, otp) {
       auto_redirect_to_identity: true,
       app_launcher_visible: false,
       skip_interstitial: true,
-      custom_deny_message: "This private Idol Platform API requires an admitted account identity.",
+      custom_deny_message: "This private Idol Platform API requires the admitted owner identity.",
     }),
   });
 }
 
-function policyMatches(policy, emailDomain) {
+function policyMatches(policy, bootstrapEmail) {
   return policy?.decision === "allow" && Array.isArray(policy.include) && policy.include.some(
-    (rule) => rule?.email_domain?.domain === emailDomain,
+    (rule) => String(rule?.email?.email || "").toLowerCase() === bootstrapEmail,
   );
 }
 
-async function ensurePolicy(context, app, emailDomain) {
+async function ensurePolicy(context, app, bootstrapEmail) {
   const listed = await cloudflare(context, `/access/apps/${encodeURIComponent(app.id)}/policies?per_page=100`);
   const existing = Array.isArray(listed) ? listed.find((policy) => policy.name === POLICY_NAME) : null;
   if (existing) {
-    if (!policyMatches(existing, emailDomain)) throw new Error(`${POLICY_NAME} exists with a different admission rule`);
+    if (!policyMatches(existing, bootstrapEmail)) throw new Error(`${POLICY_NAME} exists with a different admission rule`);
     return existing;
   }
   return cloudflare(context, `/access/apps/${encodeURIComponent(app.id)}/policies`, {
@@ -128,7 +128,7 @@ async function ensurePolicy(context, app, emailDomain) {
       decision: "allow",
       precedence: 1,
       session_duration: "24h",
-      include: [{ email_domain: { domain: emailDomain } }],
+      include: [{ email: { email: bootstrapEmail } }],
       require: [],
       exclude: [],
     }),
@@ -143,7 +143,7 @@ function accessAudience(app) {
 export async function provisionPlatform({
   accountId,
   apiToken,
-  emailDomain = "pecunies.com",
+  bootstrapEmail = "chris@pecunies.com",
   teamName = "idol-clpi",
   fetcher = fetch,
 } = {}) {
@@ -152,7 +152,7 @@ export async function provisionPlatform({
     apiToken: ensureString(apiToken, "Cloudflare API token"),
     fetcher,
   };
-  const admittedDomain = ensureString(emailDomain, "Access email domain").toLowerCase();
+  const admittedEmail = ensureString(bootstrapEmail, "Access bootstrap email").toLowerCase();
   const database = await ensureDatabase(context);
   if (!database?.uuid) throw new Error("Cloudflare D1 database response has no UUID");
   const organization = await ensureOrganization(context, ensureString(teamName, "Access team name"));
@@ -160,7 +160,7 @@ export async function provisionPlatform({
   if (!otp?.id) throw new Error("Cloudflare Access one-time PIN response has no ID");
   const app = await ensureApplication(context, otp);
   if (!app?.id || !accessAudience(app)) throw new Error("Cloudflare Access application response is incomplete");
-  await ensurePolicy(context, app, admittedDomain);
+  await ensurePolicy(context, app, admittedEmail);
 
   return Object.freeze({
     databaseId: database.uuid,
@@ -168,11 +168,11 @@ export async function provisionPlatform({
     teamDomain: organization.auth_domain,
     accessApplicationId: app.id,
     accessAudience: accessAudience(app),
-    emailDomain: admittedDomain,
+    bootstrapEmail: admittedEmail,
   });
 }
 
-export function renderProductionWrangler(baseConfig, provisioned) {
+export function renderProductionWrangler(baseConfig, provisioned, { webCommit } = {}) {
   const config = structuredClone(baseConfig);
   config.d1_databases = [{
     binding: "PLATFORM_DB",
@@ -182,9 +182,10 @@ export function renderProductionWrangler(baseConfig, provisioned) {
   }];
   config.vars = {
     ...(config.vars || {}),
+    ...(webCommit ? { IDOL_COMMIT: webCommit } : {}),
     ACCESS_TEAM_DOMAIN: provisioned.teamDomain,
     ACCESS_AUD: provisioned.accessAudience,
-    ACCESS_EMAIL_DOMAIN: provisioned.emailDomain,
+    ACCESS_EMAIL: provisioned.bootstrapEmail,
   };
   return config;
 }
