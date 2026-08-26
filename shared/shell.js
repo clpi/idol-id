@@ -31,9 +31,21 @@ function decodeWorldHash(hash = global.location.hash) {
   }
 }
 
+function worldRoute(pathname = global.location.pathname) {
+  const match = /^\/world\/([^/]+)(?:\/([^/]+))?\/?$/.exec(String(pathname || ""));
+  if (!match) return Object.freeze({ world: "", lens: "" });
+  return Object.freeze({
+    world: decodeWorldHash(`#${match[1]}`),
+    lens: decodeWorldHash(`#${match[2] || ""}`),
+  });
+}
+
 function worldFromPath(pathname = global.location.pathname) {
-  const match = /^\/world\/([^/]+)\/?$/.exec(String(pathname || ""));
-  return match ? decodeWorldHash(`#${match[1]}`) : "";
+  return worldRoute(pathname).world;
+}
+
+function worldLensFromPath(pathname = global.location.pathname) {
+  return worldRoute(pathname).lens;
 }
 
 function sanitiseHash() {
@@ -56,9 +68,6 @@ function prepareWorldRoute(app) {
 function bindWorldHistory(app) {
   if (app !== "worlds" || global.__idolWorldHistoryBound) return;
   global.__idolWorldHistoryBound = true;
-  // Setting a new hash selects immediately in the current page. Traversing
-  // Back/Forward activates an older hash entry; reload so the Atlas rehydrates
-  // its selection from that exact URL instead of leaving stale detail visible.
   global.addEventListener("popstate", () => global.location.reload());
 }
 
@@ -111,6 +120,7 @@ function boot(app, opts) {
   global.IdolShell = {
     decodeWorldHash,
     worldFromPath,
+    worldLensFromPath,
     crumbs(list) {
       const c = document.getElementById("crumbs");
       if (!c) return;
@@ -136,6 +146,6 @@ function boot(app, opts) {
   return global.IdolShell;
 }
 
-global.Shell = { boot, apps: APPS, decodeWorldHash, worldFromPath };
+global.Shell = { boot, apps: APPS, decodeWorldHash, worldFromPath, worldLensFromPath };
 
 })(window);
