@@ -138,6 +138,28 @@ export function fileRecord(path, size = null) {
   return Object.freeze({ path: clean, bytes: Number.isFinite(bytes) && bytes >= 0 ? bytes : null });
 }
 
+export function repositoryObservationSummary(record) {
+  if (!record) return null;
+  const provider = exact(record.provider, "repository provider", 32);
+  const namespace = exact(record.namespace, "repository namespace", 320);
+  const repository = exact(record.repository, "repository name", 160);
+  const count = Number(record.file_count ?? record.inventory?.file_count ?? 0);
+  const fileCount = Number.isFinite(count) && count >= 0 ? Math.trunc(count) : 0;
+  const rawTruncated = record.inventory_truncated ?? record.inventory?.truncated ?? false;
+  const truncated = rawTruncated === true || rawTruncated === 1 || rawTruncated === "1";
+  return Object.freeze({
+    schema: "idol.web.repository.observation.summary.v1",
+    id: exact(record.id, "observation id", 160),
+    provider,
+    namespace,
+    repository,
+    coordinate: `${provider}:${namespace}/${repository}`,
+    resolved_revision: exact(record.resolved_revision, "resolved repository revision", 128),
+    inventory: Object.freeze({ file_count: fileCount, truncated }),
+    created_at: exact(record.created_at, "observation creation time", 64),
+  });
+}
+
 const EXTENSIONS = Object.freeze({
   ".id": "idol", ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript", ".ts": "typescript", ".tsx": "typescript",
   ".rs": "rust", ".go": "go", ".py": "python", ".c": "c", ".h": "c", ".cc": "cpp", ".cpp": "cpp", ".hpp": "cpp",
