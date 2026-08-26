@@ -64,8 +64,8 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(ideHtml, /remote native/i);
   assert.match(ideHtml, /semantic identity not published/i);
   assert.match(ideHtml, /source remains local/i);
-  assert.match(ideHtml, /@media \(max-width: 699px\)/);
-  assert.match(ideHtml, /@media \(max-width: 360px\)/);
+  assert.match(ideHtml, /@media\s*\(max-width:\s*699px\)/);
+  assert.match(ideHtml, /@media\s*\(max-width:\s*360px\)/);
   assert.match(ideHtml, /prefers-reduced-motion/);
 
   assert.match(surfaceCss, /@font-face/);
