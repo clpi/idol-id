@@ -6,6 +6,7 @@
 
 const APPS = [
   { id: "graph",    label: "explorer", href: "https://graph.idol.id/",    title: "Explorer" },
+  { id: "ide",      label: "ide",      href: "https://platform.idol.id/ide", title: "Browser IDE" },
   { id: "worlds",   label: "worlds",   href: "https://worlds.idol.id/",   title: "World Atlas" },
   { id: "lib",      label: "lib",      href: "https://lib.idol.id/",      title: "Registry" },
   { id: "docs",     label: "docs",     href: "https://docs.idol.id/",     title: "Docs" },
@@ -71,6 +72,13 @@ function bindWorldHistory(app) {
   global.addEventListener("popstate", () => global.location.reload());
 }
 
+function activeApp(candidate, app) {
+  if (candidate.id === app) return true;
+  return candidate.id === "ide"
+    && global.location.hostname === "platform.idol.id"
+    && /^\/ide(?:\/|$)/.test(global.location.pathname);
+}
+
 function boot(app, opts) {
   opts = opts || {};
   sanitiseHash();
@@ -89,7 +97,7 @@ function boot(app, opts) {
     <div class="crumbs" id="crumbs"></div>
     <div class="spacer"></div>
     <nav class="nav" aria-label="Idol surfaces">
-      ${APPS.map((a) => `<a href="${a.href}" class="${a.id === app ? "here" : ""}" title="${a.title}">${a.label}</a>`).join("")}
+      ${APPS.map((a) => `<a href="${a.href}" class="${activeApp(a, app) ? "here" : ""}" title="${a.title}">${a.label}</a>`).join("")}
     </nav>`;
 
   const sb = document.querySelector(".statusbar");
