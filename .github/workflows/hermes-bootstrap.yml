@@ -12,27 +12,24 @@ permissions:
 
 env:
   CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
 
 jobs:
   discover:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Inventory live r16 tunnel ingress and connector state
+      - name: Inspect r16 connector metadata
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
-          tunnels="$(curl -fsS "${auth[@]}" "$base/cfd_tunnel?is_deleted=false&per_page=100")"
-          while IFS=$'\t' read -r id name status; do
-            cfg="$(curl -fsS "${auth[@]}" "$base/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
-            if [ -n "$cfg" ] && echo "$cfg" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then
-              echo "TUNNEL id=$id name=$name status=$status"
-              echo "$cfg" | jq -c '.result.config.ingress | map({hostname:(.hostname // null),service})'
-              echo 'CONNECTIONS:'
-              curl -fsS "${auth[@]}" "$base/cfd_tunnel/$id/connections" | jq -c '{success,result:[.result[]? | {colo_name,id,is_pending_reconnect,origin_ip,opened_at,client_version}]}'
-            fi
-          done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
+          base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$R16_TUNNEL_ID"
+          echo '--- tunnel ---'
+          curl -fsS "${auth[@]}" "$base" | jq -c '.result | del(.credentials_file,.token)'
+          echo '--- configuration ---'
+          curl -fsS "${auth[@]}" "$base/configurations" | jq -c '.result.config'
+          echo '--- connections full ---'
+          curl -fsS "${auth[@]}" "$base/connections" | jq -c '.'
