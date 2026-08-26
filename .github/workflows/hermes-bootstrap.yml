@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "missing production CLOUDFLARE_API_TOKEN"; exit 2; }
+          test -n "$CLOUDFLARE_API_TOKEN"
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           abase="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
           tunnels="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel?is_deleted=false&per_page=100")"
@@ -34,7 +34,7 @@ jobs:
             candidate="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
             if [ -n "$candidate" ] && echo "$candidate" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then tid="$id"; cfg="$candidate"; fi
           done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
-          test -n "$tid" || { echo 'r16 tunnel not found'; exit 3; }
+          test -n "$tid"
           current="$(echo "$cfg" | jq '.result.config')"
           if ! echo "$current" | jq -e --arg h "$SSH_HOST" '.ingress[] | select(.hostname==$h and .service=="ssh://localhost:22")' >/dev/null; then
             updated="$(echo "$current" | jq --arg h "$SSH_HOST" '.ingress as $i | .ingress = (($i[0:-1]) + [{hostname:$h,service:"ssh://localhost:22"}] + [$i[-1]])')"
@@ -50,26 +50,22 @@ jobs:
           if [ -n "$rid" ]; then curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase/$rid" | jq -e '.success == true' >/dev/null; else curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase" | jq -e '.success == true' >/dev/null; fi
           echo "r16 SSH route ready: $SSH_HOST"
 
-      - name: Probe SSH protocol and authentication methods with supported ProxyCommand
+      - name: Probe portable C execution through the live r16 compiler service
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload='{"source":"main: i64 = ()\n  42","args":["--backend=c"]}'
+          echo '--- r16 idol run --backend=c ---'
+          curl -fsS -H 'content-type: application/json' --data "$payload" https://r16.idol.id/api/run | jq -c '{rc,stdout,stderr}'
+
+      - name: Probe SSH protocol with supported ProxyCommand
         shell: bash
         run: |
           set -euo pipefail
           curl -L --fail --silent --show-error https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
           chmod +x /tmp/cloudflared
-          echo '--- ssh protocol/auth probe ---'
           set +e
-          ssh -vv \
-            -o "ProxyCommand=/tmp/cloudflared access ssh --hostname %h" \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -o BatchMode=yes \
-            -o PreferredAuthentications=publickey,password,keyboard-interactive \
-            -o ConnectTimeout=15 \
-            clp@$SSH_HOST true 2>&1 \
-            | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Offering public key|Permission denied|Connection closed|websocket|bad handshake|Access' \
-            | tail -n 40
+          ssh -vv -o "ProxyCommand=/tmp/cloudflared access ssh --hostname %h" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=15 clp@$SSH_HOST true 2>&1 | grep -E 'Remote protocol version|Authentications that can continue|Permission denied|websocket|bad handshake|Connection closed' | tail -n 40
           rc=${PIPESTATUS[0]}
           set -e
           echo "SSH_PROBE_RC=$rc"
-
-# probe trigger 2026-08-25T19:52-07:00
