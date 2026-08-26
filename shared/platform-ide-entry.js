@@ -1,10 +1,49 @@
 /* Session-gated entry for the protected browser IDE.
    The Platform app owns session admission by toggling #signed-in. This adapter
-   exposes /ide only while that admitted session pane is visible. */
+   exposes /ide only while that admitted session pane is visible and owns the
+   public Program L presentation contract. */
 (function installPlatformIdeEntry(global) {
 "use strict";
 
+function programCard(letter) {
+  const wanted = `program ${letter}`.toLowerCase();
+  return [...document.querySelectorAll(".program")].find((card) => {
+    const mark = card.querySelector(".mark");
+    return String(mark?.textContent || "").trim().toLowerCase() === wanted;
+  }) || null;
+}
+
+function replaceFacts(card, values) {
+  const facts = card?.querySelector(".facts");
+  if (!facts) return;
+  facts.replaceChildren(...values.map((value) => {
+    const fact = document.createElement("span");
+    fact.className = "fact";
+    fact.textContent = value;
+    return fact;
+  }));
+}
+
+function reconcileProgramCard() {
+  const card = programCard("L");
+  if (!card) return;
+  const status = card.querySelector(".status");
+  if (status) {
+    status.textContent = "live";
+    status.classList.remove("planned");
+    status.classList.add("live");
+  }
+  const title = card.querySelector("h3");
+  if (title) title.textContent = "Local-first browser IDE";
+  const copy = card.querySelector("p");
+  if (copy) {
+    copy.textContent = "Edit browser-local workspaces and request exact remote-native semantic facts explicitly. Source stays local until requested.";
+  }
+  replaceFacts(card, ["local workspace", "exact token facts", "Access protected"]);
+}
+
 function install() {
+  reconcileProgramCard();
   const signedIn = document.getElementById("signed-in");
   if (!signedIn || document.getElementById("platform-ide-entry")) return;
 
