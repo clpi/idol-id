@@ -31,15 +31,42 @@ function decodeWorldHash(hash = global.location.hash) {
   }
 }
 
+function worldFromPath(pathname = global.location.pathname) {
+  const match = /^\/world\/([^/]+)\/?$/.exec(String(pathname || ""));
+  return match ? decodeWorldHash(`#${match[1]}`) : "";
+}
+
 function sanitiseHash() {
   const hash = global.location.hash;
   if (!hash || hash === "#" || decodeWorldHash(hash)) return;
   global.history.replaceState(null, "", global.location.pathname + global.location.search);
 }
 
+function prepareWorldRoute(app) {
+  if (app !== "worlds" || decodeWorldHash()) return;
+  const requested = worldFromPath();
+  if (!requested) return;
+  global.history.replaceState(
+    null,
+    "",
+    `${global.location.pathname}${global.location.search}#${encodeURIComponent(requested)}`,
+  );
+}
+
+function bindWorldHistory(app) {
+  if (app !== "worlds" || global.__idolWorldHistoryBound) return;
+  global.__idolWorldHistoryBound = true;
+  // Setting a new hash selects immediately in the current page. Traversing
+  // Back/Forward activates an older hash entry; reload so the Atlas rehydrates
+  // its selection from that exact URL instead of leaving stale detail visible.
+  global.addEventListener("popstate", () => global.location.reload());
+}
+
 function boot(app, opts) {
   opts = opts || {};
   sanitiseHash();
+  prepareWorldRoute(app);
+  bindWorldHistory(app);
   ensureSurfaceStyles();
   document.title = (opts.title || app) + " — idol.id";
 
@@ -83,12 +110,13 @@ function boot(app, opts) {
 
   global.IdolShell = {
     decodeWorldHash,
+    worldFromPath,
     crumbs(list) {
       const c = document.getElementById("crumbs");
       if (!c) return;
       c.innerHTML = "";
       (list || []).forEach((item, i) => {
-        if (i) { const s = document.createElement("span"); s.className = "sep"; s.textContent = "/"; c.appendChild(s); }
+        if (i) { const s = document.createElement("span"); s.className = "sep"; c.appendChild(s); }
         const cr = document.createElement("span");
         cr.className = "crumb" + (i === list.length - 1 ? " here" : "");
         cr.textContent = item.label;
@@ -103,6 +131,6 @@ function boot(app, opts) {
   return global.IdolShell;
 }
 
-global.Shell = { boot, apps: APPS, decodeWorldHash };
+global.Shell = { boot, apps: APPS, decodeWorldHash, worldFromPath };
 
 })(window);
