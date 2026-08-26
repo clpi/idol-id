@@ -161,9 +161,12 @@ test("D1 record and audit writes use one transactional batch", async () => {
     provider: document.provider,
     namespace: document.namespace,
     repository: document.repository,
+    coordinate: document.coordinate,
+    requested_ref: document.requested_ref,
+    default_branch: document.default_branch,
     resolved_revision: document.resolved_revision,
     file_count: document.inventory.file_count,
-    inventory_truncated: document.inventory.truncated,
+    truncated: document.inventory.truncated,
     document,
     created_at: document.created_at,
   }, event);
@@ -189,9 +192,12 @@ test("D1 observation lists select bounded summary columns instead of full docume
                 provider: "github",
                 namespace: "acme",
                 repository: "demo",
+                coordinate: "github:acme/demo",
+                requested_ref: "main",
+                default_branch: "main",
                 resolved_revision: "abcdef123456",
                 file_count: 5000,
-                inventory_truncated: 1,
+                truncated: 1,
                 created_at: "2026-08-26T12:00:00.000Z",
               }] };
             },
@@ -209,14 +215,17 @@ test("D1 observation lists select bounded summary columns instead of full docume
     namespace: "acme",
     repository: "demo",
     coordinate: "github:acme/demo",
+    requested_ref: "main",
+    default_branch: "main",
     resolved_revision: "abcdef123456",
     inventory: { file_count: 5000, truncated: true },
     created_at: "2026-08-26T12:00:00.000Z",
   }]);
 });
 
-test("repository migration stores the bounded observation summary facts", async () => {
+test("repository migration stores the canonical bounded observation summary facts", async () => {
   const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
-  assert.match(migration, /file_count INTEGER NOT NULL/);
-  assert.match(migration, /inventory_truncated INTEGER NOT NULL/);
+  for (const column of ["coordinate", "requested_ref", "default_branch", "file_count", "truncated"]) {
+    assert.match(migration, new RegExp(`\\b${column}\\b`), column);
+  }
 });
