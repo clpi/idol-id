@@ -15,21 +15,24 @@
     --atlas-panel: rgba(12, 13, 14, 0.92);
   }
   body { overflow: hidden; background: #050607; }
-  .atlas { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(290px, 360px) minmax(0, 1fr); position: relative; }
+  .atlas { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(290px, 370px) minmax(0, 1fr); position: relative; }
   .atlas::before {
     content: ""; position: absolute; inset: 0; pointer-events: none;
     background:
       radial-gradient(circle at 72% 18%, rgba(111,199,210,.06), transparent 28%),
+      radial-gradient(circle at 82% 72%, rgba(167,153,216,.045), transparent 24%),
       linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
-    background-size: auto, 44px 44px, 44px 44px;
+    background-size: auto, auto, 44px 44px, 44px 44px;
   }
   .rail, .detail { position: relative; z-index: 1; min-height: 0; }
-  .rail { border-right: 1px solid var(--rule); background: rgba(5,6,7,.88); display: flex; flex-direction: column; }
+  .rail { border-right: 1px solid var(--rule); background: rgba(5,6,7,.9); display: flex; flex-direction: column; }
   .atlas-head { padding: 22px 20px 16px; border-bottom: 1px solid var(--rule); }
   .eyebrow { color: var(--atlas-world); font: 10px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
   .atlas-head h1 { margin-top: 9px; font: 500 clamp(24px, 3vw, 36px)/1.05 var(--sans); letter-spacing: -.035em; }
-  .atlas-head p { margin-top: 10px; max-width: 36ch; color: var(--ink-3); font-size: 12px; line-height: 1.65; }
+  .atlas-head p { margin-top: 10px; max-width: 40ch; color: var(--ink-3); font-size: 12px; line-height: 1.65; }
+  .atlas-head-actions { display: flex; gap: 7px; margin-top: 13px; }
+  .atlas-head-actions button { min-height: 36px; border-radius: 999px; }
   .search { padding: 12px; border-bottom: 1px solid var(--rule); display: grid; gap: 9px; }
   .search input { width: 100%; border-radius: 999px; padding-inline: 14px; }
   .filters { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
@@ -45,35 +48,42 @@
   .orb.provided { background: var(--atlas-world); }
   .orb.published { background: var(--atlas-published); }
   .orb.foreign { background: var(--atlas-foreign); }
-  .world-name { color: var(--ink); font-size: 13px; font-weight: 560; overflow: hidden; text-overflow: ellipsis; }
-  .world-summary { margin-top: 4px; color: var(--ink-3); font-size: 11px; line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .world-name { display: block; color: var(--ink); font-size: 13px; font-weight: 560; overflow: hidden; text-overflow: ellipsis; }
+  .world-summary { display: -webkit-box; margin-top: 4px; color: var(--ink-3); font-size: 11px; line-height: 1.45; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .world-meta { margin-top: 7px; display: flex; gap: 8px; color: var(--ink-4); font: 9.5px/1.3 var(--mono); flex-wrap: wrap; }
   .compare-box { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--rule-2); border-radius: 50%; color: var(--ink-4); }
   .compare-box.on { color: var(--atlas-subject); border-color: rgba(215,173,97,.5); background: rgba(215,173,97,.08); }
 
   .detail { overflow: auto; background: linear-gradient(180deg, rgba(11,12,13,.72), rgba(5,6,7,.9)); }
-  .detail-inner { max-width: 1080px; margin: 0 auto; padding: clamp(24px, 5vw, 68px); }
+  .detail-inner { max-width: 1120px; margin: 0 auto; padding: clamp(24px, 5vw, 68px); }
   .mobile-back { display: none; }
-  .world-kicker { display: flex; gap: 8px; align-items: center; color: var(--ink-3); font: 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .14em; }
-  .category { border: 1px solid currentColor; border-radius: 999px; padding: 4px 8px; }
+  .world-kicker { display: flex; gap: 8px; align-items: center; color: var(--ink-3); font: 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .14em; flex-wrap: wrap; }
+  .category, .status-pill { border: 1px solid currentColor; border-radius: 999px; padding: 4px 8px; }
   .category.provided { color: var(--atlas-world); }
   .category.published { color: var(--atlas-published); }
   .category.foreign { color: var(--atlas-foreign); }
+  .status-pill { color: var(--ink-3); }
   .world-title { margin-top: 18px; font: 520 clamp(42px, 8vw, 104px)/.9 var(--sans); letter-spacing: -.065em; overflow-wrap: anywhere; }
   .world-lede { margin-top: 22px; max-width: 65ch; color: var(--ink-2); font-size: clamp(14px, 1.5vw, 18px); line-height: 1.65; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
-  .actions a { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--rule-2); border-radius: 999px; padding: 9px 14px; min-height: 40px; color: var(--ink-2); background: rgba(255,255,255,.02); }
-  .actions a:hover { color: var(--ink); border-color: var(--rule-3); }
+  .actions a, .actions button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--rule-2); border-radius: 999px; padding: 9px 14px; min-height: 40px; color: var(--ink-2); background: rgba(255,255,255,.02); }
+  .actions a:hover, .actions button:hover { color: var(--ink); border-color: var(--rule-3); }
   .actions .primary { color: #050607; background: var(--ink); border-color: var(--ink); }
-  .facts { margin-top: clamp(34px, 6vw, 76px); display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+  .lens-tabs { display: flex; gap: 5px; margin-top: 34px; padding-bottom: 10px; overflow-x: auto; border-bottom: 1px solid var(--rule); scrollbar-width: none; }
+  .lens-tabs::-webkit-scrollbar { display: none; }
+  .lens-tab { flex: none; border-radius: 999px; background: transparent; }
+  .lens-tab.here { color: var(--ink); border-color: var(--ink-3); background: var(--bg-active); }
+  .lens { display: none; }
+  .lens.here { display: block; }
+  .facts { margin-top: 24px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
   .fact { min-height: 112px; padding: 15px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
   .fact .label { color: var(--ink-4); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
   .fact .value { margin-top: 11px; color: var(--ink-2); line-height: 1.45; overflow-wrap: anywhere; }
   .tags { margin-top: 30px; display: flex; gap: 7px; flex-wrap: wrap; }
   .tag { padding: 6px 9px; border-radius: 999px; border: 1px solid var(--rule-2); color: var(--ink-3); font-size: 11px; }
-  .boundary { margin-top: 42px; padding: 18px; border: 1px solid var(--rule-2); border-radius: 12px; background: rgba(255,255,255,.018); }
-  .boundary h2, .compare-panel h2 { font: 500 16px/1.2 var(--sans); }
-  .boundary p { margin-top: 8px; color: var(--ink-3); line-height: 1.65; max-width: 72ch; }
+  .boundary, .integration-empty { margin-top: 28px; padding: 18px; border: 1px solid var(--rule-2); border-radius: 12px; background: rgba(255,255,255,.018); }
+  .boundary h2, .compare-panel h2, .integration-title { font: 500 16px/1.2 var(--sans); }
+  .boundary p, .integration-empty p { margin-top: 8px; color: var(--ink-3); line-height: 1.65; max-width: 76ch; }
   .empty-detail { min-height: 70vh; display: grid; place-items: center; text-align: center; color: var(--ink-4); }
   .empty-detail strong { display: block; color: var(--ink-2); font: 500 22px/1.2 var(--sans); margin-bottom: 8px; }
   .compare-panel { margin-top: 32px; border: 1px solid var(--rule-2); border-radius: 12px; overflow: hidden; }
@@ -86,10 +96,56 @@
   .compare-row .field { color: var(--ink-4); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
   .compare-row .value { border-left: 1px solid var(--rule); color: var(--ink-2); font: 11px/1.45 var(--mono); }
   .compare-row.changed .value { color: var(--atlas-subject); }
+
+  .integration-head { margin-top: 24px; display: flex; gap: 12px; align-items: end; }
+  .integration-head .spacer { flex: 1; }
+  .integration-note { color: var(--ink-4); font-size: 11px; max-width: 58ch; line-height: 1.5; }
+  .uncertainty-list, .requirement-list { margin-top: 14px; display: grid; gap: 8px; }
+  .uncertainty-row, .requirement-row { display: grid; grid-template-columns: minmax(130px, .7fr) minmax(0, 1.6fr); gap: 12px; padding: 11px 12px; border: 1px solid var(--rule); border-radius: 8px; }
+  .uncertainty-row .fact-name, .requirement-row .fact-name { color: var(--ink-2); }
+  .uncertainty-row .fact-detail, .requirement-row .fact-detail { color: var(--ink-4); line-height: 1.5; }
+  .projection-list { margin-top: 24px; display: grid; gap: 14px; }
+  .projection-card { border: 1px solid var(--rule-2); border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.014); }
+  .projection-head { padding: 15px 16px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--rule); }
+  .projection-target { font: 500 15px/1.2 var(--mono); color: var(--ink); }
+  .projection-status { color: var(--atlas-foreign); font: 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+  .projection-head .spacer { flex: 1; }
+  .projection-body { padding: 16px; }
+  .refusal { border-left: 2px solid var(--atlas-foreign); padding: 10px 12px; background: rgba(167,153,216,.045); }
+  .refusal .code { color: var(--atlas-foreign); font: 10px/1.3 var(--mono); }
+  .refusal .detail { margin-top: 6px; color: var(--ink-3); line-height: 1.55; }
+  .obligation-title { margin-top: 20px; font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-4); }
+  .obligation-grid { margin-top: 9px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+  .obligation { padding: 12px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-height: 92px; }
+  .obligation .name { color: var(--ink-4); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+  .obligation ul { margin: 8px 0 0 16px; color: var(--ink-3); line-height: 1.5; }
+  .evidence-panel { margin-top: 14px; display: grid; grid-template-columns: 140px minmax(0,1fr); border: 1px solid var(--rule); border-radius: 8px; }
+  .evidence-panel > div { padding: 12px; }
+  .evidence-panel .state { border-right: 1px solid var(--rule); color: var(--atlas-subject); font: 11px/1.4 var(--mono); }
+  .evidence-panel ul { margin-left: 16px; color: var(--ink-3); line-height: 1.5; }
+  .artifact-state { margin-top: 12px; color: var(--ink-4); font: 10px/1.5 var(--mono); }
+
+  dialog { width: min(720px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 28px)); padding: 0; color: var(--ink); background: #090a0b; border: 1px solid var(--rule-3); border-radius: 14px; box-shadow: 0 28px 100px rgba(0,0,0,.72); }
+  dialog::backdrop { background: rgba(0,0,0,.72); }
+  .plan-head { display: flex; gap: 12px; align-items: center; padding: 17px 18px; border-bottom: 1px solid var(--rule); }
+  .plan-head h2 { font: 500 18px/1.2 var(--sans); }
+  .plan-head .spacer { flex: 1; }
+  .plan-body { padding: 18px; overflow: auto; max-height: calc(100vh - 150px); }
+  .plan-form { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 10px; }
+  .plan-form label { color: var(--ink-4); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; align-self: center; }
+  .plan-form input, .plan-form select { width: 100%; }
+  .plan-actions { margin-top: 15px; display: flex; justify-content: flex-end; gap: 8px; }
+  .plan-output { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 16px; }
+  .plan-output h3 { font: 500 15px/1.2 var(--sans); }
+  .plan-boundary { margin-top: 12px; padding: 11px 12px; border-left: 2px solid var(--atlas-subject); color: var(--ink-3); line-height: 1.55; background: rgba(215,173,97,.04); }
+  .plan-columns { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+  .plan-column { border: 1px solid var(--rule); border-radius: 8px; padding: 12px; }
+  .plan-column h4 { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-4); }
+  .plan-column ol, .plan-column ul { margin: 9px 0 0 18px; color: var(--ink-3); line-height: 1.55; }
   .mobile-nav { display: none; }
 
   @media (max-width: 900px) {
-    .facts { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .facts, .obligation-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   }
 
   @media (max-width: 699px) {
@@ -107,9 +163,15 @@
     .world-title { font-size: 54px; }
     .world-lede { font-size: 15px; }
     .actions a, .actions button { flex: 1 1 44%; min-height: 44px; }
-    .facts { grid-template-columns: 1fr 1fr; }
+    .facts, .obligation-grid { grid-template-columns: 1fr 1fr; }
     .fact { min-height: 96px; }
     .compare-row { grid-template-columns: 84px minmax(0,1fr) minmax(0,1fr); }
+    .uncertainty-row, .requirement-row { grid-template-columns: 1fr; gap: 5px; }
+    .evidence-panel { grid-template-columns: 1fr; }
+    .evidence-panel .state { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .plan-form, .plan-columns { grid-template-columns: 1fr; }
+    .plan-form label { margin-top: 5px; }
+    dialog { width: calc(100vw - 12px); max-height: calc(100vh - 12px); }
     .mobile-nav { display: flex; position: fixed; z-index: 30; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); height: 54px; border: 1px solid var(--rule-2); border-radius: 16px; background: rgba(10,11,12,.94); box-shadow: 0 20px 50px rgba(0,0,0,.6); padding: 5px; }
     .mobile-nav button { flex: 1; border: 0; background: transparent; min-height: 44px; }
   }
@@ -123,10 +185,11 @@
       <header class="atlas-head">
         <div class="eyebrow">@ · authority atlas</div>
         <h1>World Atlas</h1>
-        <p>Published world identities and provenance. Origin labels organize the view; they do not create new semantic kinds.</p>
+        <p>Published world facts and provenance-qualified foreign candidates. Candidate integrations expose uncertainty and refusal; they are not admitted semantic identities.</p>
+        <div class="atlas-head-actions"><button id="open-import" class="signal">Import plan</button></div>
       </header>
       <div class="search">
-        <input id="query" type="search" placeholder="Search identity, relation tags, origin…" autocomplete="off" aria-label="Search worlds">
+        <input id="query" type="search" placeholder="Search identity, target, obligation, origin…" autocomplete="off" aria-label="Search worlds">
         <div class="filters" id="filters" aria-label="World origin filters">
           <button class="filter here" data-category="all">all</button>
           <button class="filter" data-category="provided">provided</button>
@@ -138,16 +201,43 @@
       <div class="world-list" id="list" aria-live="polite"></div>
     </section>
     <section class="detail" id="detail" aria-live="polite">
-      <div class="empty-detail"><div><strong>Select a world</strong>Inspect exact published identity, provenance, and representation facts.</div></div>
+      <div class="empty-detail"><div><strong>Select a world</strong>Inspect exact published facts or explicit foreign integration gaps.</div></div>
     </section>
   </main>
   <nav class="mobile-nav" aria-label="World Atlas mobile navigation">
     <button id="mobile-list">worlds</button>
     <button id="mobile-detail">detail</button>
+    <button id="mobile-integrate">integrate</button>
     <button id="mobile-compare">compare <span id="compare-count">0</span></button>
   </nav>
   <div class="statusbar"></div>
 </div>
+
+<dialog id="import-dialog" aria-labelledby="import-title">
+  <div class="plan-head">
+    <h2 id="import-title">Import plan</h2>
+    <span class="spacer"></span>
+    <button id="close-import" class="ghost" aria-label="Close import plan">close</button>
+  </div>
+  <div class="plan-body">
+    <p class="prose">This creates a deterministic <span class="mono">plan-only</span> record. It does not fetch, execute, transform, or publish the locator.</p>
+    <form id="import-form" class="plan-form">
+      <label for="import-kind">Source kind</label>
+      <select id="import-kind" name="kind">
+        <option value="repository">repository</option>
+        <option value="schema">schema</option>
+        <option value="api">API</option>
+        <option value="binary">binary</option>
+      </select>
+      <label for="import-locator">Locator</label>
+      <input id="import-locator" name="locator" required maxlength="2048" placeholder="repository URL, schema URL, package coordinate, or artifact provenance">
+      <label for="import-version">Version / revision</label>
+      <input id="import-version" name="version" maxlength="256" placeholder="commit, tag, digest, standard, or API version">
+    </form>
+    <div class="plan-actions"><button id="make-plan" class="primary">Create plan</button></div>
+    <div class="plan-output" id="plan-output" aria-live="polite"></div>
+  </div>
+</dialog>
 
 <script src="/shared/shell.js"></script>
 <script type="module">
@@ -159,17 +249,29 @@ import {
   registryUrl,
   worldCoordinate,
 } from "/shared/worlds.js";
+import {
+  filterForeignWorlds,
+  normaliseForeignWorld,
+} from "/shared/foreign.js";
 
 Shell.boot("worlds", {
   title: "World Atlas",
-  keys: [["⌘K", "search"], ["↑↓", "walk"], ["C", "compare"], ["Esc", "back"]],
+  keys: [["⌘K", "search"], ["I", "import plan"], ["C", "compare"], ["Esc", "back"]],
 });
 IdolShell.crumbs([{ label: "worlds" }, { label: "atlas" }]);
 
-const state = { worlds: [], visible: [], selected: null, category: "all", compare: [] };
+const initialLens = ["facts", "integration", "boundary"].includes(IdolShell.worldLensFromPath())
+  ? IdolShell.worldLensFromPath()
+  : "facts";
+const state = {
+  published: [], foreign: [], worlds: [], visible: [], selected: null,
+  category: "all", compare: [], lens: initialLens,
+};
 const list = document.getElementById("list");
 const detail = document.getElementById("detail");
 const query = document.getElementById("query");
+const importDialog = document.getElementById("import-dialog");
+let importOpener = null;
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -179,14 +281,46 @@ const el = (tag, className, text) => {
 };
 
 function formatBytes(value) {
+  if (!value) return "not published";
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
   return `${(value / 1024 / 1024).toFixed(1)} MiB`;
 }
 
-function choose(name, mobile = true) {
-  state.selected = state.worlds.find((world) => world.name === name) || null;
-  location.hash = state.selected ? `#${encodeURIComponent(state.selected.name)}` : "";
+function routeKey(world) {
+  return world.slug || world.name;
+}
+
+function selectionKey(world) {
+  return `${world.category}:${routeKey(world)}@${world.version}`;
+}
+
+function adaptForeign(record) {
+  const world = normaliseForeignWorld(record);
+  return Object.freeze({
+    ...world,
+    route_key: world.slug,
+    publisher: "foreign-origin candidate",
+    graph_id: "",
+    source_hash: "",
+    lines: 0,
+    bytes: 0,
+    tags: Object.freeze([world.origin, ...world.projections.map((item) => item.target)].filter(Boolean)),
+    mirror: "product projection",
+    published_at: "",
+    versions: Object.freeze([world.version]),
+    candidate: true,
+  });
+}
+
+function adaptPublished(record) {
+  const world = normaliseWorld(record);
+  return Object.freeze({ ...world, route_key: world.name, candidate: false });
+}
+
+function choose(identifier, mobile = true) {
+  state.selected = state.worlds.find((world) => routeKey(world) === identifier || world.name === identifier) || null;
+  location.hash = state.selected ? `#${encodeURIComponent(routeKey(state.selected))}` : "";
   paintList();
   paintDetail();
   if (mobile && matchMedia("(max-width: 699px)").matches) detail.classList.add("open");
@@ -194,7 +328,8 @@ function choose(name, mobile = true) {
 
 function toggleCompare(world, event) {
   event?.stopPropagation();
-  const present = state.compare.findIndex((item) => item.name === world.name);
+  const key = selectionKey(world);
+  const present = state.compare.findIndex((item) => selectionKey(item) === key);
   if (present >= 0) state.compare.splice(present, 1);
   else {
     if (state.compare.length === 2) state.compare.shift();
@@ -205,29 +340,42 @@ function toggleCompare(world, event) {
   if (state.selected) paintDetail();
 }
 
+function visibleWorlds() {
+  const needle = query.value;
+  if (state.category === "foreign") return filterForeignWorlds(state.foreign, needle);
+  const published = filterWorlds(state.published, needle, state.category);
+  const foreign = state.category === "all" ? filterForeignWorlds(state.foreign, needle) : [];
+  return [...published, ...foreign].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
+}
+
 function paintList() {
-  state.visible = filterWorlds(state.worlds, query.value, state.category);
-  document.getElementById("count").textContent = `${state.visible.length} / ${state.worlds.length} worlds`;
+  state.visible = visibleWorlds();
+  document.getElementById("count").textContent = `${state.visible.length} / ${state.worlds.length} records`;
   list.innerHTML = "";
   if (!state.visible.length) {
     const empty = el("div", "empty");
-    empty.append(el("div", "glyph", "∅"), el("div", "", "No published world matches this view."));
+    empty.append(el("div", "glyph", "∅"), el("div", "", "No world or foreign candidate matches this view."));
     list.appendChild(empty);
     return;
   }
   for (const world of state.visible) {
-    const button = el("button", `world-card${state.selected?.name === world.name ? " here" : ""}`);
+    const selected = state.selected && selectionKey(state.selected) === selectionKey(world);
+    const button = el("button", `world-card${selected ? " here" : ""}`);
     button.type = "button";
-    button.addEventListener("click", () => choose(world.name));
+    button.addEventListener("click", () => choose(routeKey(world)));
     button.appendChild(el("span", `orb ${world.category}`));
     const body = el("span");
     body.appendChild(el("span", "world-name", world.name));
-    body.appendChild(el("span", "world-summary", world.summary || "Published world projection"));
+    body.appendChild(el("span", "world-summary", world.summary || "World projection"));
     const meta = el("span", "world-meta");
-    meta.append(el("span", "", `v${world.version}`), el("span", "", world.publisher || "unknown"), el("span", "", world.category));
+    meta.append(
+      el("span", "", world.version),
+      el("span", "", world.publisher || "unknown"),
+      el("span", "", world.candidate ? "candidate" : world.category),
+    );
     body.appendChild(meta);
     button.appendChild(body);
-    const compare = el("span", `compare-box${state.compare.some((item) => item.name === world.name) ? " on" : ""}`, "◇");
+    const compare = el("span", `compare-box${state.compare.some((item) => selectionKey(item) === selectionKey(world)) ? " on" : ""}`, "◇");
     compare.title = "Toggle comparison";
     compare.addEventListener("click", (event) => toggleCompare(world, event));
     button.appendChild(compare);
@@ -254,11 +402,11 @@ function paintComparison(mount) {
   const head = el("div", "compare-head");
   head.appendChild(el("h2", "", state.compare.length === 2 ? "Published fact comparison" : "Comparison queue"));
   head.appendChild(el("span", "spacer"));
-  head.appendChild(el("span", "compare-note", "No semantic compatibility claim is inferred."));
+  head.appendChild(el("span", "compare-note", "No semantic compatibility or equivalence claim is inferred."));
   panel.appendChild(head);
   if (state.compare.length < 2) {
     const note = el("div", "boundary");
-    note.appendChild(el("p", "", "Select one more world to compare exact published manifest fields."));
+    note.appendChild(el("p", "", "Select one more record to compare transport and published fields."));
     panel.appendChild(note);
   } else {
     for (const row of compareWorlds(state.compare[0], state.compare[1])) {
@@ -270,13 +418,137 @@ function paintComparison(mount) {
   mount.appendChild(panel);
 }
 
+function paintFacts(mount, world) {
+  const facts = el("section", "facts");
+  facts.append(
+    fact("semantic identity", world.semantic_id || (world.candidate ? "identity not published" : world.graph_id), true),
+    fact("graph identity", world.graph_id || "not published", true),
+    fact("source hash", world.source_hash || "not published", true),
+    fact("publisher", world.publisher || "not published"),
+    fact("origin", world.origin || (world.category === "provided" ? "idol" : "not published"), true),
+    fact("source extent", world.candidate ? "not ingested" : `${world.lines.toLocaleString()} lines · ${formatBytes(world.bytes)}`),
+    fact("mirror", world.mirror || "not published", true),
+    fact("published", world.published_at || "not published", true),
+    fact("classification", `${world.category} · presentation only`),
+  );
+  mount.appendChild(facts);
+
+  const tags = el("div", "tags");
+  for (const tag of world.tags || []) tags.appendChild(el("span", "tag", tag));
+  if (!(world.tags || []).length) tags.appendChild(el("span", "tag", "no published tags"));
+  mount.appendChild(tags);
+  paintComparison(mount);
+}
+
+function obligationCard(name, values) {
+  const card = el("div", "obligation");
+  card.appendChild(el("div", "name", name));
+  const list = el("ul");
+  for (const value of values || []) list.appendChild(el("li", "", value));
+  if (!(values || []).length) list.appendChild(el("li", "", "not published"));
+  card.appendChild(list);
+  return card;
+}
+
+function paintIntegration(mount, world) {
+  if (!world.candidate || !Array.isArray(world.projections)) {
+    const empty = el("section", "integration-empty");
+    empty.append(
+      el("h2", "integration-title", "Integration projection not published"),
+      el("p", "", "This published Idol world does not currently carry a versioned foreign integration record. The Atlas will not reconstruct one from names, tags, or source text."),
+    );
+    mount.appendChild(empty);
+    return;
+  }
+
+  const head = el("div", "integration-head");
+  head.appendChild(el("h2", "integration-title", "Integration obligations"));
+  head.appendChild(el("span", "spacer"));
+  head.appendChild(el("span", "integration-note", "Candidate facts only. No semantic identity, artifact, equivalence, injection witness, or authority grant has been published."));
+  mount.appendChild(head);
+
+  const identity = el("section", "boundary");
+  identity.append(
+    el("h2", "", "Identity and uncertainty"),
+    el("p", "", `${world.identity_status === "not-published" ? "Semantic identity not published." : world.identity_status} This record is joined by provenance slug only in the product surface.`),
+  );
+  const uncertainty = el("div", "uncertainty-list");
+  for (const item of world.uncertainty || []) {
+    const row = el("div", "uncertainty-row");
+    row.append(el("div", "fact-name", `${item.fact} · ${item.status}`), el("div", "fact-detail", item.detail || "no detail published"));
+    uncertainty.appendChild(row);
+  }
+  identity.appendChild(uncertainty);
+  mount.appendChild(identity);
+
+  const requirements = el("section", "boundary");
+  requirements.appendChild(el("h2", "", "Required facts before admission"));
+  const requirementList = el("div", "requirement-list");
+  for (const value of world.requirements || []) {
+    const row = el("div", "requirement-row");
+    row.append(el("div", "fact-name", value), el("div", "fact-detail", "must be published or witnessed at the selected boundary"));
+    requirementList.appendChild(row);
+  }
+  requirements.appendChild(requirementList);
+  mount.appendChild(requirements);
+
+  const projections = el("div", "projection-list");
+  for (const projection of world.projections) {
+    const card = el("section", "projection-card");
+    const phead = el("div", "projection-head");
+    phead.append(
+      el("span", "projection-target", projection.target),
+      el("span", "spacer"),
+      el("span", "projection-status", projection.available ? "available" : projection.status),
+    );
+    card.appendChild(phead);
+    const body = el("div", "projection-body");
+    const refusal = el("div", "refusal");
+    refusal.append(el("div", "code", projection.refusal.code), el("div", "detail", projection.refusal.detail));
+    body.appendChild(refusal);
+    body.appendChild(el("div", "obligation-title", "ABI · ownership · failure · threading · effect · world"));
+    const grid = el("div", "obligation-grid");
+    for (const name of ["abi", "ownership", "failure", "threading", "effect", "world"]) {
+      grid.appendChild(obligationCard(name, projection.obligations[name]));
+    }
+    body.appendChild(grid);
+    const evidence = el("div", "evidence-panel");
+    evidence.appendChild(el("div", "state", `evidence · ${projection.evidence.status}`));
+    const required = el("div");
+    const ul = el("ul");
+    for (const item of projection.evidence.required) ul.appendChild(el("li", "", item));
+    required.appendChild(ul); evidence.appendChild(required); body.appendChild(evidence);
+    body.appendChild(el("div", "artifact-state", projection.artifact
+      ? `artifact ${projection.artifact.sha256 || "hash not published"}`
+      : "artifact not published · no copy command is emitted"));
+    card.appendChild(body); projections.appendChild(card);
+  }
+  mount.appendChild(projections);
+}
+
+function paintBoundary(mount, world) {
+  const boundary = el("section", "boundary");
+  boundary.appendChild(el("h2", "", "Authority boundary"));
+  boundary.appendChild(el("p", "", world.candidate
+    ? "This is a provenance-qualified foreign candidate. The product preserves uncertainty and exact refusal. It has not fetched or executed the foreign source, established semantic identity, proven equivalence, generated an admitted artifact, or formed a world."
+    : "This atlas displays the registry projection exactly as published. Provided, published, and foreign are navigation qualifications. Injection witnesses, capability grants, semantic equivalence, and composition are shown only when an authoritative producer publishes those facts; this page does not manufacture them."));
+  mount.appendChild(boundary);
+  paintComparison(mount);
+}
+
+function setLens(lens) {
+  state.lens = lens;
+  document.querySelectorAll(".lens-tab").forEach((button) => button.classList.toggle("here", button.dataset.lens === lens));
+  document.querySelectorAll(".lens").forEach((panel) => panel.classList.toggle("here", panel.dataset.lens === lens));
+}
+
 function paintDetail() {
   detail.innerHTML = "";
   const world = state.selected;
   if (!world) {
     const empty = el("div", "empty-detail");
     const body = el("div");
-    body.append(el("strong", "", "Select a world"), document.createTextNode("Inspect exact published identity, provenance, and representation facts."));
+    body.append(el("strong", "", "Select a world"), document.createTextNode("Inspect exact published facts or explicit foreign integration gaps."));
     empty.appendChild(body); detail.appendChild(empty); return;
   }
 
@@ -287,48 +559,49 @@ function paintDetail() {
 
   const kicker = el("div", "world-kicker");
   kicker.appendChild(el("span", `category ${world.category}`, world.category));
-  kicker.appendChild(el("span", "", `world · v${world.version}`));
+  kicker.appendChild(el("span", "", world.candidate ? "candidate projection" : `world · v${world.version}`));
+  if (world.candidate) kicker.appendChild(el("span", "status-pill", world.identity_status));
   inner.appendChild(kicker);
   inner.appendChild(el("h1", "world-title", world.name));
-  inner.appendChild(el("p", "world-lede", world.summary || "Published world projection with no summary."));
+  inner.appendChild(el("p", "world-lede", world.summary || "World projection with no summary."));
 
   const actions = el("div", "actions");
-  actions.append(action("Open registry", registryUrl(world), true), action("Open graph", graphUrl(world)));
+  if (world.candidate) {
+    actions.append(
+      action("Integration API", `/v1/world/${encodeURIComponent(world.slug)}/integration`, true),
+      action("Integration deep link", `/world/${encodeURIComponent(world.slug)}/integration`),
+    );
+  } else {
+    actions.append(action("Open registry", registryUrl(world), true), action("Open graph", graphUrl(world)));
+  }
   const copy = el("button", "", "Copy coordinate");
   copy.addEventListener("click", async () => {
-    await navigator.clipboard.writeText(worldCoordinate(world));
+    const coordinate = world.candidate ? `${world.slug}@${world.version}` : worldCoordinate(world);
+    await navigator.clipboard.writeText(coordinate);
     copy.textContent = "Copied";
     setTimeout(() => { copy.textContent = "Copy coordinate"; }, 1000);
   });
-  const compare = el("button", "", state.compare.some((item) => item.name === world.name) ? "Remove comparison" : "Add comparison");
+  const compare = el("button", "", state.compare.some((item) => selectionKey(item) === selectionKey(world)) ? "Remove comparison" : "Add comparison");
   compare.addEventListener("click", (event) => toggleCompare(world, event));
   actions.append(copy, compare);
   inner.appendChild(actions);
 
-  const facts = el("section", "facts");
-  facts.append(
-    fact("graph identity", world.graph_id, true),
-    fact("source hash", world.source_hash, true),
-    fact("publisher", world.publisher || "not published"),
-    fact("origin", world.origin || (world.category === "provided" ? "idol" : "not published"), true),
-    fact("source extent", `${world.lines.toLocaleString()} lines · ${formatBytes(world.bytes)}`),
-    fact("mirror", world.mirror || "not published", true),
-    fact("published", world.published_at || "not published", true),
-    fact("versions", Array.isArray(world.versions) ? world.versions.join(", ") : world.version, true),
-    fact("snapshot class", `${world.category} · presentation only`)
-  );
-  inner.appendChild(facts);
+  const tabs = el("nav", "lens-tabs");
+  for (const lens of ["facts", "integration", "boundary"]) {
+    const button = el("button", `lens-tab${state.lens === lens ? " here" : ""}`, lens);
+    button.dataset.lens = lens;
+    button.addEventListener("click", () => setLens(lens));
+    tabs.appendChild(button);
+  }
+  inner.appendChild(tabs);
 
-  const tags = el("div", "tags");
-  for (const tag of world.tags) tags.appendChild(el("span", "tag", tag));
-  if (!world.tags.length) tags.appendChild(el("span", "tag", "no published tags"));
-  inner.appendChild(tags);
-
-  const boundary = el("section", "boundary");
-  boundary.appendChild(el("h2", "", "Authority boundary"));
-  boundary.appendChild(el("p", "", "This atlas displays the registry projection exactly as published. Provided, published, and foreign are navigation qualifications. Injection witnesses, capability grants, semantic equivalence, and composition are shown only when the compiler or registry publishes those facts; this page does not manufacture them."));
-  inner.appendChild(boundary);
-  paintComparison(inner);
+  const factsLens = el("section", `lens${state.lens === "facts" ? " here" : ""}`); factsLens.dataset.lens = "facts";
+  const integrationLens = el("section", `lens${state.lens === "integration" ? " here" : ""}`); integrationLens.dataset.lens = "integration";
+  const boundaryLens = el("section", `lens${state.lens === "boundary" ? " here" : ""}`); boundaryLens.dataset.lens = "boundary";
+  paintFacts(factsLens, world);
+  paintIntegration(integrationLens, world);
+  paintBoundary(boundaryLens, world);
+  inner.append(factsLens, integrationLens, boundaryLens);
   detail.appendChild(inner);
 }
 
@@ -338,6 +611,58 @@ function setCategory(category) {
   paintList();
 }
 
+function openImport() {
+  importOpener = document.activeElement;
+  importDialog.showModal();
+  document.getElementById("import-locator").focus();
+}
+
+function closeImport() {
+  importDialog.close();
+  if (importOpener instanceof HTMLElement) importOpener.focus();
+}
+
+function listBlock(title, items, ordered = false) {
+  const column = el("section", "plan-column");
+  column.appendChild(el("h4", "", title));
+  const list = el(ordered ? "ol" : "ul");
+  for (const item of items || []) list.appendChild(el("li", "", item));
+  column.appendChild(list);
+  return column;
+}
+
+async function createImportPlan() {
+  const output = document.getElementById("plan-output");
+  const form = document.getElementById("import-form");
+  if (!form.reportValidity()) return;
+  const body = Object.fromEntries(new FormData(form).entries());
+  output.innerHTML = "";
+  output.appendChild(el("p", "mono-note", "planning · no source access"));
+  try {
+    const response = await fetch("/v1/world/import-plan", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const plan = await response.json();
+    if (!response.ok) throw new Error(plan.error || `plan answered ${response.status}`);
+    output.innerHTML = "";
+    output.appendChild(el("h3", "", `${plan.kind} · ${plan.status}`));
+    output.appendChild(el("div", "plan-boundary", plan.authority_boundary));
+    const columns = el("div", "plan-columns");
+    columns.append(
+      listBlock("Stages", plan.stages, true),
+      listBlock("Required grants", plan.required_grants),
+      listBlock("Missing facts", plan.missing_facts),
+      listBlock("Refusals", plan.refusals),
+    );
+    output.appendChild(columns);
+  } catch (error) {
+    output.innerHTML = "";
+    output.appendChild(el("div", "plan-boundary", `Plan refused: ${error.message}`));
+  }
+}
+
 document.getElementById("filters").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-category]");
   if (button) setCategory(button.dataset.category);
@@ -345,27 +670,40 @@ document.getElementById("filters").addEventListener("click", (event) => {
 query.addEventListener("input", paintList);
 document.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); query.focus(); query.select(); }
-  if (event.key === "Escape") detail.classList.remove("open");
-  if (event.key.toLowerCase() === "c" && state.selected && document.activeElement !== query) toggleCompare(state.selected);
+  if (event.key.toLowerCase() === "i" && document.activeElement !== query && !importDialog.open) { event.preventDefault(); openImport(); }
+  if (event.key === "Escape" && !importDialog.open) detail.classList.remove("open");
+  if (event.key.toLowerCase() === "c" && state.selected && document.activeElement !== query && !importDialog.open) toggleCompare(state.selected);
 });
+document.getElementById("open-import").addEventListener("click", openImport);
+document.getElementById("close-import").addEventListener("click", closeImport);
+document.getElementById("make-plan").addEventListener("click", createImportPlan);
+importDialog.addEventListener("close", () => { if (importOpener instanceof HTMLElement) importOpener.focus(); });
 document.getElementById("mobile-list").addEventListener("click", () => detail.classList.remove("open"));
-document.getElementById("mobile-detail").addEventListener("click", () => { if (state.selected) detail.classList.add("open"); });
-document.getElementById("mobile-compare").addEventListener("click", () => { if (state.selected) { detail.classList.add("open"); paintDetail(); } });
+document.getElementById("mobile-detail").addEventListener("click", () => { if (state.selected) { state.lens = "facts"; paintDetail(); detail.classList.add("open"); } });
+document.getElementById("mobile-integrate").addEventListener("click", () => { if (state.selected) { state.lens = "integration"; paintDetail(); detail.classList.add("open"); } });
+document.getElementById("mobile-compare").addEventListener("click", () => { if (state.selected) { state.lens = "facts"; paintDetail(); detail.classList.add("open"); } });
 
 try {
-  const response = await fetch("/runtime/worlds.json", { cache: "no-cache" });
-  if (!response.ok) throw new Error(`snapshot answered ${response.status}`);
-  const snapshot = await response.json();
+  const [worldResponse, foreignResponse] = await Promise.all([
+    fetch("/runtime/worlds.json", { cache: "no-cache" }),
+    fetch("/runtime/foreign.json", { cache: "no-cache" }),
+  ]);
+  if (!worldResponse.ok) throw new Error(`world snapshot answered ${worldResponse.status}`);
+  if (!foreignResponse.ok) throw new Error(`foreign projection answered ${foreignResponse.status}`);
+  const [snapshot, foreign] = await Promise.all([worldResponse.json(), foreignResponse.json()]);
   if (snapshot.schema !== "idol.web.worlds.v1" || !Array.isArray(snapshot.worlds)) throw new Error("invalid world snapshot");
-  state.worlds = snapshot.worlds.map(normaliseWorld);
-  document.getElementById("captured").textContent = snapshot.captured_at ? `captured ${snapshot.captured_at.slice(0, 10)}` : "snapshot";
-  const requested = decodeURIComponent(location.hash.slice(1));
-  const first = state.worlds.find((world) => world.name === requested) || state.worlds[0];
-  if (first) choose(first.name, false); else paintList();
+  if (foreign.schema !== "idol.web.foreign.v1" || !Array.isArray(foreign.worlds)) throw new Error("invalid foreign projection");
+  state.published = snapshot.worlds.map(adaptPublished);
+  state.foreign = foreign.worlds.map(adaptForeign);
+  state.worlds = [...state.published, ...state.foreign];
+  document.getElementById("captured").textContent = `${snapshot.captured_at?.slice(0, 10) || "snapshot"} · ${foreign.revision}`;
+  const requested = IdolShell.decodeWorldHash();
+  const first = state.worlds.find((world) => routeKey(world) === requested || world.name === requested) || state.worlds[0];
+  if (first) choose(routeKey(first), false); else paintList();
 } catch (error) {
   list.innerHTML = "";
   const empty = el("div", "empty");
-  empty.append(el("div", "glyph", "×"), el("div", "", `World snapshot unavailable: ${error.message}`));
+  empty.append(el("div", "glyph", "×"), el("div", "", `World projection unavailable: ${error.message}`));
   list.appendChild(empty);
   document.getElementById("count").textContent = "refused";
 }
