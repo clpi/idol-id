@@ -116,7 +116,12 @@ function boot(app, opts) {
       if (!c) return;
       c.innerHTML = "";
       (list || []).forEach((item, i) => {
-        if (i) { const s = document.createElement("span"); s.className = "sep"; c.appendChild(s); }
+        if (i) {
+          const s = document.createElement("span");
+          s.className = "sep";
+          s.textContent = "/";
+          c.appendChild(s);
+        }
         const cr = document.createElement("span");
         cr.className = "crumb" + (i === list.length - 1 ? " here" : "");
         cr.textContent = item.label;
