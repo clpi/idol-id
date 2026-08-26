@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Idol Browser IDE — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  :root {
+    --ide-subject: #d8b16b;
+    --ide-relation: #f0ece3;
+    --ide-projection: #79a9d8;
+    --ide-world: #72c8d0;
+    --ide-descriptor: #a99bdd;
+    --ide-result: #8eaf91;
+    --ide-refine: #d8879f;
+    --ide-provenance: #74808c;
+    --ide-panel: rgba(10, 11, 12, .94);
+  }
+  * { box-sizing: border-box; }
+  body { overflow: hidden; background: #050607; font-family: var(--sans); }
+  button, input, select { font-family: var(--sans); }
+  code, pre, textarea, .mono, .identity { font-family: var(--mono); font-variant-ligatures: none; }
+  .app { height: 100dvh; }
+  .ide { flex: 1; min-height: 0; display: grid; grid-template-columns: 52px minmax(210px, 270px) minmax(0, 1fr) minmax(250px, 330px); position: relative; }
+  .ide::before { content:""; position:absolute; inset:0; pointer-events:none; background: radial-gradient(circle at 62% 0%,rgba(114,200,208,.055),transparent 28%), linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px); background-size:auto,48px 48px,48px 48px; }
+  .activity,.files,.workbench,.inspector { position:relative; z-index:1; min-height:0; background:rgba(5,6,7,.86); }
+  .activity { border-right:1px solid var(--rule); display:flex; flex-direction:column; align-items:center; padding:8px 5px; gap:5px; }
+  .activity button { width:42px; height:42px; display:grid; place-items:center; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--ink-4); font:11px/1 var(--mono); }
+  .activity button.here { color:var(--ink); border-color:var(--rule-2); background:rgba(255,255,255,.045); }
+  .activity .spacer { flex:1; }
+  .files { border-right:1px solid var(--rule); display:flex; flex-direction:column; }
+  .pane-head { min-height:55px; padding:10px 12px; border-bottom:1px solid var(--rule); display:flex; align-items:center; gap:8px; }
+  .pane-head strong { font-size:12px; font-weight:600; letter-spacing:.02em; }
+  .pane-head .spacer { flex:1; }
+  .icon { width:34px; height:34px; border:1px solid var(--rule-2); border-radius:9px; background:transparent; color:var(--ink-3); }
+  .workspace-name { padding:11px 12px 8px; color:var(--ink-4); font:10px/1.3 var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file-list { flex:1; min-height:0; overflow:auto; padding:4px 7px 80px; }
+  .file { width:100%; min-height:40px; padding:7px 9px; display:grid; grid-template-columns:14px minmax(0,1fr); gap:8px; align-items:center; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--ink-3); text-align:left; }
+  .file:hover { background:rgba(255,255,255,.025); }
+  .file.here { color:var(--ink); border-color:var(--rule-2); background:rgba(255,255,255,.045); }
+  .file .dot { width:7px; height:7px; border-radius:50%; background:var(--ide-provenance); }
+  .file.here .dot { background:var(--ide-world); box-shadow:0 0 0 4px rgba(114,200,208,.07); }
+  .file span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:11px/1.2 var(--mono); }
+  .file-actions { padding:9px; border-top:1px solid var(--rule); display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .file-actions button { min-height:38px; border:1px solid var(--rule-2); border-radius:9px; background:transparent; color:var(--ink-3); font-size:11px; }
+
+  .workbench { min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr); }
+  .toolbar { min-height:55px; padding:8px 12px; border-bottom:1px solid var(--rule); display:flex; align-items:center; gap:8px; overflow-x:auto; }
+  .toolbar .path { min-width:100px; max-width:32vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-3); font:11px/1 var(--mono); }
+  .toolbar .spacer { flex:1; }
+  .capability { min-height:34px; display:inline-flex; align-items:center; gap:7px; padding:0 10px; border:1px solid var(--rule-2); border-radius:999px; color:var(--ink-3); white-space:nowrap; font-size:10px; }
+  .capability i { width:7px; height:7px; border-radius:50%; background:var(--ide-provenance); }
+  .capability.remote i { background:var(--ide-result); }
+  .capability.wasm i { background:var(--ide-descriptor); }
+  .analyze { min-height:38px; padding:0 14px; border:1px solid var(--ink); border-radius:999px; background:var(--ink); color:#050607; font-size:11px; white-space:nowrap; }
+  .analyze:disabled { opacity:.45; }
+  .surface-stack { min-height:0; position:relative; }
+  .surface { position:absolute; inset:0; min-height:0; display:none; }
+  .surface.here { display:flex; }
+  #source-surface { flex-direction:column; }
+  #editor { flex:1; min-height:0; }
+  .editor-wrap { background:rgba(5,6,7,.68); }
+  .editor-wrap .tk { border-radius:3px; transition:background 100ms ease,color 100ms ease,box-shadow 100ms ease; }
+  .editor-wrap .tk:hover { background:rgba(255,255,255,.075); box-shadow:0 0 0 1px rgba(255,255,255,.07); }
+  .editor-wrap .semantic-published { box-shadow:inset 0 -1px var(--ide-world); }
+  .editor-wrap .semantic-ambiguous { box-shadow:inset 0 -1px var(--ide-refine); }
+  .editor-wrap .semantic-selected { background:rgba(216,177,107,.13); box-shadow:0 0 0 1px rgba(216,177,107,.38); }
+  .tk-colon,.tk-subject { color:var(--ide-subject)!important; }
+  .tk-world,.tk-direct { color:var(--ide-world)!important; }
+  .tk-type { color:var(--ide-descriptor)!important; }
+  .tk-fn,.tk-decl { color:var(--ide-relation)!important; }
+  .tk-member { color:var(--ide-projection)!important; }
+  .tk-str,.tk-num { color:var(--ide-result)!important; }
+  .tk-com { color:var(--ide-provenance)!important; font-style:italic; }
+  .local-note { min-height:30px; padding:7px 12px; border-top:1px solid var(--rule); color:var(--ink-4); font-size:10px; display:flex; gap:12px; align-items:center; }
+  .local-note .save { color:var(--ide-result); }
+
+  #graph-surface { background:rgba(5,6,7,.8); }
+  #graph { flex:1; min-width:0; }
+  .graph-empty { margin:auto; max-width:440px; padding:24px; text-align:center; color:var(--ink-4); line-height:1.65; }
+  #facts-surface,#output-surface { overflow:auto; padding:clamp(16px,3vw,34px); align-content:start; display:none; }
+  #facts-surface.here,#output-surface.here { display:block; }
+  .fact-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:1px solid var(--rule); border-left:1px solid var(--rule); }
+  .fact-card { min-height:102px; padding:14px; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+  .fact-card label { color:var(--ink-4); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+  .fact-card div { margin-top:10px; color:var(--ink-2); overflow-wrap:anywhere; line-height:1.5; }
+  .graph-list { margin-top:22px; display:grid; gap:5px; }
+  .graph-list button { min-height:42px; padding:8px 11px; display:flex; gap:10px; align-items:center; border:1px solid var(--rule-2); border-radius:9px; background:transparent; color:var(--ink-3); text-align:left; }
+  .graph-list button:hover { color:var(--ink); }
+  .output { margin:0; min-height:100%; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--ink-2); font:11px/1.7 var(--mono); }
+
+  .inspector { border-left:1px solid var(--rule); display:flex; flex-direction:column; }
+  .inspector-scroll { flex:1; min-height:0; overflow:auto; padding:14px 14px 80px; }
+  .selection-title { font:520 22px/1.05 var(--sans); letter-spacing:-.035em; overflow-wrap:anywhere; }
+  .selection-kind { margin-top:8px; color:var(--ink-4); font:9.5px/1.4 var(--mono); text-transform:uppercase; letter-spacing:.1em; }
+  .identity-state { margin-top:14px; padding:11px; border:1px solid var(--rule-2); border-radius:10px; color:var(--ink-3); line-height:1.55; font-size:11px; }
+  .identity-state.published { border-color:rgba(114,200,208,.32); color:var(--ide-world); }
+  .identity-state.ambiguous { border-color:rgba(216,135,159,.32); color:var(--ide-refine); }
+  .inspector-section { margin-top:22px; }
+  .inspector-section h3 { padding-bottom:8px; border-bottom:1px solid var(--rule); color:var(--ink-4); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+  .kv { display:grid; grid-template-columns:95px minmax(0,1fr); gap:9px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.035); }
+  .kv .k { color:var(--ink-4); font-size:10px; }
+  .kv .v { color:var(--ink-2); overflow-wrap:anywhere; font:10.5px/1.45 var(--mono); }
+  .edge { width:100%; min-height:42px; margin-top:6px; padding:8px 9px; border:1px solid var(--rule-2); border-radius:9px; background:transparent; color:var(--ink-3); text-align:left; font:10px/1.45 var(--mono); overflow-wrap:anywhere; }
+  .edge:hover { color:var(--ink); border-color:var(--rule-3); }
+  .id-link { display:inline-flex; margin:3px 4px 3px 0; padding:5px 7px; border:1px solid var(--rule-2); border-radius:7px; color:var(--ide-projection); font:9.5px/1 var(--mono); overflow-wrap:anywhere; }
+  .empty { color:var(--ink-4); line-height:1.65; font-size:12px; }
+
+  .mobile-nav { display:none; }
+  .drawer-scrim { display:none; }
+  @media (max-width:1050px) { .ide { grid-template-columns:52px 220px minmax(0,1fr); } .inspector { position:fixed; z-index:30; top:48px; right:0; bottom:30px; width:min(360px,88vw); transform:translateX(100%); transition:transform 180ms ease; box-shadow:-30px 0 80px rgba(0,0,0,.55); } .inspector.open { transform:none; } }
+  @media (max-width:699px) {
+    .ide { grid-template-columns:1fr; padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
+    .activity { display:none; }
+    .files { position:fixed; z-index:35; top:48px; bottom:calc(66px + env(safe-area-inset-bottom)); left:0; width:min(320px,88vw); transform:translateX(-100%); transition:transform 180ms ease; box-shadow:30px 0 80px rgba(0,0,0,.55); }
+    .files.open { transform:none; }
+    .workbench { grid-column:1; }
+    .inspector { top:48px; bottom:calc(66px + env(safe-area-inset-bottom)); width:100%; }
+    .toolbar { min-height:52px; padding-inline:9px; }
+    .toolbar .path { max-width:34vw; }
+    .capability span { display:none; }
+    .analyze { min-height:44px; }
+    .fact-grid { grid-template-columns:1fr; }
+    .mobile-nav { display:flex; position:fixed; z-index:45; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom)); min-height:54px; padding:5px; border:1px solid var(--rule-2); border-radius:16px; background:rgba(9,10,11,.96); box-shadow:0 24px 70px rgba(0,0,0,.62); }
+    .mobile-nav button { flex:1; min-height:44px; border:0; border-radius:11px; background:transparent; color:var(--ink-4); font-size:10px; }
+    .mobile-nav button.here { background:rgba(255,255,255,.06); color:var(--ink); }
+    .drawer-scrim.open { display:block; position:fixed; z-index:29; inset:48px 0 calc(66px + env(safe-area-inset-bottom)); background:rgba(0,0,0,.48); }
+  }
+  @media (max-width:360px) { .toolbar .path { max-width:26vw; } .analyze { padding-inline:10px; } .mobile-nav button { font-size:9px; } }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.001ms!important; transition-duration:.001ms!important; scroll-behavior:auto!important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <main class="ide">
+    <nav class="activity" aria-label="IDE lenses">
+      <button data-lens="source" class="here" title="Source">S</button>
+      <button data-lens="graph" title="Graph">G</button>
+      <button data-lens="facts" title="Facts">F</button>
+      <button data-lens="output" title="Output">O</button>
+      <span class="spacer"></span>
+      <button id="activity-files" title="Files">≡</button>
+      <button id="activity-inspector" title="Inspector">◎</button>
+    </nav>
+
+    <aside class="files" id="files-pane" aria-label="Workspace files">
+      <div class="pane-head"><strong>Workspace</strong><span class="spacer"></span><button class="icon" id="new-file" title="New file">+</button></div>
+      <div class="workspace-name" id="workspace-name">initializing</div>
+      <div class="file-list" id="file-list"></div>
+      <div class="file-actions">
+        <button id="rename-file">rename</button><button id="delete-file">delete</button>
+        <button id="import-files">import</button><button id="export-workspace">export</button>
+      </div>
+    </aside>
+
+    <section class="workbench">
+      <header class="toolbar">
+        <button class="icon" id="mobile-files" title="Files">≡</button>
+        <span class="path" id="active-path">no file</span>
+        <span class="spacer"></span>
+        <span class="capability" id="capability"><i></i><span>lexical preview</span></span>
+        <button class="analyze" id="analyze">Analyze remotely</button>
+        <button class="icon" id="show-inspector" title="Semantic inspector">◎</button>
+      </header>
+      <div class="surface-stack">
+        <section class="surface here" id="source-surface" data-lens="source">
+          <div id="editor"></div>
+          <div class="local-note"><span class="save" id="save-state">local</span><span>Source remains local in IndexedDB until Analyze remotely is pressed.</span></div>
+        </section>
+        <section class="surface" id="graph-surface" data-lens="graph"><div id="graph"></div><div class="graph-empty" id="graph-empty">Remote native or admitted browser Wasm analysis can publish a graph. Lexical preview never invents one.</div></section>
+        <section class="surface" id="facts-surface" data-lens="facts"></section>
+        <section class="surface" id="output-surface" data-lens="output"><pre class="output" id="output">No lowering or output has been published.</pre></section>
+      </div>
+    </section>
+
+    <aside class="inspector" id="inspector" aria-label="Semantic inspector">
+      <div class="pane-head"><strong>Semantic inspector</strong><span class="spacer"></span><button class="icon" id="close-inspector">×</button></div>
+      <div class="inspector-scroll" id="inspector-content"><p class="empty">Select any non-whitespace token or graph node. Lexical facts remain clickable even when semantic identity is not published.</p></div>
+    </aside>
+  </main>
+  <div class="drawer-scrim" id="scrim"></div>
+  <nav class="mobile-nav" aria-label="IDE mobile navigation">
+    <button id="mobile-files-tab">files</button><button data-lens="source" class="here">source</button><button data-lens="graph">graph</button><button data-lens="facts">facts</button><button data-lens="output">output</button><button id="mobile-inspector-tab">inspect</button>
+  </nav>
+  <div class="statusbar"></div>
+</div>
+<input id="file-input" type="file" multiple hidden>
+<input id="directory-input" type="file" multiple webkitdirectory hidden>
+<input id="snapshot-input" type="file" accept="application/json,.json" hidden>
+
+<script src="/shared/shell.js"></script>
+<script src="/shared/idol.js"></script>
+<script src="/shared/graph.js"></script>
+<script src="/shared/web.js"></script>
+<script src="/shared/wasm.js"></script>
+<script type="module">
+import {
+  addFile,
+  createBrowserWorkspaceStore,
+  createWorkspace,
+  removeFile,
+  renameFile,
+  restoreWorkspace,
+  selectFile,
+  workspaceSnapshot,
+  writeFile,
+} from "/shared/workspace.js";
+import {
+  bundleCapability,
+  lexicalBundle,
+  remoteBundle,
+  tokenSelection,
+} from "/shared/semantic-bundle.js";
+
+Shell.boot("platform", { title:"Idol Browser IDE", keys:[["⌘↵","analyze"],["⌘S","save"],["G","graph"],["Esc","close"]] });
+IdolShell.crumbs([{label:"platform",go:()=>location.assign("/")},{label:"ide"}]);
+
+const authority = Object.freeze({ repository:"clpi/idol", commit:window.IDOL?.authority || "not-published" });
+const sample = `Point: @{\n  x: f64\n  y: f64\n}\n\ndistance = (a: Point, b: Point)\n  dx = a.x - b.x\n  dy = a.y - b.y\n  (dx * dx + dy * dy):sqrt()\n`;
+const state = { workspace:null, store:null, bundle:null, selection:null, node:null, lens:"source", saving:null, wasm:false };
+const q = (selector) => document.querySelector(selector);
+const encoder = new TextEncoder();
+const html = (value) => String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+const editor = Idol.editor(q("#editor"), {
+  source:"",
+  oninput(source) {
+    const file = activeFile();
+    if (!file) return;
+    state.workspace = writeFile(state.workspace, file.id, source);
+    refreshLexical();
+    renderFiles();
+    scheduleSave();
+  },
+  onTokenClick(token) {
+    const index = editor.tokens().indexOf(token);
+    selectToken(index);
+  },
+});
+const graph = new GraphView(q("#graph"), { onSelect(node) { selectNode(node); } });
+
+function activeFile() { return state.workspace?.files.find((file)=>file.id===state.workspace.active) || null; }
+function identity(value) { return value === null || value === undefined || value === "" ? "not published" : String(value); }
+function row(key,value) { return `<div class="kv"><span class="k">${html(key)}</span><span class="v">${html(identity(value))}</span></div>`; }
+function idLinks(values=[]) { return values.length ? values.map((value)=>`<a class="id-link" target="_blank" rel="noreferrer" href="https://graph.idol.id/?id=${encodeURIComponent(value)}">${html(value)}</a>`).join("") : `<span class="empty">none published</span>`; }
+
+function lexicalTokens() { return editor.tokens().map((token)=>({ ...token })); }
+function refreshLexical() {
+  const source = activeFile()?.source || "";
+  state.bundle = lexicalBundle({ source, tokens:lexicalTokens(), authority });
+  state.selection = null; state.node = null;
+  decorateTokens(); renderCapability(); renderFacts(); renderOutput(); renderInspector(); setGraph(null);
+}
+function decorateTokens() {
+  const tokens = state.bundle?.tokens || [];
+  tokens.forEach((token,index)=>{
+    const element = editor.elementFor(index);
+    if (!element) return;
+    element.dataset.binding = token.binding.status;
+    element.dataset.face = token.source_face;
+    element.classList.toggle("semantic-published",token.binding.status==="published");
+    element.classList.toggle("semantic-ambiguous",token.binding.status==="ambiguous");
+    element.classList.toggle("semantic-selected",state.selection?.index===index);
+    element.tabIndex = 0;
+    element.setAttribute("role","button");
+    element.setAttribute("aria-label",`${token.value}, ${token.lexical_identity}, ${token.binding.status}`);
+    element.onkeydown = (event)=>{ if(event.key==="Enter"||event.key===" "){event.preventDefault();selectToken(index);} };
+  });
+}
+function selectToken(index) {
+  state.selection = tokenSelection(state.bundle,index); state.node=null;
+  decorateTokens(); renderInspector(); openInspector();
+  const graphId = state.selection?.graph_ids?.[0]; if(graphId && graph.byId?.has(graphId)) graph.select(graphId,true);
+}
+function selectNode(node) { state.node=node; state.selection=null; decorateTokens(); renderInspector(); openInspector(); }
+
+function setGraph(value) {
+  const admitted = value && Array.isArray(value.nodes) ? value : {nodes:[],edges:[],applications:[]};
+  graph.setGraph(admitted);
+  q("#graph-empty").style.display = admitted.nodes.length ? "none" : "block";
+}
+function renderCapability() {
+  const kind = bundleCapability(state.bundle);
+  const badge=q("#capability"); badge.className=`capability ${kind==="remote-native"?"remote":(kind==="browser-wasm"?"wasm":"")}`;
+  const label = kind === "remote-native" ? "remote native evidence" : kind === "browser-wasm" ? "browser Wasm" : "lexical preview";
+  badge.querySelector("span").textContent=label;
+}
+function renderFacts() {
+  const bundle=state.bundle;
+  const tokenCount=bundle?.tokens?.length||0, nodeCount=bundle?.graph?.nodes?.length||0, edgeCount=bundle?.graph?.edges?.length||0;
+  q("#facts-surface").innerHTML=`<div class="fact-grid">
+    <div class="fact-card"><label>authority state</label><div class="mono">${html(bundleCapability(bundle))}</div></div>
+    <div class="fact-card"><label>language authority</label><div class="mono">${html(bundle?.authority?.commit)}</div></div>
+    <div class="fact-card"><label>tokens</label><div>${tokenCount.toLocaleString()}</div></div>
+    <div class="fact-card"><label>graph</label><div>${nodeCount.toLocaleString()} nodes · ${edgeCount.toLocaleString()} edges</div></div>
+    <div class="fact-card"><label>browser Wasm</label><div>${state.wasm?"artifact available; IDE semantic entry point not admitted":"not deployed"}</div></div>
+    <div class="fact-card"><label>source boundary</label><div>local until explicit remote analysis</div></div>
+  </div><div class="graph-list" id="graph-list"></div>`;
+  const list=q("#graph-list");
+  (bundle?.graph?.nodes||[]).forEach((node)=>{ const button=document.createElement("button");button.innerHTML=`<span class="mono">${html(node.id)}</span><span>${html(node.name||node.kind||"node")}</span>`;button.onclick=()=>{graph.select(node.id,true);setLens("graph");};list.appendChild(button); });
+}
+function renderOutput() {
+  const output=state.bundle?.output;
+  q("#output").textContent=output===null||output===undefined?"No lowering or output has been published.":typeof output==="string"?output:JSON.stringify(output,null,2);
+}
+function renderInspector() {
+  const mount=q("#inspector-content");
+  if(state.selection) {
+    const token=state.selection;
+    const status=token.binding.status;
+    const edges=token.edges||[], lowering=token.lowering||[];
+    mount.innerHTML=`<h2 class="selection-title">${html(token.value)}</h2><div class="selection-kind">token ${token.index} · ${html(token.lexical_identity)}</div>
+      <div class="identity-state ${status}">${status==="published"?"Compiler-published semantic binding":status==="ambiguous"?"Compiler published more than one candidate":"semantic identity not published"}</div>
+      <section class="inspector-section"><h3>canonical</h3>${row("span",`${token.span[0]}…${token.span[1]}`)}${row("source face",token.source_face)}${row("token identity",token.token_id)}${row("semantic",token.semantic_id)}</section>
+      <section class="inspector-section"><h3>graph identities</h3>${idLinks(token.graph_ids)}</section>
+      <section class="inspector-section"><h3>applications</h3>${idLinks(token.application_ids)}</section>
+      <section class="inspector-section"><h3>edges</h3><div id="token-edges">${edges.length?"":"<p class=empty>none published</p>"}</div></section>
+      <section class="inspector-section"><h3>lowering</h3><pre class="output">${html(lowering.length?JSON.stringify(lowering,null,2):"not published")}</pre></section>
+      <section class="inspector-section"><h3>provenance</h3><pre class="output">${html(JSON.stringify(token.provenance||{},null,2))}</pre></section>`;
+    const edgeMount=q("#token-edges");edges.forEach((edge)=>{const button=document.createElement("button");button.className="edge";button.textContent=`${edge.relation||edge.kind||"edge"} · ${edge.from||"?"} → ${edge.to||"?"}`;button.onclick=()=>selectEdge(edge);edgeMount.appendChild(button);});
+    return;
+  }
+  if(state.node) {
+    const node=state.node.raw||state.node;
+    const graphData=state.bundle?.graph||{edges:[],applications:[]};
+    const edges=(graphData.edges||[]).filter((edge)=>edge.from===node.id||edge.to===node.id);
+    const applications=(graphData.applications||[]).filter((app)=>app.application===node.id||app.subject===node.id||(app.arguments||[]).includes(node.id)||(app.results||[]).includes(node.id));
+    mount.innerHTML=`<h2 class="selection-title">${html(node.name||node.kind||node.id)}</h2><div class="selection-kind">${html(node.kind||"graph node")}</div><div class="identity-state published">Compiler-published graph identity</div>
+      <section class="inspector-section"><h3>canonical</h3>${row("graph id",node.id)}${row("kind",node.kind)}${row("name",node.name)}</section>
+      <section class="inspector-section"><h3>edges</h3><div id="node-edges">${edges.length?"":"<p class=empty>none published</p>"}</div></section>
+      <section class="inspector-section"><h3>applications</h3><pre class="output">${html(applications.length?JSON.stringify(applications,null,2):"none published")}</pre></section>
+      <section class="inspector-section"><h3>raw facts</h3><pre class="output">${html(JSON.stringify(node,null,2))}</pre></section>`;
+    const edgeMount=q("#node-edges");edges.forEach((edge)=>{const button=document.createElement("button");button.className="edge";button.textContent=`${edge.relation||"edge"} · ${edge.from} → ${edge.to}`;button.onclick=()=>selectEdge(edge,node.id);edgeMount.appendChild(button);});
+    return;
+  }
+  mount.innerHTML=`<p class="empty">Select any non-whitespace token or graph node. Lexical facts remain clickable even when semantic identity is not published.</p>`;
+}
+function selectEdge(edge,current=null) { const target=current===edge.to?edge.from:edge.to; if(graph.byId?.has(target)){graph.select(target,true);setLens("graph");} }
+
+function setLens(lens) {
+  state.lens=lens;
+  document.querySelectorAll(".surface").forEach((surface)=>surface.classList.toggle("here",surface.dataset.lens===lens));
+  document.querySelectorAll("[data-lens]").forEach((button)=>{if(button.tagName==="BUTTON")button.classList.toggle("here",button.dataset.lens===lens);});
+  if(lens==="graph") setTimeout(()=>graph.fit(),20);
+}
+function openInspector(){q("#inspector").classList.add("open");q("#scrim").classList.add("open");}
+function closeDrawers(){q("#inspector").classList.remove("open");q("#files-pane").classList.remove("open");q("#scrim").classList.remove("open");}
+function openFiles(){q("#files-pane").classList.add("open");q("#scrim").classList.add("open");}
+
+function renderFiles() {
+  q("#workspace-name").textContent=`${state.workspace?.name||"workspace"} · ${state.workspace?.id||""}`;
+  const list=q("#file-list");list.innerHTML="";
+  for(const file of state.workspace?.files||[]){const button=document.createElement("button");button.className=`file${file.id===state.workspace.active?" here":""}`;button.innerHTML=`<span class="dot"></span><span>${html(file.path)}</span>`;button.onclick=()=>activateFile(file.id);list.appendChild(button);}
+  const file=activeFile();q("#active-path").textContent=file?.path||"no file";q("#analyze").disabled=!file;
+}
+function activateFile(id) { state.workspace=selectFile(state.workspace,id);editor.setSource(activeFile()?.source||"");refreshLexical();renderFiles();scheduleSave();closeDrawers(); }
+async function saveNow() { if(!state.store||!state.workspace)return;q("#save-state").textContent="saving";await state.store.save(state.workspace);q("#save-state").textContent="saved locally";history.replaceState(null,"",`/ide/workspace/${encodeURIComponent(state.workspace.id)}`); }
+function scheduleSave(){q("#save-state").textContent=state.store?"unsaved":"memory only";clearTimeout(state.saving);state.saving=setTimeout(()=>saveNow().catch((error)=>{q("#save-state").textContent=`save refused: ${error.message}`;}),240);}
+
+async function analyze() {
+  const file=activeFile();if(!file)return;
+  const button=q("#analyze");button.disabled=true;button.textContent="Analyzing…";
+  try {
+    const response=await fetch("/v1/ide/analyze",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json","x-idol-request":"browser"},body:JSON.stringify({workspace_id:state.workspace.id,file_id:file.id,path:file.path,source:file.source})});
+    const result=await response.json().catch(()=>({error:`HTTP ${response.status}`}));
+    if(!response.ok)throw new Error(result.detail||result.error||`HTTP ${response.status}`);
+    state.bundle=remoteBundle({source:file.source,response:result,authority,tokens:lexicalTokens()});state.selection=null;state.node=null;
+    setGraph(state.bundle.graph);decorateTokens();renderCapability();renderFacts();renderOutput();renderInspector();setLens(state.bundle.graph?.nodes?.length?"graph":"facts");
+    Idol.toast("Remote native evidence received");
+  } catch(error){Idol.toast(`Analysis refused: ${error.message}`,true);} finally{button.disabled=false;button.textContent="Analyze remotely";}
+}
+
+async function initialize() {
+  const opened=await createBrowserWorkspaceStore();state.store=opened.store;
+  const route=/^\/ide\/workspace\/([^/]+)\/?$/.exec(location.pathname);let workspace=null;
+  if(state.store&&route){try{workspace=await state.store.load(decodeURIComponent(route[1]));}catch{}}
+  if(!workspace&&state.store){const listed=await state.store.list();workspace=listed[0]||null;}
+  if(!workspace){workspace=createWorkspace("scratch");workspace=addFile(workspace,"main.id",sample);}
+  state.workspace=workspace;editor.setSource(activeFile()?.source||"");renderFiles();refreshLexical();
+  if(state.store)await saveNow();else q("#save-state").textContent=opened.reason||"memory only";
+  const wasm=await window.IdolWasm?.ready;state.wasm=Boolean(wasm?.available);renderFacts();
+}
+
+q("#new-file").onclick=()=>{const path=prompt("New relative file path","module.id");if(!path)return;try{state.workspace=addFile(state.workspace,path,"");activateFile(state.workspace.files.at(-1).id);}catch(error){Idol.toast(error.message,true);}};
+q("#rename-file").onclick=()=>{const file=activeFile();if(!file)return;const path=prompt("Rename file",file.path);if(!path)return;try{state.workspace=renameFile(state.workspace,file.id,path);renderFiles();scheduleSave();}catch(error){Idol.toast(error.message,true);}};
+q("#delete-file").onclick=()=>{const file=activeFile();if(!file||!confirm(`Delete ${file.path}?`))return;state.workspace=removeFile(state.workspace,file.id);editor.setSource(activeFile()?.source||"");renderFiles();refreshLexical();scheduleSave();};
+q("#import-files").onclick=()=>q("#file-input").click();
+q("#file-input").onchange=async(event)=>{for(const file of event.target.files){try{state.workspace=addFile(state.workspace,file.name,await file.text());}catch(error){Idol.toast(`${file.name}: ${error.message}`,true);}}renderFiles();if(state.workspace.active)activateFile(state.workspace.active);event.target.value="";};
+q("#export-workspace").onclick=()=>{const blob=new Blob([JSON.stringify(workspaceSnapshot(state.workspace),null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`${state.workspace.name}.idol-workspace.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),0);};
+q("#analyze").onclick=analyze;
+q("#mobile-files").onclick=openFiles;q("#activity-files").onclick=openFiles;q("#show-inspector").onclick=openInspector;q("#activity-inspector").onclick=openInspector;q("#mobile-inspector-tab").onclick=openInspector;q("#mobile-files-tab").onclick=openFiles;q("#close-inspector").onclick=closeDrawers;q("#scrim").onclick=closeDrawers;
+document.querySelectorAll("button[data-lens]").forEach((button)=>button.onclick=()=>{setLens(button.dataset.lens);closeDrawers();});
+document.addEventListener("keydown",(event)=>{if((event.metaKey||event.ctrlKey)&&event.key==="Enter"){event.preventDefault();analyze();}if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="s"){event.preventDefault();saveNow();}if(event.key==="Escape")closeDrawers();});
+
+initialize().catch((error)=>{q("#save-state").textContent=`initialization refused: ${error.message}`;Idol.toast(error.message,true);});
+</script>
+</body>
+</html>
