@@ -10,9 +10,9 @@
 | api | `api.idol.id` | compiler/registry HTTP console, public world transport and API-token transport |
 | graph | `graph.idol.id`, `r8a.idol.id`, `r8b.idol.id`, `r16.idol.id` | explorer, lowering and architecture projections |
 | worlds | `worlds.idol.id` | public World Atlas, foreign candidate boundaries and exact manifest comparison |
-| platform | `platform.idol.id` | Access-verified profile, API-token and audit console plus the implementation frontier |
+| platform | `platform.idol.id` | Access-verified account/API console and local-first browser IDE at `platform.idol.id/ide` |
 
-A push to `main` runs tests, builds every surface once, validates the Worker bundle, snapshots the public world projection, validates the authority-pinned foreign projection, provisions the platform identity boundary, applies D1 migrations, and deploys the same immutable version across all ten hosts.
+A push to `main` runs tests, builds every surface once, validates the Worker bundle, snapshots the public world projection, validates the authority-pinned foreign projection, provisions the platform identity boundary, applies D1 migrations, and deploys the same immutable version across all ten hosts and protected Platform paths.
 
 ## authority
 
@@ -21,27 +21,29 @@ The authority manifest pins:
 - language and semantic authority: `clpi/idol@f33bb3773484e7d954a2975211e683dfa89edab5`
 - native realization/evidence: `clpi/idol-native@d422ef33c88811b99523ef0cc19a03bd158dd3c0`
 
-Source spelling, package coordinates, foreign provenance slugs, account identifiers, credential IDs and hostnames are provenance. They do not mint relation, application, value, world, demand or realization identity.
+Source spelling, package coordinates, foreign provenance slugs, account identifiers, credential IDs, workspace paths and hostnames are provenance. They do not mint relation, application, value, world, demand or realization identity.
 
 ## architecture
 
 ```text
 browser request
     -> one Cloudflare Worker
-    -> host selects one product face
+    -> host/path selects one product face
     -> existing Route hosts preserve the Cloudflare Tunnel compiler origin
     -> worlds/platform Custom Domains are Worker-origin surfaces
-    -> Access protects only /v1/platform/browser/*
+    -> Access protects account APIs, /ide*, and /v1/ide/*
     -> D1 stores platform profiles, token digests and audit events
+    -> IndexedDB stores browser workspaces locally
+    -> remote-native analysis occurs only after explicit user action
     -> exact deployment/authority/runtime/world/foreign projections remain inspectable
 ```
 
 Current product sources live in:
 
 ```text
-apps/{site,docs,lib,api,graph,worlds,platform}/index.html
-shared/{theme.css,surface.css,shell.js,idol.js,graph.js,worlds.js,foreign.js,platform*.js,web.js,wasm.js}
-worker/{index.js,platform.js}
+apps/{site,docs,lib,api,graph,worlds,platform,ide}/index.html
+shared/{theme.css,surface.css,shell.js,idol.js,graph.js,worlds.js,foreign.js,platform*.js,workspace.js,semantic-bundle.js,web.js,wasm.js}
+worker/{index.js,platform.js,ide.js}
 content/{docs/*.md,foreign.json}
 runtime/{authority.json,worlds.json}
 migrations/*.sql
@@ -49,7 +51,7 @@ migrations/*.sql
 
 The legacy Python server remains the dynamic compiler and R2-registry origin for established Route-backed hosts. `/api/*`, `/health`, `/info`, existing registry writes and dynamic fallbacks continue to that Tunnel origin.
 
-`worlds.idol.id` and `platform.idol.id` are Cloudflare Worker Custom Domains. They have no generic same-host dynamic origin. The Worker refuses unknown dynamic fallthrough instead of recursively fetching itself. Explicit `/v1/world/*` and `/v1/platform/*` endpoints are implemented inside the Worker.
+`worlds.idol.id` and `platform.idol.id` are Cloudflare Worker Custom Domains. They have no generic same-host dynamic origin. The Worker refuses unknown dynamic fallthrough instead of recursively fetching itself. Explicit `/v1/world/*`, `/v1/platform/*`, and `/v1/ide/*` endpoints are implemented inside the Worker.
 
 ## World Atlas boundary
 
@@ -102,7 +104,7 @@ Browser identity:
 ```text
 Cloudflare Access one-time PIN
 → Access application JWT
-→ Worker verifies RS256 signature, issuer, audience, expiry and email domain
+→ Worker verifies RS256 signature, issuer, audience, expiry and exact owner email
 → D1 profile
 ```
 
@@ -134,6 +136,36 @@ Browser mutations require the exact Platform origin, `X-Idol-Request: browser`, 
 
 An account or token authorizes transport only. It never grants filesystem, process, network, secret, device, repository, runner or Idol-world authority.
 
+## Browser IDE
+
+`platform.idol.id/ide` is a real local-first multi-file workspace rather than a simulated cloud editor.
+
+```text
+source files
+→ validated immutable workspace model
+→ IndexedDB persistence in the current browser
+→ immediate lexical preview
+→ optional admitted browser Wasm capability
+→ explicit Analyze remotely action
+→ remote-native compiler evidence
+→ exact token / graph / application / edge / lowering inspection
+```
+
+The editor keeps every lexical token clickable, including tokens with no semantic binding. Lexical preview is labeled `semantic identity not published`; it never upgrades name matching into compiler authority. When the compiler publishes exact token spans and graph identities, the UI preserves those identities as strings and cross-links them to graph nodes, applications, edges, provenance and lowering.
+
+Source remains local until the user presses **Analyze remotely**. The protected Worker then:
+
+- independently verifies the Access identity;
+- requires same-origin browser request proof;
+- validates workspace/file/path/source bounds;
+- calls the fixed `api.idol.id/api/analyze` origin exactly once;
+- returns a `remote-native` semantic bundle;
+- appends metadata-only audit evidence without storing source text.
+
+The IDE supports desktop, tablet, phone and 320px layouts; touch-sized controls; file import/export; responsive source/graph/facts/output lenses; keyboard navigation; reduced motion; and Iosevka only for code and exact identities.
+
+This is not a cloud workspace, provider repository connection, shell, collaboration service, or automatic repository mutation surface. Those require later programs and explicit world/policy grants.
+
 ## Cloudflare provisioning
 
 The protected production deploy is idempotent:
@@ -142,8 +174,8 @@ The protected production deploy is idempotent:
 ensure D1 database idol-platform
 ensure Zero Trust organization
 ensure one-time-PIN identity provider
-ensure Access application for platform.idol.id/v1/platform/browser/*
-ensure bootstrap email-domain policy
+ensure Access application for platform account APIs, /ide*, and /v1/ide/*
+ensure exact bootstrap owner policy
 render production Wrangler config
 apply D1 migrations
 build and deploy one Worker version
@@ -161,7 +193,7 @@ The generated configuration contains resource IDs and Access verification facts,
 IDOL_WASM_PATH=/path/to/idol-web.wasm npm run build
 ```
 
-The build publishes `/runtime/manifest.json`, including authority commit, artifact hash, bytes, projection paths, and whether Wasm is actually present. No performance claim is valid without a deployed artifact and reproducible measurement.
+The build publishes `/runtime/manifest.json`, including authority commit, artifact hash, bytes, projection paths, the IDE capability contract, and whether Wasm is actually present. No performance claim is valid without a deployed artifact and reproducible measurement.
 
 ## local verification
 
@@ -177,6 +209,7 @@ Local Worker development:
 npm run dev
 # http://localhost:8787/?surface=worlds
 # http://localhost:8787/?surface=platform
+# http://localhost:8787/?surface=ide
 ```
 
 Platform provisioning is intentionally production-only unless explicit Cloudflare credentials are supplied:
@@ -197,6 +230,8 @@ Every deployed version exposes:
 - `/runtime/worlds.json`
 - `/runtime/foreign.json`
 - `/v1/platform/status`
+- `/ide`
+- `/v1/ide/analyze` (Access and browser-proof protected)
 
 On Route-backed hosts, `/health` and `/info` remain origin checks. Originless hosts use `/__idol/health` for edge liveness.
 
