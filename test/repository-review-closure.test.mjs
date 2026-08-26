@@ -215,8 +215,16 @@ test("D1 observation lists select bounded summary columns instead of full docume
   }]);
 });
 
-test("repository migration stores the bounded observation summary facts", async () => {
-  const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
-  assert.match(migration, /file_count INTEGER NOT NULL/);
-  assert.match(migration, /inventory_truncated INTEGER NOT NULL/);
+test("repository summary columns are added by a forward migration with JSON backfill", async () => {
+  const [shipped, forward] = await Promise.all([
+    readFile("migrations/0002_repository_observation.sql", "utf8"),
+    readFile("migrations/0003_repository_summary_columns.sql", "utf8"),
+  ]);
+  assert.doesNotMatch(shipped, /file_count|inventory_truncated|refusal_code/);
+  assert.match(forward, /ALTER TABLE platform_repository_observation[\s\S]*ADD COLUMN file_count/);
+  assert.match(forward, /ADD COLUMN inventory_truncated/);
+  assert.match(forward, /ALTER TABLE platform_repository_scaffold[\s\S]*ADD COLUMN status/);
+  assert.match(forward, /ADD COLUMN refusal_code/);
+  assert.match(forward, /json_extract\(document, '\$\.inventory\.file_count'\)/);
+  assert.match(forward, /json_array_length\(document, '\$\.files'\)/);
 });
