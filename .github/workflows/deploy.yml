@@ -69,4 +69,13 @@ jobs:
           - r8a.idol.id
           - r8b.idol.id
           - r16.idol.id
+
+          Immutable public projections:
+          - /runtime/worlds.json
+          - /runtime/foreign.json
+
+          Public foreign-world transport:
+          - GET /v1/world/foreign
+          - GET /v1/world/:slug/integration
+          - POST /v1/world/import-plan (plan-only; no source access or execution)
           SUMMARY
