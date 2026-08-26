@@ -12,14 +12,48 @@ permissions:
 
 env:
   CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
-  R16_HOST: ssh-r16.idol.id
+  R16_HOST: ssh-r16.pecunies.com
 
 jobs:
   discover:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Bind browser SSH Access app to confirmed-live r16 tunnel hostname
+      - name: Route clean SSH hostname to the same live r16 tunnel
+        id: route
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          abase="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          tunnels="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel?is_deleted=false&per_page=100")"
+          tid=""; cfg=""
+          while IFS=$'\t' read -r id name status; do
+            candidate="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
+            if [ -n "$candidate" ] && echo "$candidate" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then tid="$id"; cfg="$candidate"; break; fi
+          done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
+          test -n "$tid" || { echo 'live r16 tunnel not found'; exit 3; }
+          current="$(echo "$cfg" | jq '.result.config')"
+          if ! echo "$current" | jq -e --arg h "$R16_HOST" '.ingress[]? | select(.hostname==$h and .service=="ssh://localhost:22")' >/dev/null; then
+            updated="$(echo "$current" | jq --arg h "$R16_HOST" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:"ssh://localhost:22"}]+[$i[-1]])')"
+            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$updated" '{config:$c}')" "$abase/cfd_tunnel/$tid/configurations" | jq -e '.success==true' >/dev/null
+            echo 'added SSH ingress to live r16 tunnel'
+          else
+            echo 'SSH ingress already present'
+          fi
+          zones="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active')"
+          zid="$(echo "$zones" | jq -r '.result[0].id // empty')"; test -n "$zid"
+          dnsbase="https://api.cloudflare.com/client/v4/zones/$zid/dns_records"
+          existing="$(curl -fsS "${auth[@]}" "$dnsbase?type=CNAME&name=$R16_HOST")"
+          rid="$(echo "$existing" | jq -r '.result[0].id // empty')"; target="$tid.cfargotunnel.com"
+          payload="$(jq -nc --arg h "$R16_HOST" --arg t "$target" '{type:"CNAME",name:$h,content:$t,proxied:true,ttl:1}')"
+          if [ -n "$rid" ]; then curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase/$rid" | jq -e '.success==true' >/dev/null; else curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase" | jq -e '.success==true' >/dev/null; fi
+          echo "TUNNEL_ID=$tid" >> "$GITHUB_OUTPUT"
+          echo "SSH hostname routed outside Idol Worker: $R16_HOST"
+
+      - name: Bind Access SSH app and human policy
         id: access
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -31,26 +65,19 @@ jobs:
           apps="$(curl -fsS "${auth[@]}" "$base/access/apps?per_page=100")"
           app_id="$(echo "$apps" | jq -r --arg h "$R16_HOST" '.result[]? | select(.domain==$h and .type=="ssh") | .id' | head -n1)"
           if [ -z "$app_id" ]; then
-            body="$(jq -nc --arg h "$R16_HOST" '{name:"r16 idol SSH",domain:$h,type:"ssh",session_duration:"24h",app_launcher_visible:true}')"
+            body="$(jq -nc --arg h "$R16_HOST" '{name:"r16 Hermes SSH",domain:$h,type:"ssh",session_duration:"24h",app_launcher_visible:true}')"
             created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$body" "$base/access/apps")"
             app_id="$(echo "$created" | jq -r '.result.id')"
-            echo "created Access SSH app"
-          else
-            echo "Access SSH app already exists"
           fi
           test -n "$app_id"
           policies="$(curl -fsS "${auth[@]}" "$base/access/apps/$app_id/policies?per_page=100")"
           if ! echo "$policies" | jq -e '.result[]? | select(.decision=="allow") | .include[]? | select(.email.email=="chris@pecunies.com")' >/dev/null; then
-            pbody='{"name":"Chris r16 SSH","decision":"allow","include":[{"email":{"email":"chris@pecunies.com"}}],"require":[],"exclude":[]}'
-            curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$pbody" "$base/access/apps/$app_id/policies" | jq -e '.success==true' >/dev/null
-            echo "created email policy"
-          else
-            echo "email policy already exists"
+            curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data '{"name":"Chris r16 SSH","decision":"allow","include":[{"email":{"email":"chris@pecunies.com"}}],"require":[],"exclude":[]}' "$base/access/apps/$app_id/policies" | jq -e '.success==true' >/dev/null
           fi
           echo "APP_ID=$app_id" >> "$GITHUB_OUTPUT"
-          echo "R16_ACCESS_APP=$app_id"
+          echo "Access app ready for $R16_HOST"
 
-      - name: Probe live origin with ephemeral machine Access policy
+      - name: Probe SSH protocol with ephemeral service-auth token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           R16_ACCESS_APP: ${{ steps.access.outputs.APP_ID }}
@@ -60,33 +87,21 @@ jobs:
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
           token_id=""; policy_id=""
-          cleanup() {
-            set +e
-            [ -z "$policy_id" ] || curl -sS -X DELETE "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP/policies/$policy_id" >/dev/null
-            [ -z "$token_id" ] || curl -sS -X DELETE "${auth[@]}" "$base/access/service_tokens/$token_id" >/dev/null
-          }
+          cleanup(){ set +e; [ -z "$policy_id" ] || curl -sS -X DELETE "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP/policies/$policy_id" >/dev/null; [ -z "$token_id" ] || curl -sS -X DELETE "${auth[@]}" "$base/access/service_tokens/$token_id" >/dev/null; }
           trap cleanup EXIT
           created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data '{"name":"hermes-bootstrap-ephemeral","duration":"30m"}' "$base/access/service_tokens")"
-          token_id="$(echo "$created" | jq -r '.result.id')"
-          client_id="$(echo "$created" | jq -r '.result.client_id')"
-          client_secret="$(echo "$created" | jq -r '.result.client_secret')"
-          policy_body="$(jq -nc --arg tid "$token_id" '{name:"Hermes bootstrap ephemeral",decision:"non_identity",include:[{service_token:{token_id:$tid}}],require:[],exclude:[]}')"
-          policy="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$policy_body" "$base/access/apps/$R16_ACCESS_APP/policies")"
-          policy_id="$(echo "$policy" | jq -r '.result.id')"
-          curl -L --fail --silent --show-error https://github.com/cloudflare/cloudflared/releases/download/2026.5.1/cloudflared-linux-amd64 -o /tmp/cloudflared
-          chmod +x /tmp/cloudflared
-          cat >/tmp/cfssh <<'EOF'
+          token_id="$(echo "$created"|jq -r '.result.id')"; cid="$(echo "$created"|jq -r '.result.client_id')"; csec="$(echo "$created"|jq -r '.result.client_secret')"
+          pbody="$(jq -nc --arg tid "$token_id" '{name:"Hermes bootstrap ephemeral",decision:"non_identity",include:[{service_token:{token_id:$tid}}],require:[],exclude:[]}')"
+          policy="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$pbody" "$base/access/apps/$R16_ACCESS_APP/policies")"; policy_id="$(echo "$policy"|jq -r '.result.id')"
+          curl -LfsS https://github.com/cloudflare/cloudflared/releases/download/2026.5.1/cloudflared-linux-amd64 -o /tmp/cloudflared; chmod +x /tmp/cloudflared
+          cat >/tmp/cfssh <<EOF
           #!/bin/sh
-          export TUNNEL_SERVICE_TOKEN_ID="$CF_EPHEMERAL_ID"
-          export TUNNEL_SERVICE_TOKEN_SECRET="$CF_EPHEMERAL_SECRET"
-          exec /tmp/cloudflared access ssh --hostname "$1"
+          exec /tmp/cloudflared access ssh --hostname "\$1" --service-token-id '$cid' --service-token-secret '$csec'
           EOF
           chmod 700 /tmp/cfssh
-          export CF_EPHEMERAL_ID="$client_id" CF_EPHEMERAL_SECRET="$client_secret"
           set +e
-          out="$(ssh -vv -o 'ProxyCommand=/tmp/cfssh %h' -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o PubkeyAuthentication=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ConnectTimeout=15 clp@$R16_HOST true 2>&1)"
-          rc=$?
+          out="$(ssh -vv -o 'ProxyCommand=/tmp/cfssh %h' -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ConnectTimeout=12 clp@$R16_HOST true 2>&1)"; rc=$?
           set -e
-          echo "$out" | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Offering public key|Permission denied|Authenticated to|Connection closed|Connection timed out|websocket|bad handshake|Could not resolve|refused' | tail -n 80 || true
+          echo "$out" | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Permission denied|Authenticated to|Connection closed|Connection timed out|websocket|bad handshake|refused' | tail -n 80 || true
           echo "SSH_PROBE_RC=$rc"
-          if echo "$out" | grep -q 'Remote protocol version'; then echo 'ORIGIN_SSH_PROTOCOL=alive'; else echo 'ORIGIN_SSH_PROTOCOL=unconfirmed'; fi
+          echo "$out" | grep -q 'Remote protocol version' && echo 'ORIGIN_SSH_PROTOCOL=alive' || echo 'ORIGIN_SSH_PROTOCOL=unconfirmed'
