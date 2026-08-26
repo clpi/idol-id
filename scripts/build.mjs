@@ -94,6 +94,12 @@ for (const app of ["site", "docs", "lib", "api", "graph", "worlds", "platform", 
     if (/<div class="actions">/i.test(html)) html = html.replace(/<div class="actions">/i, `<div class="actions">${entry}`);
     else html = html.replace(/<body([^>]*)>/i, `<body$1>${entry}`);
   }
+  if (app === "ide" && !html.includes("/shared/ide-semantic-layer.js")) {
+    html = html.replace(
+      /<script type="module">/i,
+      '<script src="/shared/ide-semantic-layer.js"></script>\n<script type="module">',
+    );
+  }
   await writeFile(path, html);
 }
 
