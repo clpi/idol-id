@@ -30,7 +30,10 @@ test("observation pins a revision and scaffold remains review-only", async () =>
     ] }],
   ]);
   const observed = await observePublicRepository({ url: "https://github.com/acme/demo" }, {
-    fetcher: async (url) => new Response(JSON.stringify(responses.get(url))),
+    fetcher: async (url) => {
+      if (!responses.has(url)) throw new Error(`Unmapped provider request: ${url}`);
+      return new Response(JSON.stringify(responses.get(url)));
+    },
     observedAt: () => "2026-08-26T12:00:00.000Z",
   });
   assert.equal(observed.resolved_revision, "abcdef123456");
