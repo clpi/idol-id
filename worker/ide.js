@@ -5,7 +5,7 @@ import { validateWorkspacePath } from "../shared/workspace.js";
 
 const IDE_PATH = "/v1/ide/analyze";
 const SOURCE_LIMIT = 2 * 1024 * 1024;
-const BODY_LIMIT = SOURCE_LIMIT;
+const BODY_LIMIT = SOURCE_LIMIT + 64 * 1024;
 const RESULT_LIMIT = 4 * 1024 * 1024;
 const ID_LIMIT = 160;
 const encoder = new TextEncoder();
@@ -162,6 +162,34 @@ function auditSink(env, dependencies, identity) {
   };
 }
 
+function auditEvent(dependencies, identity, input, sourceHash, type, upstreamStatus = null) {
+  return {
+    id: auditIdentifier(dependencies),
+    subject: identity.subject,
+    actor_email: identity.email,
+    type,
+    target: `${input.workspace_id}/${input.file_id}`,
+    metadata: Object.freeze({
+      workspace_id: input.workspace_id,
+      file_id: input.file_id,
+      path: input.path,
+      source_hash: sourceHash,
+      source_bytes: textBytes(input.source),
+      upstream_status: upstreamStatus,
+    }),
+    created_at: nowIso(dependencies),
+  };
+}
+
+async function appendAudit(sink, event) {
+  try {
+    await sink(event);
+    return null;
+  } catch {
+    return json({ error: "IDE_AUDIT_UNAVAILABLE" }, 503);
+  }
+}
+
 function boundedUpstreamError(status) {
   return json({ error: "IDE_UPSTREAM_REFUSED", upstream_status: status }, 502);
 }
@@ -191,6 +219,13 @@ export async function handleIdeTransport(request, env, pathname, info, dependenc
   if (admitted.response) return admitted.response;
   const input = admitted.value;
   const sourceHash = await sha256(input.source);
+
+  const requestedAudit = await appendAudit(
+    sink,
+    auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.requested"),
+  );
+  if (requestedAudit) return requestedAudit;
+
   const fetcher = dependencies.fetcher || fetch;
   let upstream;
   try {
@@ -204,41 +239,36 @@ export async function handleIdeTransport(request, env, pathname, info, dependenc
       body: JSON.stringify({ source: input.source }),
     }));
   } catch {
+    await appendAudit(sink, auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.refused", 0));
     return json({ error: "IDE_UPSTREAM_UNAVAILABLE" }, 502);
   }
 
-  if (!upstream.ok) return boundedUpstreamError(upstream.status);
+  if (!upstream.ok) {
+    await appendAudit(sink, auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.refused", upstream.status));
+    return boundedUpstreamError(upstream.status);
+  }
   const rawResult = await upstream.text();
-  if (textBytes(rawResult) > RESULT_LIMIT) return json({ error: "IDE_UPSTREAM_RESULT_TOO_LARGE" }, 502);
+  if (textBytes(rawResult) > RESULT_LIMIT) {
+    await appendAudit(sink, auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.refused", upstream.status));
+    return json({ error: "IDE_UPSTREAM_RESULT_TOO_LARGE" }, 502);
+  }
   let result;
   try {
     result = JSON.parse(rawResult);
   } catch {
+    await appendAudit(sink, auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.refused", upstream.status));
     return json({ error: "IDE_UPSTREAM_INVALID" }, 502);
   }
-  if (!result || typeof result !== "object" || Array.isArray(result)) return json({ error: "IDE_UPSTREAM_INVALID" }, 502);
-
-  const metadata = Object.freeze({
-    workspace_id: input.workspace_id,
-    file_id: input.file_id,
-    path: input.path,
-    source_hash: sourceHash,
-    source_bytes: textBytes(input.source),
-    upstream_status: upstream.status,
-  });
-  try {
-    await sink({
-      id: auditIdentifier(dependencies),
-      subject: identity.subject,
-      actor_email: identity.email,
-      type: "ide.analysis.requested",
-      target: `${input.workspace_id}/${input.file_id}`,
-      metadata,
-      created_at: nowIso(dependencies),
-    });
-  } catch {
-    return json({ error: "IDE_AUDIT_UNAVAILABLE" }, 503);
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    await appendAudit(sink, auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.refused", upstream.status));
+    return json({ error: "IDE_UPSTREAM_INVALID" }, 502);
   }
+
+  const completedAudit = await appendAudit(
+    sink,
+    auditEvent(dependencies, identity, input, sourceHash, "ide.analysis.completed", upstream.status),
+  );
+  if (completedAudit) return completedAudit;
 
   return json({
     schema: "idol.web.ide.analysis.v1",
