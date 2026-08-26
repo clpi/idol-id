@@ -12,6 +12,7 @@ function envWithAssets() {
     ["/apps/worlds/index.html", ["text/html", "<html>worlds</html>"]],
     ["/apps/platform/index.html", ["text/html", "<html>platform</html>"]],
     ["/shared/web.js", ["application/javascript", "web"]],
+    ["/runtime/worlds.json", ["application/json", "{\"schema\":\"idol.web.worlds.v1\",\"worlds\":[]}"]],
     ["/manifest.json", ["application/json", "{\"ok\":true}"]],
   ]);
   return {
@@ -22,7 +23,10 @@ function envWithAssets() {
         const path = new URL(request.url).pathname;
         const found = files.get(path);
         if (!found) return new Response("missing", { status: 404 });
-        return new Response(found[1], { headers: { "content-type": found[0] } });
+        if (request.headers.get("if-none-match") === "worlds-v1") {
+          return new Response(null, { status: 304, headers: { etag: "worlds-v1" } });
+        }
+        return new Response(found[1], { headers: { "content-type": found[0], etag: "worlds-v1" } });
       },
     },
   };
@@ -86,6 +90,17 @@ test("originless surfaces refuse dynamic proxy paths instead of recursing", asyn
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
   const response = await handle(new Request("https://worlds.idol.id/api/worlds"), envWithAssets());
   assert.equal(response.status, 404);
+  assert.equal(called, false);
+});
+
+test("conditional static asset responses survive originless routing", async () => {
+  let called = false;
+  globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
+  const response = await handle(new Request("https://worlds.idol.id/runtime/worlds.json", {
+    headers: { "if-none-match": "worlds-v1" },
+  }), envWithAssets());
+  assert.equal(response.status, 304);
+  assert.equal(response.headers.get("etag"), "worlds-v1");
   assert.equal(called, false);
 });
 
