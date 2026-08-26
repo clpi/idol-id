@@ -88,11 +88,16 @@ export function createRepositoryService({
     const draft = createRepositoryScaffold(observation, input, { authorityPin, createdAt: nowIso });
     const id = randomIdentifier("scf", randomBytes);
     const createdAt = draft.created_at || nowIso();
+    const fileCount = Number(draft.files?.length || 0);
+    const refusalCode = draft.refusal?.code || null;
     const document = Object.freeze({ ...draft, id, observation_id: observation.id, created_at: createdAt });
     const record = Object.freeze({
       id,
       subject: identity.subject,
       observation_id: observation.id,
+      status: draft.status,
+      file_count: fileCount,
+      refusal_code: refusalCode,
       document,
       created_at: createdAt,
     });
@@ -104,8 +109,8 @@ export function createRepositoryService({
         observation_id: observation.id,
         capabilities: draft.capabilities || [],
         status: draft.status,
-        refusal: draft.refusal?.code || null,
-        file_count: draft.files?.length || 0,
+        refusal: refusalCode,
+        file_count: fileCount,
       },
       createdAt,
     );
