@@ -47,18 +47,22 @@ export function createD1RepositoryStore(database) {
     async commitObservation(record, event) {
       const insert = database.prepare(`
         INSERT INTO platform_repository_observation(
-          id, subject, provider, namespace, repository, resolved_revision,
-          file_count, inventory_truncated, document, created_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+          id, subject, provider, namespace, repository, coordinate,
+          requested_ref, default_branch, resolved_revision, file_count,
+          truncated, document, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
       `).bind(
         record.id,
         record.subject,
         record.provider,
         record.namespace,
         record.repository,
+        record.coordinate,
+        record.requested_ref,
+        record.default_branch,
         record.resolved_revision,
         record.file_count,
-        record.inventory_truncated ? 1 : 0,
+        record.truncated ? 1 : 0,
         JSON.stringify(record.document),
         record.created_at,
       );
@@ -68,8 +72,9 @@ export function createD1RepositoryStore(database) {
 
     async listObservations(subject, limit = 50) {
       const result = await database.prepare(`
-        SELECT id, provider, namespace, repository, resolved_revision,
-               file_count, inventory_truncated, created_at
+        SELECT id, provider, namespace, repository, coordinate,
+               requested_ref, default_branch, resolved_revision,
+               file_count, truncated, created_at
         FROM platform_repository_observation
         WHERE subject = ?1
         ORDER BY created_at DESC, rowid DESC
