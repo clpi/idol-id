@@ -20,7 +20,6 @@ jobs:
     environment: production
     steps:
       - name: Configure dedicated r16 SSH hostname on existing tunnel
-        id: tunnel
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -30,79 +29,45 @@ jobs:
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           abase="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
           tunnels="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel?is_deleted=false&per_page=100")"
-          tid=""
-          cfg=""
+          tid=""; cfg=""
           while IFS=$'\t' read -r id name status; do
             candidate="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
-            if [ -n "$candidate" ] && echo "$candidate" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then
-              tid="$id"
-              cfg="$candidate"
-            fi
+            if [ -n "$candidate" ] && echo "$candidate" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then tid="$id"; cfg="$candidate"; fi
           done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
           test -n "$tid" || { echo 'r16 tunnel not found'; exit 3; }
-          echo "R16_TUNNEL_ID=$tid"
-
-          # Preserve the complete current config and add one SSH hostname before the catch-all.
           current="$(echo "$cfg" | jq '.result.config')"
           if ! echo "$current" | jq -e --arg h "$SSH_HOST" '.ingress[] | select(.hostname==$h and .service=="ssh://localhost:22")' >/dev/null; then
-            updated="$(echo "$current" | jq --arg h "$SSH_HOST" '
-              .ingress as $i |
-              .ingress = (($i[0:-1]) + [{hostname:$h,service:"ssh://localhost:22"}] + [$i[-1]])
-            ')"
+            updated="$(echo "$current" | jq --arg h "$SSH_HOST" '.ingress as $i | .ingress = (($i[0:-1]) + [{hostname:$h,service:"ssh://localhost:22"}] + [$i[-1]])')"
             body="$(jq -n --argjson c "$updated" '{config:$c}')"
-            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
-              --data "$body" "$abase/cfd_tunnel/$tid/configurations" \
-              | jq -e '.success == true' >/dev/null
-            echo "Added $SSH_HOST -> ssh://localhost:22"
-          else
-            echo "$SSH_HOST ingress already present"
+            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$body" "$abase/cfd_tunnel/$tid/configurations" | jq -e '.success == true' >/dev/null
           fi
-
-          # Upsert proxied DNS CNAME to the tunnel.
           zones="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=idol.id&status=active')"
-          zid="$(echo "$zones" | jq -r '.result[0].id // empty')"
-          test -n "$zid" || { echo 'idol.id zone not visible to deployment token'; exit 4; }
+          zid="$(echo "$zones" | jq -r '.result[0].id // empty')"; test -n "$zid"
           dnsbase="https://api.cloudflare.com/client/v4/zones/$zid/dns_records"
           existing="$(curl -fsS "${auth[@]}" "$dnsbase?type=CNAME&name=$SSH_HOST")"
-          target="$tid.cfargotunnel.com"
-          rid="$(echo "$existing" | jq -r '.result[0].id // empty')"
+          target="$tid.cfargotunnel.com"; rid="$(echo "$existing" | jq -r '.result[0].id // empty')"
           payload="$(jq -n --arg name "$SSH_HOST" --arg content "$target" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')"
-          if [ -n "$rid" ]; then
-            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase/$rid" | jq -e '.success == true' >/dev/null
-            echo "Updated DNS $SSH_HOST"
-          else
-            curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase" | jq -e '.success == true' >/dev/null
-            echo "Created DNS $SSH_HOST"
-          fi
+          if [ -n "$rid" ]; then curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase/$rid" | jq -e '.success == true' >/dev/null; else curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase" | jq -e '.success == true' >/dev/null; fi
+          echo "r16 SSH route ready: $SSH_HOST"
 
-      - name: Probe SSH protocol and authentication methods
+      - name: Probe SSH protocol and authentication methods with supported ProxyCommand
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --silent --show-error \
-            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
-            -o /tmp/cloudflared
+          curl -L --fail --silent --show-error https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
           chmod +x /tmp/cloudflared
-          /tmp/cloudflared access tcp --hostname "$SSH_HOST" --url localhost:2222 >/tmp/cloudflared.log 2>&1 &
-          proxy=$!
-          trap 'kill $proxy 2>/dev/null || true' EXIT
-          for i in $(seq 1 30); do
-            nc -z 127.0.0.1 2222 && break
-            sleep 1
-          done
-          echo '--- ssh protocol probe ---'
+          echo '--- ssh protocol/auth probe ---'
           set +e
-          ssh -vv -p 2222 \
+          ssh -vv \
+            -o "ProxyCommand=/tmp/cloudflared access ssh --hostname %h" \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -o BatchMode=yes \
             -o PreferredAuthentications=publickey,password,keyboard-interactive \
-            -o ConnectTimeout=10 \
-            clp@127.0.0.1 true 2>&1 \
-            | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Offering public key|Permission denied|Connection closed|banner' \
-            | tail -n 30
+            -o ConnectTimeout=15 \
+            clp@$SSH_HOST true 2>&1 \
+            | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Offering public key|Permission denied|Connection closed|websocket|bad handshake|Access' \
+            | tail -n 40
           rc=${PIPESTATUS[0]}
           set -e
           echo "SSH_PROBE_RC=$rc"
-          echo '--- cloudflared tail ---'
-          tail -n 20 /tmp/cloudflared.log || true
