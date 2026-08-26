@@ -169,7 +169,14 @@ export function createPlatformService({
     if (requiredScope && !scopes.includes(requiredScope)) throw new PlatformError("API_TOKEN_SCOPE_REFUSED", `API token lacks scope ${requiredScope}`, 403);
     const owner = await repository.getProfile(record.subject);
     if (!owner) throw new PlatformError("API_TOKEN_OWNER_MISSING", "API token owner unavailable", 401);
-    await repository.touchToken(record.id, nowIso());
+    const usedAt = nowIso();
+    await repository.touchToken(record.id, usedAt);
+    await appendAudit(
+      { subject: record.subject, email: owner.email },
+      "token.used",
+      record.id,
+      { scope: requiredScope || null, used_at: usedAt },
+    );
     return Object.freeze({
       kind: "api-token",
       subject: record.subject,
