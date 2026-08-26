@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS platform_repository_scaffold (
   id TEXT PRIMARY KEY,
   subject TEXT NOT NULL,
   observation_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  file_count INTEGER NOT NULL,
+  refusal_code TEXT,
   document TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY(observation_id) REFERENCES platform_repository_observation(id)
