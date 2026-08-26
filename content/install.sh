@@ -4,11 +4,17 @@
 set -eu
 
 IDOL_AUTHORITY="${IDOL_AUTHORITY:-f33bb3773484e7d954a2975211e683dfa89edab5}"
-IDOL_REPOSITORY="${IDOL_REPOSITORY:-https://github.com/clpi/idol.git}"
+CANONICAL_IDOL_REPOSITORY="https://github.com/clpi/idol.git"
 IDOL_PREFIX="${IDOL_PREFIX:-${HOME}/.local}"
 
 fail() { printf '%s\n' "idol install: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"; }
+
+if [ -n "${IDOL_REPOSITORY:-}" ] && [ "$IDOL_REPOSITORY" != "$CANONICAL_IDOL_REPOSITORY" ]; then
+  fail "IDOL_REPOSITORY overrides are not admitted; installer provenance is pinned to clpi/idol"
+fi
+IDOL_REPOSITORY="$CANONICAL_IDOL_REPOSITORY"
+
 need git
 need zig
 
@@ -42,6 +48,7 @@ cat > "$IDOL_PREFIX/share/idol/authority.json" <<JSON
 {
   "schema": "idol.install.authority.v1",
   "repository": "clpi/idol",
+  "source": "$CANONICAL_IDOL_REPOSITORY",
   "commit": "$IDOL_AUTHORITY",
   "kind": "bootstrap-seed",
   "self_hosted": false
@@ -49,6 +56,7 @@ cat > "$IDOL_PREFIX/share/idol/authority.json" <<JSON
 JSON
 
 printf '\n%s\n' "Installed Idol bootstrap seed: $IDOL_PREFIX/bin/idol"
+printf '%s\n' "Repository: clpi/idol"
 printf '%s\n' "Authority: $IDOL_AUTHORITY"
 printf '%s\n' "Add $IDOL_PREFIX/bin to PATH when needed."
 printf '%s\n' "This installs the current Zig-built seed transport, not a self-hosted release."
