@@ -3,9 +3,14 @@ import { TEXT, MAX_FILES, REPOSITORY_AUTHORITY_BOUNDARY, RepositoryError, exact,
 const RESPONSE_LIMIT = 2 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const BITBUCKET_MAX_DEPTH = 20;
+const DEFAULT_BRANCH_LIMIT = 160;
 
 function timeoutError(label) {
   return new RepositoryError("REPOSITORY_PROVIDER_TIMEOUT", `${label} exceeded the admitted time limit`, 504);
+}
+
+function boundedDefaultBranch(value) {
+  return exact(value, "default repository branch", DEFAULT_BRANCH_LIMIT);
 }
 
 async function readBoundedText(response, limit = RESPONSE_LIMIT, signal = null, label = "repository provider response") {
@@ -99,7 +104,8 @@ async function observeGitHub(locator, fetcher, timeoutMs) {
   const base = `https://api.github.com/repos/${encodeURIComponent(locator.namespace)}/${encodeURIComponent(locator.repository)}`;
   const metadata = (await providerJson(base, fetcher, "GitHub repository metadata", timeoutMs)).value;
   if (metadata.private) throw new RepositoryError("PUBLIC_REPOSITORY_REQUIRED", "private GitHub repositories require a provider connection", 403);
-  const ref = locator.requested_ref === "HEAD" ? metadata.default_branch : locator.requested_ref;
+  const defaultBranch = boundedDefaultBranch(metadata.default_branch);
+  const ref = locator.requested_ref === "HEAD" ? defaultBranch : locator.requested_ref;
   const commit = (await providerJson(`${base}/commits/${encodeURIComponent(ref)}`, fetcher, "GitHub repository revision", timeoutMs)).value;
   const sha = exact(commit.sha, "GitHub revision", 128);
   const tree = (await providerJson(`${base}/git/trees/${encodeURIComponent(sha)}?recursive=1`, fetcher, "GitHub repository tree", timeoutMs)).value;
@@ -107,7 +113,7 @@ async function observeGitHub(locator, fetcher, timeoutMs) {
     .filter((entry) => entry?.type === "blob")
     .map((entry) => fileRecord(entry.path, entry.size))
     .filter(Boolean);
-  return { default_branch: metadata.default_branch, resolved_revision: sha, files, truncated: Boolean(tree.truncated) || files.length > MAX_FILES };
+  return { default_branch: defaultBranch, resolved_revision: sha, files, truncated: Boolean(tree.truncated) || files.length > MAX_FILES };
 }
 
 async function observeGitLab(locator, fetcher, timeoutMs) {
@@ -117,7 +123,8 @@ async function observeGitLab(locator, fetcher, timeoutMs) {
   if (metadata.visibility && metadata.visibility !== "public") {
     throw new RepositoryError("PUBLIC_REPOSITORY_REQUIRED", "private GitLab projects require a provider connection", 403);
   }
-  const ref = locator.requested_ref === "HEAD" ? metadata.default_branch : locator.requested_ref;
+  const defaultBranch = boundedDefaultBranch(metadata.default_branch);
+  const ref = locator.requested_ref === "HEAD" ? defaultBranch : locator.requested_ref;
   const commit = (await providerJson(`${base}/repository/commits/${encodeURIComponent(ref)}`, fetcher, "GitLab repository revision", timeoutMs)).value;
   const sha = exact(commit.id, "GitLab revision", 128);
   const page = await providerJson(`${base}/repository/tree?recursive=true&per_page=100&ref=${encodeURIComponent(sha)}`, fetcher, "GitLab repository tree", timeoutMs);
@@ -125,14 +132,14 @@ async function observeGitLab(locator, fetcher, timeoutMs) {
     .filter((entry) => entry?.type === "blob")
     .map((entry) => fileRecord(entry.path))
     .filter(Boolean);
-  return { default_branch: metadata.default_branch, resolved_revision: sha, files, truncated: Boolean(page.headers.get("x-next-page")) || files.length >= 100 };
+  return { default_branch: defaultBranch, resolved_revision: sha, files, truncated: Boolean(page.headers.get("x-next-page")) || files.length >= 100 };
 }
 
 async function observeBitbucket(locator, fetcher, timeoutMs) {
   const base = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(locator.namespace)}/${encodeURIComponent(locator.repository)}`;
   const metadata = (await providerJson(base, fetcher, "Bitbucket repository metadata", timeoutMs)).value;
   if (metadata.is_private) throw new RepositoryError("PUBLIC_REPOSITORY_REQUIRED", "private Bitbucket repositories require a provider connection", 403);
-  const defaultBranch = metadata.mainbranch?.name || "main";
+  const defaultBranch = boundedDefaultBranch(metadata.mainbranch?.name || "main");
   const ref = locator.requested_ref === "HEAD" ? defaultBranch : locator.requested_ref;
   const commit = (await providerJson(`${base}/commit/${encodeURIComponent(ref)}`, fetcher, "Bitbucket repository revision", timeoutMs)).value;
   const sha = exact(commit.hash, "Bitbucket revision", 128);
@@ -182,7 +189,7 @@ export async function observePublicRepository(input, {
     coordinate: locator.coordinate,
     source_url: locator.source_url,
     requested_ref: locator.requested_ref,
-    default_branch: text(observed.default_branch),
+    default_branch: boundedDefaultBranch(observed.default_branch),
     resolved_revision: resolved,
     visibility: "public",
     observed_at: exact(observedAt(), "observation time", 64),
