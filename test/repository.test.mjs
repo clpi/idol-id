@@ -74,6 +74,30 @@ test("public GitHub observation is revision-pinned, bounded, and identity-safe",
   assert.equal(calls.every((call) => !String(call.url).includes("example.com")), true);
 });
 
+test("Bitbucket observation requests bounded recursion and retains nested files", async () => {
+  const seen = [];
+  const base = "https://api.bitbucket.org/2.0/repositories/acme/demo";
+  const observation = await observePublicRepository({ url: "https://bitbucket.org/acme/demo" }, {
+    observedAt: () => "2026-08-26T12:00:00.000Z",
+    fetcher: async (url, init) => {
+      seen.push({ url, init });
+      if (url === base) return response({ is_private: false, mainbranch: { name: "main" } });
+      if (url === `${base}/commit/main`) return response({ hash: "0123456789abcdef" });
+      if (url.startsWith(`${base}/src/0123456789abcdef/`)) return response({ values: [
+        { type: "commit_directory", path: "src" },
+        { type: "commit_file", path: "src/main.rs", size: 1200 },
+        { type: "commit_file", path: "Cargo.toml", size: 200 },
+      ] });
+      throw new Error(`unexpected ${url}`);
+    },
+  });
+  const treeUrl = new URL(seen.at(-1).url);
+  assert.equal(treeUrl.searchParams.get("max_depth"), "25");
+  assert.equal(treeUrl.searchParams.get("pagelen"), "100");
+  assert.equal(observation.inventory.paths.includes("src/main.rs"), true);
+  assert.equal(observation.inventory.truncated, false);
+});
+
 test("scaffold generates review-only files and a deterministic add patch", async () => {
   const observation = { ...(await observePublicRepository({ url: "https://github.com/acme/demo" }, { fetcher: githubFetch, observedAt: () => "2026-08-26T12:00:00.000Z" })), id: "obs_123" };
   const scaffold = createRepositoryScaffold(observation, { capabilities: ["ci", "test", "authority", "build"] }, {
@@ -116,4 +140,23 @@ test("scaffold refuses path conflicts rather than overwriting", () => {
   assert.equal(scaffold.status, "refused");
   assert.equal(scaffold.refusal.code, "SCAFFOLD_PATH_CONFLICT");
   assert.deepEqual(scaffold.refusal.paths, [".idol/authority.json"]);
+});
+
+test("scaffold refuses incomplete inventories before claiming paths are unused", () => {
+  const observation = {
+    schema: "idol.web.repository.observation.v1",
+    id: "obs_truncated",
+    provider: "github",
+    coordinate: "github:acme/large",
+    resolved_revision: "abc",
+    inventory: { truncated: true, paths: [], build_systems: [], commands: [], tests: [], benchmarks: [] },
+  };
+  const scaffold = createRepositoryScaffold(observation, { capabilities: ["authority"] }, {
+    authorityPin: { language: { commit: "a" }, native: { commit: "b" } },
+    createdAt: () => "2026-08-26T12:00:00.000Z",
+  });
+  assert.equal(scaffold.status, "refused");
+  assert.equal(scaffold.refusal.code, "SCAFFOLD_INCOMPLETE_INVENTORY");
+  assert.deepEqual(scaffold.files, []);
+  assert.equal(scaffold.patch, "");
 });
