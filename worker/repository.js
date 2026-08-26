@@ -2,6 +2,7 @@ import { bearerToken, verifyAccessJwt } from "../shared/platform-auth.js";
 import { createD1PlatformRepository } from "../shared/platform-d1.js";
 import { createPlatformService, PlatformError } from "../shared/platform.js";
 import { createD1RepositoryStore } from "../shared/repository-d1.js";
+import { createMemoryRepositoryStore } from "../shared/repository-memory.js";
 import { createRepositoryService } from "../shared/repository-service.js";
 import { observePublicRepository, RepositoryError } from "../shared/repository.js";
 
@@ -12,6 +13,9 @@ const ID = "[A-Za-z0-9_-]{12,}";
 const OBSERVATION_PATH = new RegExp(`^observations/(${ID})$`);
 const SCAFFOLD_CREATE_PATH = new RegExp(`^observations/(${ID})/scaffolds$`);
 const SCAFFOLD_PATH = new RegExp(`^scaffolds/(${ID})$`);
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const LOCAL_STORE = createMemoryRepositoryStore();
+const LOCAL_AUDIT = [];
 
 function json(value, status = 200, headers = {}) {
   return new Response(JSON.stringify(value), {
@@ -20,14 +24,23 @@ function json(value, status = 200, headers = {}) {
   });
 }
 
-function configured(env) {
+function localDevelopment(request, env) {
+  return env.IDOL_LOCAL_DEVELOPMENT === "1" && LOCAL_HOSTS.has(new URL(request.url).hostname);
+}
+
+function configured(request, env) {
+  const local = localDevelopment(request, env);
   return {
-    access: Boolean(env.ACCESS_TEAM_DOMAIN && env.REPOSITORY_ACCESS_AUD && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN)),
-    storage: Boolean(env.PLATFORM_DB),
+    access: local || Boolean(env.ACCESS_TEAM_DOMAIN && env.REPOSITORY_ACCESS_AUD && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN)),
+    storage: local || Boolean(env.PLATFORM_DB),
+    local_development: local,
   };
 }
 
 async function browserIdentity(request, env, dependencies) {
+  if (localDevelopment(request, env)) {
+    return Object.freeze({ subject: "local-development", email: "local@idol.invalid", displayName: "Local developer" });
+  }
   if (dependencies.verifyAccess) return dependencies.verifyAccess(request, env);
   const assertion = request.headers.get("cf-access-jwt-assertion");
   if (!assertion) return null;
@@ -41,18 +54,46 @@ async function browserIdentity(request, env, dependencies) {
   });
 }
 
-function requireBrowserProof(request) {
-  return request.headers.get("origin") === "https://platform.idol.id"
-    && request.headers.get("x-idol-request") === "browser";
+function requireBrowserProof(request, env) {
+  const actual = request.headers.get("origin");
+  const expected = localDevelopment(request, env) ? new URL(request.url).origin : "https://platform.idol.id";
+  return actual === expected && request.headers.get("x-idol-request") === "browser";
+}
+
+async function readBoundedRequestText(request) {
+  const announced = Number(request.headers.get("content-length") || 0);
+  if (announced > BODY_LIMIT) throw new RepositoryError("REPOSITORY_REQUEST_TOO_LARGE", "repository request body too large", 413);
+  if (!request.body?.getReader) {
+    const value = await request.text();
+    if (new TextEncoder().encode(value).byteLength > BODY_LIMIT) throw new RepositoryError("REPOSITORY_REQUEST_TOO_LARGE", "repository request body too large", 413);
+    return value;
+  }
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > BODY_LIMIT) {
+      await reader.cancel("repository request body too large");
+      throw new RepositoryError("REPOSITORY_REQUEST_TOO_LARGE", "repository request body too large", 413);
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 async function readJson(request) {
   const type = request.headers.get("content-type") || "";
   if (!type.toLowerCase().startsWith("application/json")) throw new RepositoryError("JSON_REQUIRED", "application/json request required", 415);
-  const announced = Number(request.headers.get("content-length") || 0);
-  if (announced > BODY_LIMIT) throw new RepositoryError("REPOSITORY_REQUEST_TOO_LARGE", "repository request body too large", 413);
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > BODY_LIMIT) throw new RepositoryError("REPOSITORY_REQUEST_TOO_LARGE", "repository request body too large", 413);
+  const raw = await readBoundedRequestText(request);
   if (!raw) return {};
   try { return JSON.parse(raw); } catch { throw new RepositoryError("INVALID_JSON", "invalid JSON", 400); }
 }
@@ -82,6 +123,19 @@ async function services(request, env, dependencies) {
   if (dependencies.platformService && dependencies.repositoryService) {
     return { platform: dependencies.platformService, repository: dependencies.repositoryService };
   }
+  const authorityPin = await loadAuthorityPin(request, env, dependencies);
+  if (localDevelopment(request, env)) {
+    return {
+      platform: Object.freeze({ async session(identity) { return { profile: identity }; } }),
+      repository: createRepositoryService({
+        store: LOCAL_STORE,
+        appendAudit: async (event) => { LOCAL_AUDIT.push(event); },
+        authorityPin,
+        now: dependencies.now,
+        randomBytes: dependencies.randomBytes,
+      }),
+    };
+  }
   if (!env.PLATFORM_DB?.prepare) throw new RepositoryError("PLATFORM_STORAGE_UNAVAILABLE", "platform storage unavailable", 503);
   const platformRepository = createD1PlatformRepository(env.PLATFORM_DB);
   const platform = createPlatformService({
@@ -92,7 +146,7 @@ async function services(request, env, dependencies) {
   const repository = createRepositoryService({
     store: createD1RepositoryStore(env.PLATFORM_DB),
     appendAudit: (event) => platformRepository.appendAudit(event),
-    authorityPin: await loadAuthorityPin(request, env, dependencies),
+    authorityPin,
     now: dependencies.now,
     randomBytes: dependencies.randomBytes,
   });
@@ -107,6 +161,7 @@ async function action(request, path, identity, repository, dependencies) {
     const draft = await observePublicRepository(input, {
       fetcher: dependencies.providerFetcher || fetch,
       observedAt: dependencies.now || (() => new Date().toISOString()),
+      timeoutMs: dependencies.providerTimeoutMs,
     });
     return json(await repository.saveObservation(identity, draft), 201);
   }
@@ -121,11 +176,11 @@ async function action(request, path, identity, repository, dependencies) {
 
 async function browserTransport(request, env, path, info, dependencies) {
   if (info.surface !== "platform") return json({ error: "REPOSITORY_BROWSER_HOST_REQUIRED" }, 404);
-  if (!configured(env).access) return json({ error: "ACCESS_NOT_CONFIGURED" }, 503);
+  if (!configured(request, env).access) return json({ error: "ACCESS_NOT_CONFIGURED" }, 503);
   let identity;
   try { identity = await browserIdentity(request, env, dependencies); } catch { return json({ error: "ACCESS_IDENTITY_INVALID" }, 401); }
   if (!identity) return json({ error: "ACCESS_IDENTITY_REQUIRED" }, 401);
-  if (request.method !== "GET" && !requireBrowserProof(request)) return json({ error: "BROWSER_REQUEST_PROOF_REQUIRED" }, 403);
+  if (request.method !== "GET" && !requireBrowserProof(request, env)) return json({ error: "BROWSER_REQUEST_PROOF_REQUIRED" }, 403);
   try {
     const available = await services(request, env, dependencies);
     await available.platform.session(identity);
@@ -155,7 +210,7 @@ export async function handleRepositoryTransport(request, env, pathname, info, de
     if (info.surface !== "platform") return json({ error: "REPOSITORY_STATUS_HOST_REQUIRED" }, 404);
     return json({
       schema: "idol.web.repository.status.v1",
-      configured: configured(env),
+      configured: configured(request, env),
       browser: `${BROWSER_PREFIX}observations`,
       api: `${API_PREFIX}observations`,
       providers: ["github", "gitlab", "bitbucket"],
