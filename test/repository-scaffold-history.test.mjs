@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
 import { repositoryScaffoldSummary } from "../shared/repository-core.js";
 import { createD1RepositoryStore } from "../shared/repository-d1.js";
 import { createMemoryRepositoryStore } from "../shared/repository-memory.js";
@@ -214,4 +215,31 @@ test("forward migration 0004 adds and backfills bounded scaffold history fields"
   assert.match(migration, /json_extract\(document, '\$\.status'\)/);
   assert.match(migration, /json_array_length\(document, '\$\.files'\)/);
   assert.match(migration, /json_extract\(document, '\$\.refusal\.code'\)/);
+});
+
+test("forward migration 0004 tolerates malformed historical scaffold JSON", async () => {
+  const migration = await readFile(new URL("../migrations/0004_repository_scaffold_summary.sql", import.meta.url), "utf8");
+  const database = new DatabaseSync(":memory:");
+  try {
+    database.exec(`
+      CREATE TABLE platform_repository_scaffold (
+        id TEXT PRIMARY KEY,
+        subject TEXT NOT NULL,
+        observation_id TEXT NOT NULL,
+        document TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      INSERT INTO platform_repository_scaffold(id, subject, observation_id, document, created_at)
+      VALUES ('scf_invalid', 'user', 'obs_invalid', '{', '${timestamp}');
+    `);
+    database.exec(migration);
+    const row = database.prepare(`
+      SELECT status, file_count, refusal_code
+      FROM platform_repository_scaffold
+      WHERE id = 'scf_invalid'
+    `).get();
+    assert.deepEqual({ ...row }, { status: "preview", file_count: 0, refusal_code: null });
+  } finally {
+    database.close();
+  }
 });
