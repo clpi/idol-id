@@ -1,6 +1,6 @@
 import { bearerToken, verifyAccessJwt } from "../shared/platform-auth.js";
 import { createD1PlatformRepository } from "../shared/platform-d1.js";
-import { createPlatformService } from "../shared/platform.js";
+import { createPlatformService, PlatformError } from "../shared/platform.js";
 import { createD1RepositoryStore } from "../shared/repository-d1.js";
 import { createRepositoryService } from "../shared/repository-service.js";
 import { observePublicRepository, RepositoryError } from "../shared/repository.js";
@@ -58,7 +58,9 @@ async function readJson(request) {
 }
 
 function routeError(error) {
-  if (error instanceof RepositoryError) return json({ error: error.code, detail: error.message }, error.status);
+  if (error instanceof RepositoryError || error instanceof PlatformError) {
+    return json({ error: error.code, detail: error.message }, error.status);
+  }
   return json({ error: "REPOSITORY_REQUEST_FAILED", detail: "repository request failed closed" }, 500);
 }
 
