@@ -38,7 +38,7 @@ function envWithAssets() {
     IDOL_AUTHORITY: "authority",
     ACCESS_TEAM_DOMAIN: "idol-clpi.cloudflareaccess.com",
     ACCESS_AUD: "idol-platform-aud",
-    ACCESS_EMAIL_DOMAIN: "pecunies.com",
+    ACCESS_EMAIL: "chris@pecunies.com",
     PLATFORM_DB: {},
     ASSETS: { async fetch(request) {
       const found = files.get(new URL(request.url).pathname);
@@ -73,12 +73,16 @@ function browserRequest(path, init = {}) {
   return new Request(`https://platform.idol.id${path}`, { ...init, headers });
 }
 
-test("platform status is public and reports exact provisioning boundaries", async () => {
-  const response = await handle(new Request("https://platform.idol.id/v1/platform/status"), envWithAssets(), dependencies(memoryRepository(), false));
+test("platform status is public only on the Platform surface", async () => {
+  let response = await handle(new Request("https://platform.idol.id/v1/platform/status"), envWithAssets(), dependencies(memoryRepository(), false));
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.deepEqual(body.configured, { access: true, storage: true });
   assert.equal(body.authority, "transport identity only; no Idol world grant");
+
+  response = await handle(new Request("https://api.idol.id/v1/platform/status"), envWithAssets(), dependencies(memoryRepository(), false));
+  assert.equal(response.status, 404);
+  assert.equal((await response.json()).error, "PLATFORM_STATUS_HOST_REQUIRED");
 });
 
 test("browser session requires independently verified Access identity", async () => {
@@ -124,6 +128,12 @@ test("authenticated browser can create profile and manage digest-only tokens", a
   assert.equal(listed.tokens.length, 1);
   assert.equal("token" in listed.tokens[0], false);
   assert.equal("digest" in listed.tokens[0], false);
+
+  response = await handle(new Request("https://platform.idol.id/v1/platform/api/whoami", {
+    headers: { authorization: `Bearer ${created.token}` },
+  }), envWithAssets(), dependencies(repository, false));
+  assert.equal(response.status, 404);
+  assert.equal((await response.json()).error, "PLATFORM_API_HOST_REQUIRED");
 
   response = await handle(new Request("https://api.idol.id/v1/platform/api/whoami", {
     headers: { authorization: `Bearer ${created.token}` },
