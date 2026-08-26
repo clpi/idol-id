@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  BrowserWorkspaceStore,
   MemoryWorkspaceStore,
   addFile,
+  createBrowserWorkspaceStore,
   createWorkspace,
   removeFile,
   renameFile,
@@ -15,6 +17,81 @@ import {
 function ids(...values) {
   let index = 0;
   return () => values[index++] || `id-${index}`;
+}
+
+function fakeIndexedDB({ failOpen = false } = {}) {
+  const databases = new Map();
+
+  function request(result, error = null, transaction = null) {
+    const value = {};
+    queueMicrotask(() => {
+      if (error) {
+        value.error = error;
+        value.onerror?.({ target: value });
+        transaction?.onerror?.({ target: transaction });
+      } else {
+        value.result = structuredClone(result);
+        value.onsuccess?.({ target: value });
+        queueMicrotask(() => transaction?.oncomplete?.({ target: transaction }));
+      }
+    });
+    return value;
+  }
+
+  return {
+    open(name, version) {
+      const opening = {};
+      queueMicrotask(() => {
+        if (failOpen) {
+          opening.error = new Error("indexeddb denied");
+          opening.onerror?.({ target: opening });
+          return;
+        }
+        let state = databases.get(name);
+        const fresh = !state;
+        if (!state) {
+          state = { version, stores: new Map() };
+          databases.set(name, state);
+        }
+        const database = {
+          objectStoreNames: { contains: (storeName) => state.stores.has(storeName) },
+          createObjectStore(storeName, options = {}) {
+            const records = new Map();
+            state.stores.set(storeName, { keyPath: options.keyPath || null, records });
+            return {};
+          },
+          transaction(storeName) {
+            const transaction = { error: null };
+            const stateStore = state.stores.get(storeName);
+            if (!stateStore) throw new Error(`missing object store ${storeName}`);
+            transaction.objectStore = () => ({
+              put(value) {
+                const key = stateStore.keyPath ? value[stateStore.keyPath] : value.id;
+                stateStore.records.set(String(key), structuredClone(value));
+                return request(key, null, transaction);
+              },
+              get(key) {
+                return request(stateStore.records.get(String(key)), null, transaction);
+              },
+              getAll() {
+                return request([...stateStore.records.values()], null, transaction);
+              },
+              delete(key) {
+                const removed = stateStore.records.delete(String(key));
+                return request(removed, null, transaction);
+              },
+            });
+            return transaction;
+          },
+          close() {},
+        };
+        opening.result = database;
+        if (fresh) opening.onupgradeneeded?.({ target: opening });
+        opening.onsuccess?.({ target: opening });
+      });
+      return opening;
+    },
+  };
 }
 
 test("workspace mutations are immutable and select the first file", () => {
@@ -105,4 +182,39 @@ test("memory store round trips clones and sorts by updated time", async () => {
   assert.deepEqual((await store.list()).map((workspace) => workspace.id), ["workspace-new", "workspace-old"]);
   await store.delete("workspace-new");
   assert.equal(await store.load("workspace-new"), null);
+});
+
+test("browser store persists validated snapshots without exposing internal records", async () => {
+  const opened = await createBrowserWorkspaceStore({ indexedDB: fakeIndexedDB(), databaseName: "test-workspaces" });
+  assert.equal(opened.status, "available");
+  assert.ok(opened.store instanceof BrowserWorkspaceStore);
+
+  let older = createWorkspace("older", { idFactory: ids("workspace-old"), now: "2026-08-26T00:00:00.000Z" });
+  older = addFile(older, "main.id", "old", { idFactory: ids("file-old"), now: "2026-08-26T00:00:00.000Z" });
+  let newer = createWorkspace("newer", { idFactory: ids("workspace-new"), now: "2026-08-26T00:00:01.000Z" });
+  newer = addFile(newer, "main.id", "new", { idFactory: ids("file-new"), now: "2026-08-26T00:00:01.000Z" });
+
+  await opened.store.save(older);
+  await opened.store.save(newer);
+  const loaded = await opened.store.load("workspace-old");
+  assert.deepEqual(workspaceSnapshot(loaded), workspaceSnapshot(older));
+  assert.notEqual(loaded, older);
+  assert.deepEqual((await opened.store.list()).map((workspace) => workspace.id), ["workspace-new", "workspace-old"]);
+  await opened.store.delete("workspace-new");
+  assert.equal(await opened.store.load("workspace-new"), null);
+  opened.store.close();
+});
+
+test("browser persistence reports storage-unavailable explicitly", async () => {
+  let result = await createBrowserWorkspaceStore({ indexedDB: null });
+  assert.deepEqual(result, {
+    status: "storage-unavailable",
+    store: null,
+    reason: "IndexedDB is not available",
+  });
+
+  result = await createBrowserWorkspaceStore({ indexedDB: fakeIndexedDB({ failOpen: true }) });
+  assert.equal(result.status, "storage-unavailable");
+  assert.equal(result.store, null);
+  assert.match(result.reason, /indexeddb denied/);
 });
