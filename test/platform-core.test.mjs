@@ -65,7 +65,7 @@ test("platform service creates profiles, updates display data, and audits mutati
   assert.throws(() => service.validateProfilePatch({ display_name: "x".repeat(81) }), /display name/i);
 });
 
-test("API tokens are returned once, stored by digest, listed without secret, and revocable", async () => {
+test("API tokens are returned once, stored by digest, listed without secret, audited, and revocable", async () => {
   const repository = memoryRepository();
   let cursor = 0;
   const randomBytes = (length) => Uint8Array.from({ length }, () => (cursor++ * 13 + 7) & 255);
@@ -93,7 +93,7 @@ test("API tokens are returned once, stored by digest, listed without secret, and
 
   await service.revokeToken(identity, created.id);
   await assert.rejects(() => service.authenticateApiToken(created.token, "profile:read"), /revoked/i);
-  assert.deepEqual(repository.audits.map((event) => event.type), ["profile.created", "token.created", "token.revoked"]);
+  assert.deepEqual(repository.audits.map((event) => event.type), ["profile.created", "token.created", "token.used", "token.revoked"]);
 });
 
 test("expired tokens and missing scopes fail closed", async () => {
