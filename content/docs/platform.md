@@ -1,6 +1,6 @@
 # The idol.id platform
 
-One edge deployment, one design system and one authority projection serve ten public host surfaces.
+One edge deployment, one design system and one authority projection serve ten host surfaces.
 
 | face | where | what |
 |---|---|---|
@@ -8,149 +8,32 @@ One edge deployment, one design system and one authority projection serve ten pu
 | Explorer | graph.idol.id · r8a · r8b · r16 | editor, token exploration, graph, lowering, run and facts |
 | Registry | lib.idol.id | homes, packages, published worlds, versions and provenance |
 | World Atlas | worlds.idol.id | public world facts, foreign-origin candidates, integration obligations and exact refusal |
-| Platform | platform.idol.id | read-only capability frontier for accounts, IDE, repositories, transformations and shell programs |
+| Platform | platform.idol.id | verified account profile, scoped API tokens, audit, and the later-work implementation frontier |
 | Docs | docs.idol.id | language law and references |
-| API | api.idol.id | transport projection of compiler, registry and public world operations |
+| API | api.idol.id | compiler, registry, public world, and bearer-token transport |
 
 ## Routing and origins
 
-The existing root/docs/lib/api/graph/r8 hosts are Cloudflare Worker Routes over proxied Tunnel origins. Static assets are served at the edge; dynamic requests continue to the existing compiler or registry service.
+The existing root/docs/lib/api/graph/r8 hosts are Cloudflare Worker Routes over proxied Tunnel origins. Static assets are served at the edge; dynamic compiler and registry requests continue to existing services.
 
-`worlds.idol.id` and `platform.idol.id` are Worker Custom Domains. They are static Worker-origin surfaces and have no same-host dynamic origin. Generic dynamic paths there fail closed instead of recursively fetching the Worker.
+`worlds.idol.id` and `platform.idol.id` are Worker Custom Domains. Generic unknown dynamic paths fail closed instead of recursively fetching the Worker.
 
-Explicit public `/v1/world/*` operations are implemented in the Worker and consume immutable build projections. They do not depend on the Tunnel origin.
-
-Every push to `idol-id/main` tests and builds all surfaces, refreshes the public world snapshot, validates the authority-pinned foreign projection, validates Wrangler configuration and deploys one immutable Worker version.
+Explicit `/v1/world/*` and `/v1/platform/*` operations are implemented in the Worker. Every push to `idol-id/main` tests all surfaces, refreshes public projections, provisions the Platform identity boundary, applies D1 migrations, validates Wrangler configuration, and deploys one immutable Worker version.
 
 ## World Atlas
 
-`worlds.idol.id` consumes two immutable deployment projections:
+`worlds.idol.id` consumes:
 
 ```text
 /runtime/worlds.json   public registry facts
 /runtime/foreign.json  provenance-qualified foreign candidates and integration records
 ```
 
-The published-world projection preserves exact manifest facts:
+The labels `provided`, `published` and `foreign` are presentation qualifications. They do not establish semantic compatibility, equivalence, composition, injection or authority.
 
-```text
-world display name
-release version
-publisher
-published graph identity
-source hash
-provenance
-published tags
-source extent
-mirror and publication time
-```
+The public foreign projection currently covers C17, Wasm/WASI, browser, Python, Rust and Go. Every candidate keeps `semantic_id = null`, publishes uncertainty and obligations, and refuses availability until a content-addressed artifact plus verified evidence exists.
 
-The labels `provided`, `published` and `foreign` are presentation qualifications. They do not create world kinds or establish semantic compatibility, equivalence, composition, injection or authority. The UI states when those authoritative facts are not published.
-
-Comparison compares transport and published manifest fields only. A compiler-backed semantic compatibility view is a later program and must not be inferred from field equality.
-
-## Foreign-origin candidates
-
-A foreign-origin candidate is an ordinary product record qualified by provenance. It is not a `ForeignWorld` semantic kind and it is not an admitted Idol world.
-
-The first public projection includes candidates for:
-
-```text
-C17
-Wasm / WASI
-browser web platform
-Python
-Rust
-Go
-```
-
-Every candidate intentionally publishes:
-
-```text
-semantic_id = null
-identity_status = not-published
-origin/version provenance
-uncertainty
-facts required before admission
-selected target projection records
-ABI / ownership / failure / threading / effect / world obligations
-required evidence
-exact refusal
-```
-
-A display slug such as `c17` is URL provenance only. It is never presented as semantic identity.
-
-## Integration projections
-
-The Atlas integration lens shows each selected physical boundary and all facts still required for it:
-
-```text
-target projection
-artifact state
-ABI obligations
-ownership and lifetime obligations
-failure/trap/exception mapping
-threading/runtime obligations
-effects and required worlds
-evidence status and required evidence
-exact refusal code and detail
-```
-
-An integration is `available` only when a content-addressed artifact and verified evidence are both published. Initial Program J projections are all `not-admitted`; they have no artifact and therefore expose no copy/install command.
-
-The page does not infer correspondence from headers, symbols, schemas, package names, URLs, tags or documentation. It cannot manufacture an equivalence witness or world grant.
-
-## Import planning
-
-The public import-plan operation accepts these provenance inputs:
-
-```text
-repository
-schema
-API description
-binary artifact
-```
-
-Endpoint:
-
-```text
-POST /v1/world/import-plan
-```
-
-The result is a deterministic `idol.web.import.plan.v1` document containing:
-
-```text
-stages
-required grants
-missing facts
-refusal conditions
-authority-boundary statement
-```
-
-The operation is strictly **plan-only**:
-
-```text
-executed = false
-semantic_id = null
-identity_status = not-published
-```
-
-It performs no repository checkout, source/archive upload, network probe, schema dereference, API request, binary inspection, process execution, transformation, generated-code production, candidate-world publication or repository mutation.
-
-The approved future import pipeline remains:
-
-```text
-ingest provenance
-→ detect/extract candidate facts
-→ preserve uncertainty
-→ identify missing laws and opaque behavior
-→ run probes only under explicit grants
-→ request human confirmation
-→ prepare a private candidate world
-→ publish only after review and evidence
-```
-
-## Public world transport
+Public world transport:
 
 ```text
 GET  /v1/world/foreign
@@ -158,55 +41,218 @@ GET  /v1/world/:slug/integration
 POST /v1/world/import-plan
 ```
 
-These endpoints are available on both the Worlds and API hosts. They serve the same authority-pinned immutable projection. Unknown candidates, malformed requests, unsupported input kinds and oversized bodies fail explicitly.
+The import-plan operation is deterministic and strictly plan-only. It performs no source fetch, repository checkout, schema dereference, API call, binary execution, transformation, semantic publication, world formation or mutation.
 
-## Platform frontier
+## Platform identity boundary
 
-`platform.idol.id` currently exposes the implementation frontier and links to capabilities that are genuinely live.
+Program K introduces account and API transport without inventing a password database or treating identity as world authority.
 
-Not yet enabled:
+### Browser identity
+
+Cloudflare Access protects only:
 
 ```text
-account sign-in
+platform.idol.id/v1/platform/browser/*
+```
+
+The initial provider is one-time PIN, admitted for the bootstrap email domain. Access admission alone is not trusted by application code. The Worker verifies the Access JWT again:
+
+```text
+RS256 signature
+issuer = https://<team>.cloudflareaccess.com
+audience = exact Access application AUD
+expiry and not-before
+verified email domain
+subject and email claims
+```
+
+Only after this verification does the Worker create or read a Platform profile.
+
+### Profile
+
+A profile contains:
+
+```text
+verified Access subject
+verified email
+display name
+created and updated times
+```
+
+The subject and email originate in verified Access claims. The editable display name is presentation only.
+
+### API tokens
+
+A user can create scoped personal API tokens from the Access-protected console.
+
+Token format:
+
+```text
+idol_pat_<public-id>.<secret>
+```
+
+The plaintext token is returned exactly once. D1 stores only:
+
+```text
+token id
+owner subject
+human name
+safe prefix
+SHA-256 digest
+allowlisted scopes
+created / expiry / revocation / last-use times
+```
+
+Current scopes:
+
+```text
+profile:read
+world:read
+registry:read
+analysis:read
+```
+
+Only `profile:read` is consumed by the first bearer endpoint. Reserved scopes grant nothing until an explicit producer consumes them.
+
+A token cannot create another token. It does not grant filesystem, process, network, secret, device, repository, runner or world authority.
+
+### Audit
+
+The following events are appended:
+
+```text
+profile.created
+profile.updated
+token.created
+token.used
+token.revoked
+```
+
+Audit records retain actor email, owner subject, target, exact event type, metadata, and time. Token plaintext and digests are not exposed through the UI or audit API.
+
+## Platform API
+
+Public:
+
+```text
+GET /v1/platform/status
+```
+
+Access-protected browser endpoints:
+
+```text
+GET   /v1/platform/browser/login
+GET   /v1/platform/browser/session
+GET   /v1/platform/browser/profile
+PATCH /v1/platform/browser/profile
+GET   /v1/platform/browser/tokens
+POST  /v1/platform/browser/tokens
+POST  /v1/platform/browser/tokens/:id/revoke
+GET   /v1/platform/browser/audit
+```
+
+Bearer endpoint:
+
+```text
+GET /v1/platform/api/whoami
+Authorization: Bearer idol_pat_...
+```
+
+Browser mutations require:
+
+```text
+verified Access identity
+Origin: https://platform.idol.id
+X-Idol-Request: browser
+application/json when a body is parsed
+bounded request body
+```
+
+Missing Access configuration, missing D1, invalid JWTs, invalid origins, unsupported scopes, expired credentials and revoked credentials fail explicitly.
+
+## D1 storage
+
+The production migration creates:
+
+```text
+platform_profile
+platform_token
+platform_audit
+```
+
+Foreign keys bind credentials and audit to a verified profile. Token digests are unique. Owner, active-token and audit-time indexes support bounded account queries.
+
+## Cloudflare provisioning
+
+The protected production workflow idempotently:
+
+1. creates or reuses D1 database `idol-platform` in western North America;
+2. creates or reuses the Zero Trust organization;
+3. creates or reuses the one-time-PIN identity provider;
+4. creates or reuses the Access application for the browser API path;
+5. creates or verifies the bootstrap email-domain Allow policy;
+6. generates the production Wrangler configuration with D1 and Access verification facts;
+7. applies migrations;
+8. deploys the same Worker version across all hosts.
+
+Generated configuration contains only non-secret IDs and verification values. The Cloudflare API token remains in protected CI secret storage.
+
+## Platform UI
+
+The public page remains readable without authentication. Its account console offers:
+
+```text
+Access sign-in and sign-out
+profile view/edit
 API-token creation
-provider/repository connections
-private workspaces
-browser-IDE writes
+one-time plaintext reveal and copy
+token list and revocation
+audit trail
+provisioning status
+```
+
+The console is responsive down to 320px, uses touch-sized controls, keyboard panel navigation and reduced-motion support. Product prose uses sans-serif; exact identities, token prefixes, scopes and timestamps use Iosevka.
+
+## Still not enabled
+
+```text
+organizations and teams
+GitHub / GitLab / Bitbucket connections
+provider credential storage
+private repositories and workspaces
+browser IDE writes
 repository import or mutation
 foreign probing or binary execution
-remote shell execution
+build/test/benchmark runners
 world/universe management writes
+remote shell execution
 ```
 
-Those capabilities require separate identity, policy, secret, world-grant, sandbox, transactional transformation and evidence programs. The public frontier does not simulate them.
+Those remain separate programs with their own policy, secret, world-grant, sandbox, transformation and evidence requirements.
 
-## Existing dynamic compiler and registry API
+## Existing compiler and registry API
 
 ```text
-GET  /health                     origin liveness + compiler presence
-GET  /info                       origin service + authority edition
-GET  /__idol/health              edge liveness
-GET  /__idol/version             deployed edge version and surface
-POST /api/analyze   {source}     graph + explain + check in one pass
-POST /api/fmt       {source}     formatter
-POST /api/lower     {source, target, emit, opt}   realization text
-POST /api/run       {source, args}                native execution
-GET  /api/libs                   indexed homes
-GET  /api/worlds                 public registry worlds
-GET  /api/lib/:name/detail       source + graph + explain + stats
-GET  /api/lib/:name/dependents   reverse references
-GET  /api/lib/:name/versions     sealed snapshots
-POST /api/publish   {name, version, source}       write token required
-GET  /api/whys?subject=X         provenance facts
-GET  /api/authority              source-law authority edition
+GET  /health
+GET  /info
+GET  /__idol/health
+GET  /__idol/version
+POST /api/analyze
+POST /api/fmt
+POST /api/lower
+POST /api/run
+GET  /api/libs
+GET  /api/worlds
+GET  /api/lib/:name/detail
+GET  /api/lib/:name/dependents
+GET  /api/lib/:name/versions
+POST /api/publish
+GET  /api/whys
+GET  /api/authority
 ```
 
-Targets for `/api/lower`: `native`, `aarch64-linux`, `aarch64-macos`, `wasm32-wasi`; emits: `asm`, `c`, `wasm`.
+The existing registry publication token remains provisional and separate from Program K tokens.
 
-## Authentication boundary
+## Provenance rule
 
-Current registry reads and public world projections are open. Existing publication uses an out-of-band bearer write token at the Tunnel origin. The future authenticated platform will replace this provisional surface with scoped identities, passkeys/device login, organizations, audit and explicit policy. No public page reads or executes secret files.
-
-## Instances and provenance
-
-The same graph application serves `graph`, `r8a`, `r8b` and `r16`; the surface label is deployment and hardware provenance, not semantic authority. Likewise, a hostname, foreign slug, provider coordinate, path, URL, version or hash selects a product record but never establishes world, relation, package or value identity.
+A hostname, Access subject, email, token ID, provider coordinate, repository path, URL, version or hash can identify a transport or product record. None independently establishes Idol world, relation, package, value or application identity.
