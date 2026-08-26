@@ -1,13 +1,15 @@
 const HOSTS = Object.freeze({
-  "idol.id": { app: "site", surface: "site" },
-  "www.idol.id": { app: "site", surface: "site", redirect: "https://idol.id" },
-  "docs.idol.id": { app: "docs", surface: "docs" },
-  "lib.idol.id": { app: "lib", surface: "lib" },
-  "api.idol.id": { app: "api", surface: "api" },
-  "graph.idol.id": { app: "graph", surface: "graph" },
-  "r8a.idol.id": { app: "graph", surface: "r8a" },
-  "r8b.idol.id": { app: "graph", surface: "r8b" },
-  "r16.idol.id": { app: "graph", surface: "r16" },
+  "idol.id": { app: "site", surface: "site", origin: true },
+  "www.idol.id": { app: "site", surface: "site", origin: true, redirect: "https://idol.id" },
+  "docs.idol.id": { app: "docs", surface: "docs", origin: true },
+  "lib.idol.id": { app: "lib", surface: "lib", origin: true },
+  "api.idol.id": { app: "api", surface: "api", origin: true },
+  "graph.idol.id": { app: "graph", surface: "graph", origin: true },
+  "worlds.idol.id": { app: "worlds", surface: "worlds", origin: false },
+  "platform.idol.id": { app: "platform", surface: "platform", origin: false },
+  "r8a.idol.id": { app: "graph", surface: "r8a", origin: true },
+  "r8b.idol.id": { app: "graph", surface: "r8b", origin: true },
+  "r16.idol.id": { app: "graph", surface: "r16", origin: true },
 });
 
 const SHARED_PREFIXES = ["/shared/", "/content/", "/runtime/", "/apps/"];
@@ -26,6 +28,7 @@ export function configSource(info, host, commit, authority) {
     app: info.app,
     surface: info.surface,
     host,
+    origin: info.origin !== false,
     api: "",
     commit,
     authority,
@@ -83,6 +86,14 @@ function shouldProxy(pathname, method) {
   return PASSTHROUGH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function originless(info) {
+  return info.origin === false;
+}
+
+function noOrigin(info) {
+  return json({ error: "dynamic origin unavailable on this surface", surface: info.surface }, { status: 404 });
+}
+
 async function proxyOrigin(request) {
   const url = new URL(request.url);
   if (url.pathname === "/origin-health") url.pathname = "/health";
@@ -97,18 +108,19 @@ function isNavigation(request, pathname) {
   return mode === "navigate" || !CACHEABLE_EXT.test(pathname);
 }
 
+function localSurface(surface) {
+  if (["docs", "lib", "api"].includes(surface)) return { app: surface, surface, origin: true };
+  if (["graph", "r8a", "r8b", "r16"].includes(surface)) return { app: "graph", surface, origin: true };
+  if (surface === "worlds") return { app: "worlds", surface: "worlds", origin: false };
+  if (surface === "platform") return { app: "platform", surface: "platform", origin: false };
+  return { app: "site", surface: "site", origin: true };
+}
+
 export async function handle(request, env) {
   const url = new URL(request.url);
   const host = url.hostname.toLowerCase();
   let info = resolveHost(host);
-  if (!info && LOCAL_HOSTS.has(host)) {
-    const surface = url.searchParams.get("surface") || "site";
-    info = surface === "docs" || surface === "lib" || surface === "api"
-      ? { app: surface, surface }
-      : surface === "graph" || surface === "r8a" || surface === "r8b" || surface === "r16"
-        ? { app: "graph", surface }
-        : { app: "site", surface: "site" };
-  }
+  if (!info && LOCAL_HOSTS.has(host)) info = localSurface(url.searchParams.get("surface") || "site");
 
   if (!info) return json({ error: "unknown idol.id surface", host }, { status: 404 });
   if (info.redirect) return Response.redirect(`${info.redirect}${url.pathname}${url.search}`, 308);
@@ -133,7 +145,10 @@ export async function handle(request, env) {
     );
   }
 
-  if (shouldProxy(url.pathname, request.method)) return proxyOrigin(request);
+  if (shouldProxy(url.pathname, request.method)) {
+    if (originless(info)) return noOrigin(info);
+    return proxyOrigin(request);
+  }
 
   if (SHARED_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
     const response = await asset(env, request, url.pathname, { immutable: CACHEABLE_EXT.test(url.pathname) });
@@ -145,11 +160,13 @@ export async function handle(request, env) {
     if (response.ok) return response;
     response = await asset(env, request, `/apps/${info.app}${url.pathname}`, { immutable: true });
     if (response.ok) return response;
+    if (originless(info)) return noOrigin(info);
     return secure(await fetch(request));
   }
 
   if (isNavigation(request, url.pathname)) return appShell(env, request, info.app);
 
+  if (originless(info)) return noOrigin(info);
   return secure(await fetch(request));
 }
 
