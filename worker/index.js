@@ -55,7 +55,7 @@ function secure(response, options = {}) {
   headers.set("strict-transport-security", "max-age=31536000; includeSubDomains; preload");
   headers.set(
     "content-security-policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: wss:; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: wss:; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
   );
   if (options.html) headers.set("cache-control", "no-cache, must-revalidate");
   else if (options.immutable) headers.set("cache-control", "public, max-age=31536000, immutable");
