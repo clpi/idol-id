@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Diagnose SSH origin through temporary direct tunnel route
+      - name: Probe localhost 22 through generic TCP tunnel
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -29,45 +29,28 @@ jobs:
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           abase="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
           tbase="$abase/cfd_tunnel/$R16_TUNNEL_ID"
-          zone="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active')"
-          zid="$(echo "$zone" | jq -r '.result[0].id')"
+          zid="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active' | jq -r '.result[0].id')"
           dnsbase="https://api.cloudflare.com/client/v4/zones/$zid/dns_records"
           origcfg="$(curl -fsS "${auth[@]}" "$tbase/configurations" | jq '.result.config')"
           dns_id=""
-          cleanup() {
-            set +e
-            curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$origcfg" '{config:$c}')" "$tbase/configurations" >/dev/null
-            [ -z "$dns_id" ] || curl -sS -X DELETE "${auth[@]}" "$dnsbase/$dns_id" >/dev/null
-          }
+          cleanup(){ set +e; curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$origcfg" '{config:$c}')" "$tbase/configurations" >/dev/null; [ -z "$dns_id" ] || curl -sS -X DELETE "${auth[@]}" "$dnsbase/$dns_id" >/dev/null; }
           trap cleanup EXIT
-
-          cfg="$(echo "$origcfg" | jq --arg h "$PROBE_HOST" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:"ssh://localhost:22"}]+[$i[-1]])')"
+          cfg="$(echo "$origcfg" | jq --arg h "$PROBE_HOST" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:"tcp://localhost:22"}]+[$i[-1]])')"
           curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson c "$cfg" '{config:$c}')" "$tbase/configurations" | jq -e '.success==true' >/dev/null
-          payload="$(jq -nc --arg h "$PROBE_HOST" --arg t "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$h,content:$t,proxied:true,ttl:1}')"
-          existing="$(curl -fsS "${auth[@]}" "$dnsbase?type=CNAME&name=$PROBE_HOST")"
-          old="$(echo "$existing" | jq -r '.result[0].id // empty')"
-          [ -z "$old" ] || curl -fsS -X DELETE "${auth[@]}" "$dnsbase/$old" >/dev/null
-          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase")"
-          dns_id="$(echo "$created" | jq -r '.result.id')"
-
+          old="$(curl -fsS "${auth[@]}" "$dnsbase?type=CNAME&name=$PROBE_HOST" | jq -r '.result[0].id // empty')"; [ -z "$old" ] || curl -fsS -X DELETE "${auth[@]}" "$dnsbase/$old" >/dev/null
+          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg h "$PROBE_HOST" --arg t "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$h,content:$t,proxied:true,ttl:1}')" "$dnsbase")"; dns_id="$(echo "$created"|jq -r '.result.id')"
           mgmt="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data '{"resources":["logs"]}' "$tbase/management" | jq -r '.result')"
-          test -n "$mgmt"
-          curl -LfsS https://github.com/cloudflare/cloudflared/releases/download/2026.5.2/cloudflared-linux-amd64 -o /tmp/cloudflared
-          chmod +x /tmp/cloudflared
-          timeout 18 /tmp/cloudflared tail --token "$mgmt" --output=json --level debug "$R16_TUNNEL_ID" >/tmp/tail.log 2>/tmp/tail.err &
-          tailpid=$!
+          curl -LfsS https://github.com/cloudflare/cloudflared/releases/download/2026.5.2/cloudflared-linux-amd64 -o /tmp/cloudflared; chmod +x /tmp/cloudflared
+          timeout 20 /tmp/cloudflared tail --token "$mgmt" --output=json --level debug "$R16_TUNNEL_ID" >/tmp/tail.log 2>/tmp/tail.err & tailpid=$!
           sleep 3
-
-          echo '--- direct SSH protocol probe ---'
+          /tmp/cloudflared access tcp --hostname "$PROBE_HOST" --url 127.0.0.1:2222 >/tmp/tcp.log 2>&1 & proxypid=$!
+          for i in $(seq 1 20); do nc -z 127.0.0.1 2222 && break; sleep .5; done
+          echo '--- SSH over generic TCP ---'
           set +e
-          sshout="$(ssh -vv -o "ProxyCommand=/tmp/cloudflared access ssh --hostname %h" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ConnectTimeout=10 clp@$PROBE_HOST true 2>&1)"
-          rc=$?
+          out="$(ssh -vv -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ConnectTimeout=8 clp@127.0.0.1 true 2>&1)"; rc=$?
           set -e
-          echo "$sshout" | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Permission denied|Connection closed|Connection timed out|websocket|bad handshake|refused|HTTP status' | tail -n 80 || true
+          echo "$out" | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Permission denied|Connection closed|Connection timed out|refused|banner' | tail -n 80 || true
           echo "SSH_PROBE_RC=$rc"
-          sleep 3
-          kill "$tailpid" 2>/dev/null || true
-          wait "$tailpid" 2>/dev/null || true
-          echo '--- cloudflared origin log evidence ---'
-          cat /tmp/tail.log /tmp/tail.err 2>/dev/null | grep -Ei 'probe-r16|localhost:22|ssh|tcp|origin|dial|refused|connect|error' | tail -n 120 || true
-          echo 'temporary probe route will now be removed'
+          kill "$proxypid" 2>/dev/null || true; sleep 2; kill "$tailpid" 2>/dev/null || true; wait "$tailpid" 2>/dev/null || true
+          echo '--- tcp proxy ---'; tail -n 60 /tmp/tcp.log || true
+          echo '--- origin logs ---'; cat /tmp/tail.log /tmp/tail.err 2>/dev/null | grep -Ei 'probe-r16|localhost:22|tcp|origin|dial|refused|connect|error' | tail -n 120 || true
