@@ -21,8 +21,25 @@ function ensureSurfaceStyles() {
   document.head.appendChild(link);
 }
 
+function decodeWorldHash(hash = global.location.hash) {
+  const source = String(hash || "").replace(/^#/, "");
+  if (!source) return "";
+  try {
+    return decodeURIComponent(source);
+  } catch {
+    return "";
+  }
+}
+
+function sanitiseHash() {
+  const hash = global.location.hash;
+  if (!hash || hash === "#" || decodeWorldHash(hash)) return;
+  global.history.replaceState(null, "", global.location.pathname + global.location.search);
+}
+
 function boot(app, opts) {
   opts = opts || {};
+  sanitiseHash();
   ensureSurfaceStyles();
   document.title = (opts.title || app) + " — idol.id";
 
@@ -64,25 +81,28 @@ function boot(app, opts) {
     }).catch(() => { live.textContent = "○"; live.style.color = "var(--danger)"; });
   }
 
-  global.IdolShell = { crumbs(list) {
-    const c = document.getElementById("crumbs");
-    if (!c) return;
-    c.innerHTML = "";
-    (list || []).forEach((item, i) => {
-      if (i) { const s = document.createElement("span"); s.className = "sep"; s.textContent = "/"; c.appendChild(s); }
-      const cr = document.createElement("span");
-      cr.className = "crumb" + (i === list.length - 1 ? " here" : "");
-      cr.textContent = item.label;
-      if (item.go) {
-        cr.style.cursor = "pointer";
-        cr.addEventListener("click", item.go);
-      }
-      c.appendChild(cr);
-    });
-  }};
+  global.IdolShell = {
+    decodeWorldHash,
+    crumbs(list) {
+      const c = document.getElementById("crumbs");
+      if (!c) return;
+      c.innerHTML = "";
+      (list || []).forEach((item, i) => {
+        if (i) { const s = document.createElement("span"); s.className = "sep"; s.textContent = "/"; c.appendChild(s); }
+        const cr = document.createElement("span");
+        cr.className = "crumb" + (i === list.length - 1 ? " here" : "");
+        cr.textContent = item.label;
+        if (item.go) {
+          cr.style.cursor = "pointer";
+          cr.addEventListener("click", item.go);
+        }
+        c.appendChild(cr);
+      });
+    },
+  };
   return global.IdolShell;
 }
 
-global.Shell = { boot, apps: APPS };
+global.Shell = { boot, apps: APPS, decodeWorldHash };
 
 })(window);
