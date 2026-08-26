@@ -1,6 +1,6 @@
 # Program N — Derived-world transformation previews
 
-**Status:** implementation plan
+**Status:** RED contracts committed; implementation absent
 
 ## Goal
 
