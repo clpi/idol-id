@@ -20,6 +20,18 @@ function observationSummary(record) {
   });
 }
 
+function scaffoldSummary(record) {
+  return Object.freeze({
+    schema: "idol.web.repository.scaffold.summary.v1",
+    id: record.document.id,
+    observation_id: record.document.observation_id,
+    status: record.status,
+    file_count: Number(record.file_count || 0),
+    refusal_code: record.refusal_code || null,
+    created_at: record.document.created_at,
+  });
+}
+
 export function createMemoryRepositoryStore() {
   const observations = new Map();
   const scaffolds = new Map();
@@ -44,16 +56,22 @@ export function createMemoryRepositoryStore() {
     },
     async commitScaffold(record, event) {
       const document = Object.freeze({ ...clone(record.document), id: record.id, observation_id: record.observation_id, created_at: record.created_at });
-      scaffolds.set(record.id, { subject: record.subject, document });
+      scaffolds.set(record.id, {
+        subject: record.subject,
+        document,
+        status: record.status,
+        file_count: record.file_count,
+        refusal_code: record.refusal_code,
+      });
       audits.set(event.id, clone(event));
       return document;
     },
     async listScaffolds(subject, limit = 50) {
       return [...scaffolds.values()]
         .filter((record) => record.subject === subject)
-        .map((record) => record.document)
-        .sort((left, right) => String(right.created_at).localeCompare(String(left.created_at)))
-        .slice(0, limit);
+        .sort((left, right) => String(right.document.created_at).localeCompare(String(left.document.created_at)))
+        .slice(0, limit)
+        .map(scaffoldSummary);
     },
     async getScaffold(subject, id) {
       const record = scaffolds.get(id);
