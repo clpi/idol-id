@@ -13,13 +13,14 @@ permissions:
 env:
   CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
   R16_ACCESS_APP: e5373039-3d29-4dd4-9c92-65aeba364ce6
+  R16_HOST: r16.pecunies.com
 
 jobs:
   discover:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Inspect r16 Access application and policy
+      - name: Probe origin SSH authentication through ephemeral Access service token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -27,12 +28,59 @@ jobs:
           set -euo pipefail
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
-          echo '--- app ---'
-          curl -fsS "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP" | jq -c '{success,errors,result:(.result|{id,name,domain,type,aud,session_duration,app_launcher_visible,allowed_idps,auto_redirect_to_identity,enable_binding_cookie,http_only_cookie,same_site_cookie})}'
-          echo '--- policies ---'
-          curl -fsS "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP/policies?per_page=100" | jq -c '{success,errors,result:[.result[]? | {id,name,decision,precedence,include,require,exclude}]}'
-          echo '--- app CA ---'
-          ca="$(curl -sS "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP/ca")"
-          echo "$ca" | jq -c '{success,errors,result:(if .result then {id:.result.id,aud:.result.aud,public_key_present:(.result.public_key|length>0)} else null end)}'
-          echo '--- all Access CAs ---'
-          curl -fsS "${auth[@]}" "$base/access/apps/ca?per_page=100" | jq -c '{success,errors,result:[.result[]? | {id,aud,public_key_present:(.public_key|length>0)}]}'
+          token_id=""; policy_id=""
+          cleanup() {
+            set +e
+            if [ -n "$policy_id" ]; then curl -sS -X DELETE "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP/policies/$policy_id" >/dev/null; fi
+            if [ -n "$token_id" ]; then curl -sS -X DELETE "${auth[@]}" "$base/access/service_tokens/$token_id" >/dev/null; fi
+          }
+          trap cleanup EXIT
+
+          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+            --data '{"name":"hermes-bootstrap-ephemeral","duration":"30m"}' \
+            "$base/access/service_tokens")"
+          token_id="$(echo "$created" | jq -r '.result.id')"
+          client_id="$(echo "$created" | jq -r '.result.client_id')"
+          client_secret="$(echo "$created" | jq -r '.result.client_secret')"
+          test -n "$token_id"; test -n "$client_id"; test -n "$client_secret"
+
+          policy_body="$(jq -nc --arg tid "$token_id" '{name:"Hermes bootstrap ephemeral",decision:"non_identity",include:[{service_token:{token_id:$tid}}],require:[],exclude:[]}')"
+          policy="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$policy_body" "$base/access/apps/$R16_ACCESS_APP/policies")"
+          policy_id="$(echo "$policy" | jq -r '.result.id')"
+          test -n "$policy_id"
+          echo 'Ephemeral Access machine policy active.'
+
+          curl -L --fail --silent --show-error \
+            https://github.com/cloudflare/cloudflared/releases/download/2026.5.1/cloudflared-linux-amd64 \
+            -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared --version
+
+          install -m 700 /dev/null /tmp/cfssh
+          cat >/tmp/cfssh <<'EOF'
+          #!/bin/sh
+          export TUNNEL_SERVICE_TOKEN_ID="$CF_EPHEMERAL_ID"
+          export TUNNEL_SERVICE_TOKEN_SECRET="$CF_EPHEMERAL_SECRET"
+          exec /tmp/cloudflared access ssh --hostname "$1"
+          EOF
+
+          export CF_EPHEMERAL_ID="$client_id"
+          export CF_EPHEMERAL_SECRET="$client_secret"
+          echo '--- origin SSH auth probe ---'
+          set +e
+          ssh -vv \
+            -o 'ProxyCommand=/tmp/cfssh %h' \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o BatchMode=yes \
+            -o PubkeyAuthentication=yes \
+            -o PasswordAuthentication=no \
+            -o KbdInteractiveAuthentication=no \
+            -o ConnectTimeout=15 \
+            clp@$R16_HOST true 2>&1 \
+            | grep -E 'Remote protocol version|Server host key|Authentications that can continue|Offering public key|Permission denied|Authenticated to|Connection closed|websocket|bad handshake' \
+            | tail -n 60
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "SSH_PROBE_RC=$rc"
+          echo 'Ephemeral policy/token will now be deleted.'
