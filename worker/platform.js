@@ -53,13 +53,13 @@ function requireBrowserProof(request) {
   if (request.headers.get("origin") !== "https://platform.idol.id" || request.headers.get("x-idol-request") !== "browser") {
     throw new PlatformError("BROWSER_REQUEST_PROOF_REQUIRED", "same-origin browser request proof required", 403);
   }
-  const type = request.headers.get("content-type") || "";
-  if (request.method !== "GET" && request.method !== "HEAD" && !type.toLowerCase().startsWith("application/json")) {
-    throw new PlatformError("JSON_REQUIRED", "application/json request required", 415);
-  }
 }
 
 async function readJson(request) {
+  const type = request.headers.get("content-type") || "";
+  if (!type.toLowerCase().startsWith("application/json")) {
+    throw new PlatformError("JSON_REQUIRED", "application/json request required", 415);
+  }
   const announced = Number(request.headers.get("content-length") || 0);
   if (announced > BODY_LIMIT) throw new PlatformError("REQUEST_BODY_TOO_LARGE", "platform request body too large", 413);
   const raw = await request.text();
