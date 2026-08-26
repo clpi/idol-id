@@ -12,7 +12,7 @@ function response(result, status = 200) {
   });
 }
 
-test("platform provisioning creates missing D1 and Access resources idempotently", async () => {
+test("platform provisioning creates missing D1 and exact-owner Access resources idempotently", async () => {
   const calls = [];
   const state = { database: null, organization: null, idp: null, app: null, policy: null };
   const fetcher = async (url, init = {}) => {
@@ -52,7 +52,7 @@ test("platform provisioning creates missing D1 and Access resources idempotently
   const input = {
     accountId: "account",
     apiToken: "secret",
-    emailDomain: "pecunies.com",
+    bootstrapEmail: "chris@pecunies.com",
     fetcher,
   };
   const first = await provisionPlatform(input);
@@ -62,11 +62,11 @@ test("platform provisioning creates missing D1 and Access resources idempotently
     teamDomain: "idol-clpi.cloudflareaccess.com",
     accessApplicationId: "app-id",
     accessAudience: "app-aud",
-    emailDomain: "pecunies.com",
+    bootstrapEmail: "chris@pecunies.com",
   });
   assert.ok(calls.some((call) => call.method === "POST" && call.path.endsWith("/d1/database")));
   assert.ok(calls.some((call) => call.method === "POST" && call.path.endsWith("/access/apps")));
-  assert.deepEqual(state.policy.include, [{ email_domain: { domain: "pecunies.com" } }]);
+  assert.deepEqual(state.policy.include, [{ email: { email: "chris@pecunies.com" } }]);
 
   calls.length = 0;
   const second = await provisionPlatform(input);
@@ -74,7 +74,7 @@ test("platform provisioning creates missing D1 and Access resources idempotently
   assert.equal(calls.some((call) => call.method === "POST"), false);
 });
 
-test("generated production Wrangler config binds D1 and Access facts without secrets", () => {
+test("generated production Wrangler config binds D1, Access, and immutable web identity without secrets", () => {
   const base = {
     name: "idol-id",
     main: "./worker/index.js",
@@ -85,14 +85,15 @@ test("generated production Wrangler config binds D1 and Access facts without sec
     databaseName: "idol-platform",
     teamDomain: "idol-clpi.cloudflareaccess.com",
     accessAudience: "app-aud",
-    emailDomain: "pecunies.com",
-  });
+    bootstrapEmail: "chris@pecunies.com",
+  }, { webCommit: "web-sha" });
   assert.deepEqual(rendered.d1_databases, [{ binding: "PLATFORM_DB", database_name: "idol-platform", database_id: "d1-uuid", migrations_dir: "migrations" }]);
   assert.deepEqual(rendered.vars, {
     IDOL_AUTHORITY: "authority",
+    IDOL_COMMIT: "web-sha",
     ACCESS_TEAM_DOMAIN: "idol-clpi.cloudflareaccess.com",
     ACCESS_AUD: "app-aud",
-    ACCESS_EMAIL_DOMAIN: "pecunies.com",
+    ACCESS_EMAIL: "chris@pecunies.com",
   });
   assert.equal(JSON.stringify(rendered).includes("secret"), false);
 });
