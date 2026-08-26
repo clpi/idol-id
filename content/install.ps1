@@ -2,7 +2,11 @@
 # Builds the exact pinned source authority; does not claim self-hosting.
 $ErrorActionPreference = "Stop"
 $authority = if ($env:IDOL_AUTHORITY) { $env:IDOL_AUTHORITY } else { "f33bb3773484e7d954a2975211e683dfa89edab5" }
-$repository = if ($env:IDOL_REPOSITORY) { $env:IDOL_REPOSITORY } else { "https://github.com/clpi/idol.git" }
+$canonicalRepository = "https://github.com/clpi/idol.git"
+if ($env:IDOL_REPOSITORY -and $env:IDOL_REPOSITORY -ne $canonicalRepository) {
+  throw "idol install: IDOL_REPOSITORY overrides are not admitted; installer provenance is pinned to clpi/idol"
+}
+$repository = $canonicalRepository
 $prefix = if ($env:IDOL_PREFIX) { $env:IDOL_PREFIX } else { Join-Path $HOME ".idol" }
 
 function Require-Command([string]$Name) {
@@ -42,6 +46,7 @@ try {
   @{
     schema = "idol.install.authority.v1"
     repository = "clpi/idol"
+    source = $canonicalRepository
     commit = $authority
     kind = "bootstrap-seed"
     self_hosted = $false
@@ -49,6 +54,7 @@ try {
 
   Write-Host ""
   Write-Host "Installed Idol bootstrap seed: $target"
+  Write-Host "Repository: clpi/idol"
   Write-Host "Authority: $authority"
   Write-Host "Add $bin to PATH when needed."
   Write-Host "This installs the current Zig-built seed transport, not a self-hosted release."
