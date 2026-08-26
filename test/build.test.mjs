@@ -22,6 +22,7 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   const worldsHtml = await readFile("dist/apps/worlds/index.html", "utf8");
   const platformHtml = await readFile("dist/apps/platform/index.html", "utf8");
   const ideHtml = await readFile("dist/apps/ide/index.html", "utf8");
+  const ideSemanticLayer = await readFile("dist/shared/ide-semantic-layer.js", "utf8");
   const surfaceCss = await readFile("dist/shared/surface.css", "utf8");
   const shellJs = await readFile("dist/shared/shell.js", "utf8");
   assert.match(worldsHtml, /World Atlas/);
@@ -39,6 +40,7 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(shellJs, /function worldFromPath\(/);
   assert.match(shellJs, /function worldLensFromPath\(/);
   assert.match(shellJs, /addEventListener\("popstate"/);
+  assert.match(shellJs, /platform\.idol\.id\/ide/);
   assert.match(surfaceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
 
   assert.match(platformHtml, /Platform/);
@@ -57,6 +59,7 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(ideHtml, /\/shared\/idol\.js/);
   assert.match(ideHtml, /\/shared\/graph\.js/);
   assert.match(ideHtml, /\/shared\/wasm\.js/);
+  assert.match(ideHtml, /\/shared\/ide-semantic-layer\.js/);
   assert.match(ideHtml, /IndexedDB/);
   assert.match(ideHtml, /Analyze remotely/);
   assert.match(ideHtml, /lexical preview/i);
@@ -67,6 +70,10 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(ideHtml, /@media\s*\(max-width:\s*699px\)/);
   assert.match(ideHtml, /@media\s*\(max-width:\s*360px\)/);
   assert.match(ideHtml, /prefers-reduced-motion/);
+  assert.match(ideSemanticLayer, /replaceChildren\(fragment\)/);
+  assert.match(ideSemanticLayer, /source\.slice\(token\.span\[0\], token\.span\[1\]\)/);
+  assert.match(ideSemanticLayer, /semantic-published/);
+  assert.match(ideSemanticLayer, /compiler token spans overlap/);
 
   assert.match(surfaceCss, /@font-face/);
   assert.match(surfaceCss, /font-family:\s*["']Iosevka["']/);
