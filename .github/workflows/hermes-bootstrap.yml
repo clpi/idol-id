@@ -71,3 +71,5 @@ jobs:
           rc=${PIPESTATUS[0]}
           set -e
           echo "SSH_PROBE_RC=$rc"
+
+# probe trigger 2026-08-25T19:52-07:00
