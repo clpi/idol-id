@@ -1,4 +1,5 @@
 import { parseImportRequest, planForeignImport } from "../shared/foreign.js";
+import { handleIdeTransport } from "./ide.js";
 import { handlePlatformTransport } from "./platform.js";
 
 const HOSTS = Object.freeze({
@@ -80,7 +81,7 @@ function projectionRequest(request, pathname) {
   url.search = "";
   return new Request(url, {
     method: "GET",
-    headers: { "accept": "application/json" },
+    headers: { accept: "application/json" },
   });
 }
 
@@ -141,6 +142,7 @@ function localSurface(surface) {
   if (["graph", "r8a", "r8b", "r16"].includes(surface)) return { app: "graph", surface, origin: true };
   if (surface === "worlds") return { app: "worlds", surface: "worlds", origin: false };
   if (surface === "platform") return { app: "platform", surface: "platform", origin: false };
+  if (surface === "ide") return { app: "ide", surface: "ide", origin: false };
   return { app: "site", surface: "site", origin: true };
 }
 
@@ -221,6 +223,9 @@ export async function handle(request, env, dependencies = {}) {
     );
   }
 
+  const ideResponse = await handleIdeTransport(request, env, url.pathname, info, dependencies);
+  if (ideResponse) return secure(ideResponse);
+
   const platformResponse = await handlePlatformTransport(request, env, url.pathname, info, dependencies);
   if (platformResponse) return secure(platformResponse);
 
@@ -244,6 +249,10 @@ export async function handle(request, env, dependencies = {}) {
     if (assetFound(response)) return response;
     if (originless(info)) return noOrigin(info);
     return secure(await fetch(request));
+  }
+
+  if (info.surface === "platform" && /^\/ide(?:\/|$)/.test(url.pathname) && isNavigation(request, url.pathname)) {
+    return appShell(env, request, "ide");
   }
 
   if (isNavigation(request, url.pathname)) return appShell(env, request, info.app);

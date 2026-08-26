@@ -11,6 +11,7 @@ function envWithAssets() {
     ["/apps/graph/index.html", ["text/html", "<html>graph</html>"]],
     ["/apps/worlds/index.html", ["text/html", "<html>worlds</html>"]],
     ["/apps/platform/index.html", ["text/html", "<html>platform</html>"]],
+    ["/apps/ide/index.html", ["text/html", "<html>ide</html>"]],
     ["/shared/web.js", ["application/javascript", "web"]],
     ["/runtime/worlds.json", ["application/json", "{\"schema\":\"idol.web.worlds.v1\",\"worlds\":[]}"]],
     ["/manifest.json", ["application/json", "{\"ok\":true}"]],
@@ -70,6 +71,26 @@ test("worlds navigation receives the atlas shell", async () => {
   assert.equal(await response.text(), "<html>worlds</html>");
 });
 
+test("Platform IDE navigation receives the IDE shell without changing other host applications", async () => {
+  for (const path of ["/ide", "/ide/", "/ide/workspace/workspace-1"]) {
+    const response = await handle(new Request(`https://platform.idol.id${path}`, {
+      headers: { "sec-fetch-mode": "navigate" },
+    }), envWithAssets());
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), "<html>ide</html>");
+  }
+
+  const rootResponse = await handle(new Request("https://idol.id/ide", {
+    headers: { "sec-fetch-mode": "navigate" },
+  }), envWithAssets());
+  assert.equal(await rootResponse.text(), "<html>site</html>");
+
+  const worldsResponse = await handle(new Request("https://worlds.idol.id/ide", {
+    headers: { "sec-fetch-mode": "navigate" },
+  }), envWithAssets());
+  assert.equal(await worldsResponse.text(), "<html>worlds</html>");
+});
+
 test("config reports the precise host surface and authority", async () => {
   const env = envWithAssets();
   const response = await handle(new Request("https://docs.idol.id/config.js"), env);
@@ -120,6 +141,8 @@ test("local development can select every surface without DNS", async () => {
   assert.equal(await response.text(), "<html>worlds</html>");
   response = await handle(new Request("http://localhost/?surface=platform"), envWithAssets());
   assert.equal(await response.text(), "<html>platform</html>");
+  response = await handle(new Request("http://localhost/?surface=ide"), envWithAssets());
+  assert.equal(await response.text(), "<html>ide</html>");
 });
 
 test("unknown hosts fail closed", async () => {
