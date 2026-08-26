@@ -11,6 +11,8 @@ export const PLATFORM_SCOPES = Object.freeze([
   "repository:read",
   "repository:scaffold",
   "repository:transform",
+  "universe:read",
+  "universe:write",
   "world:read",
 ]);
 
