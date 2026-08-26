@@ -2,7 +2,7 @@ import { TEXT, MAX_FILES, REPOSITORY_AUTHORITY_BOUNDARY, RepositoryError, exact,
 
 const RESPONSE_LIMIT = 2 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
-const BITBUCKET_MAX_DEPTH = 25;
+const BITBUCKET_MAX_DEPTH = 20;
 
 function timeoutError(label) {
   return new RepositoryError("REPOSITORY_PROVIDER_TIMEOUT", `${label} exceeded the admitted time limit`, 504);
