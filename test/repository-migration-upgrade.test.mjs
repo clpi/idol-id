@@ -38,7 +38,7 @@ test("applied repository migration 0002 remains byte-for-byte immutable", async 
 test("follow-up migration 0003 adds and backfills every bounded observation summary field", async () => {
   const migration = await readFile("migrations/0003_repository_observation_summary.sql", "utf8");
   for (const column of ["coordinate", "requested_ref", "default_branch", "file_count", "truncated"]) {
-    assert.match(migration, new RegExp(`ALTER TABLE platform_repository_observation ADD COLUMN ${column}\\b`), column);
+    assert.match(migration, new RegExp(`ALTER TABLE platform_repository_observation\\s+ADD COLUMN ${column}\\b`), column);
   }
   assert.match(migration, /UPDATE platform_repository_observation/);
   assert.match(migration, /json_extract\(document, '\$\.coordinate'\)/);
