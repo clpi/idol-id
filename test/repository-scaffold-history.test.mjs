@@ -206,7 +206,7 @@ test("memory histories retain newest records when timestamps tie", async () => {
 });
 
 test("forward migration 0004 adds and backfills bounded scaffold history fields", async () => {
-  const migration = await readFile("migrations/0004_repository_scaffold_summary.sql", "utf8");
+  const migration = await readFile(new URL("../migrations/0004_repository_scaffold_summary.sql", import.meta.url), "utf8");
   assert.match(migration, /ALTER TABLE platform_repository_scaffold\s+ADD COLUMN status\b/);
   assert.match(migration, /ADD COLUMN file_count\b/);
   assert.match(migration, /ADD COLUMN refusal_code\b/);
