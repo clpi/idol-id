@@ -3,6 +3,7 @@ import { constants } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { normaliseForeignWorld } from "../shared/foreign.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -19,6 +20,56 @@ async function exists(path) {
   } catch {
     return false;
   }
+}
+
+function requireText(value, label) {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${label} must be a nonempty string`);
+  return value.trim();
+}
+
+function validateForeignSource(source) {
+  if (!source || source.schema !== "idol.web.foreign.source.v1") throw new Error("foreign source schema mismatch");
+  const revision = requireText(source.revision, "foreign revision");
+  if (!Array.isArray(source.worlds) || !source.worlds.length) throw new Error("foreign source requires worlds[]");
+  if (!Array.isArray(source.import_kinds) || !source.import_kinds.length) throw new Error("foreign source requires import_kinds[]");
+
+  const worlds = source.worlds.map((candidate, index) => {
+    requireText(candidate?.slug, `foreign world ${index} slug`);
+    requireText(candidate?.name, `foreign world ${index} name`);
+    requireText(candidate?.version, `foreign world ${index} version`);
+    if (candidate.semantic_id !== null) throw new Error(`foreign world ${candidate.slug} must not fabricate semantic_id`);
+    if (candidate.identity_status !== "not-published") throw new Error(`foreign world ${candidate.slug} identity_status must be not-published`);
+    requireText(candidate?.provenance?.origin?.family, `foreign world ${candidate.slug} origin family`);
+    if (!Array.isArray(candidate.uncertainty) || !candidate.uncertainty.length) throw new Error(`foreign world ${candidate.slug} requires uncertainty`);
+    if (!Array.isArray(candidate.projections) || !candidate.projections.length) throw new Error(`foreign world ${candidate.slug} requires projections`);
+
+    for (const projection of candidate.projections) {
+      requireText(projection.id, `foreign world ${candidate.slug} projection id`);
+      requireText(projection.target, `foreign world ${candidate.slug} projection target`);
+      requireText(projection.status, `foreign world ${candidate.slug} projection status`);
+      if (!projection.obligations || typeof projection.obligations !== "object") throw new Error(`projection ${projection.id} requires obligations`);
+      if (!projection.evidence || typeof projection.evidence !== "object") throw new Error(`projection ${projection.id} requires evidence`);
+      if (!projection.refusal || typeof projection.refusal !== "object") throw new Error(`projection ${projection.id} requires refusal`);
+      if (projection.status === "available") {
+        if (!projection.artifact?.sha256 || projection.evidence.status !== "verified") {
+          throw new Error(`available projection ${projection.id} requires signed artifact evidence`);
+        }
+      } else if (Object.hasOwn(projection, "copy_command")) {
+        throw new Error(`unavailable projection ${projection.id} cannot publish a copy command`);
+      }
+    }
+    return normaliseForeignWorld(candidate);
+  });
+
+  const kinds = source.import_kinds.map((record, index) => {
+    const kind = requireText(record?.kind, `import kind ${index}`);
+    for (const field of ["stages", "required_grants", "missing_facts", "refusals"]) {
+      if (!Array.isArray(record[field]) || !record[field].length) throw new Error(`import kind ${kind} requires ${field}[]`);
+    }
+    return record;
+  });
+
+  return { revision, worlds, import_kinds: kinds };
 }
 
 await rm(dist, { recursive: true, force: true });
@@ -43,6 +94,20 @@ for (const app of ["site", "docs", "lib", "api", "graph", "worlds", "platform"])
 
 await mkdir(join(dist, "runtime"), { recursive: true });
 await cp(join(root, "runtime", "worlds.json"), join(dist, "runtime", "worlds.json"));
+
+const foreignSource = validateForeignSource(JSON.parse(await readFile(join(root, "content", "foreign.json"), "utf8")));
+const foreignManifest = {
+  schema: "idol.web.foreign.v1",
+  revision: foreignSource.revision,
+  authority: {
+    language: { repository: authorityPin.language.repository, commit: authority },
+    native: { repository: authorityPin.native.repository, commit: native },
+  },
+  worlds: foreignSource.worlds,
+  import_kinds: foreignSource.import_kinds,
+};
+await writeFile(join(dist, "runtime", "foreign.json"), `${JSON.stringify(foreignManifest, null, 2)}\n`);
+
 const configured = process.env.IDOL_WASM_PATH ? resolve(process.env.IDOL_WASM_PATH) : join(root, "runtime", "idol-web.wasm");
 let wasm = { available: false, file: null, bytes: 0, sha256: null };
 if (await exists(configured)) {
@@ -62,6 +127,8 @@ const runtimeManifest = {
   authority: { repository: "clpi/idol", commit: authority },
   native: { repository: "clpi/idol-native", commit: native },
   bridge: "/shared/web.js",
+  worlds: "/runtime/worlds.json",
+  foreign: "/runtime/foreign.json",
   wasm,
   note: wasm.available
     ? "Idol Wasm artifact is deployed and loaded as the preferred compute realization."
@@ -89,4 +156,5 @@ const manifest = {
 };
 await writeFile(join(dist, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`built ${Object.keys(manifest.surfaces).length} idol.id surfaces at ${commit}`);
+console.log(`foreign candidates: ${foreignManifest.worlds.length} · revision ${foreignManifest.revision}`);
 console.log(`idol wasm: ${wasm.available ? `${wasm.bytes} bytes ${wasm.sha256}` : "not supplied (bridge remains explicit)"}`);
