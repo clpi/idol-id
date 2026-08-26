@@ -49,10 +49,15 @@ function auditInsert(database, event) {
   );
 }
 
+function requireBatch(database) {
+  if (typeof database.batch !== "function") throw new TypeError("D1 transactional batch support is required for repository writes");
+}
+
 export function createD1RepositoryStore(database) {
-  if (!database?.prepare || !database?.batch) throw new TypeError("D1 database binding with transactional batch support is required");
+  if (!database?.prepare) throw new TypeError("D1 database binding is required");
   return Object.freeze({
     async commitObservation(record, event) {
+      requireBatch(database);
       const insert = database.prepare(`
         INSERT INTO platform_repository_observation(
           id, subject, provider, namespace, repository, resolved_revision,
@@ -93,6 +98,7 @@ export function createD1RepositoryStore(database) {
     },
 
     async commitScaffold(record, event) {
+      requireBatch(database);
       const insert = database.prepare(`
         INSERT INTO platform_repository_scaffold(id, subject, observation_id, document, created_at)
         VALUES (?1, ?2, ?3, ?4, ?5)
