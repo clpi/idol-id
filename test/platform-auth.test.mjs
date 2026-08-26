@@ -38,15 +38,20 @@ async function fixtureJwt(overrides = {}) {
   return { token: `${signingInput}.${b64url(signature)}`, publicJwk, now };
 }
 
-test("Access JWT validation verifies signature, issuer, audience, expiry, and email domain", async () => {
-  const { token, publicJwk, now } = await fixtureJwt();
-  const identity = await verifyAccessJwt(token, {
+function options(fixture, overrides = {}) {
+  return {
     teamDomain: "idol-clpi.cloudflareaccess.com",
     audience: "idol-platform-aud",
-    emailDomain: "pecunies.com",
-    now: () => now * 1000,
-    fetcher: async () => new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 }),
-  });
+    email: "chris@pecunies.com",
+    now: () => fixture.now * 1000,
+    fetcher: async () => new Response(JSON.stringify({ keys: [fixture.publicJwk] }), { status: 200 }),
+    ...overrides,
+  };
+}
+
+test("Access JWT validation verifies signature, issuer, audience, expiry, and exact owner email", async () => {
+  const fixture = await fixtureJwt();
+  const identity = await verifyAccessJwt(fixture.token, options(fixture));
   assert.deepEqual(identity, {
     subject: "access-user-1",
     email: "chris@pecunies.com",
@@ -56,30 +61,29 @@ test("Access JWT validation verifies signature, issuer, audience, expiry, and em
   });
 });
 
-test("Access JWT validation rejects wrong audience, email domain, expiry, and algorithm", async () => {
+test("Access JWT validation rejects wrong audience, owner email, expiry, future issue time, and algorithm", async () => {
   const valid = await fixtureJwt();
-  const fetcher = async () => new Response(JSON.stringify({ keys: [valid.publicJwk] }));
-  await assert.rejects(() => verifyAccessJwt(valid.token, {
-    teamDomain: "idol-clpi.cloudflareaccess.com", audience: "wrong", emailDomain: "pecunies.com", now: () => valid.now * 1000, fetcher,
-  }), /audience/i);
+  await assert.rejects(() => verifyAccessJwt(valid.token, options(valid, { audience: "wrong" })), /audience/i);
 
-  const wrongEmail = await fixtureJwt({ email: "attacker@example.com" });
-  await assert.rejects(() => verifyAccessJwt(wrongEmail.token, {
-    teamDomain: "idol-clpi.cloudflareaccess.com", audience: "idol-platform-aud", emailDomain: "pecunies.com", now: () => wrongEmail.now * 1000,
-    fetcher: async () => new Response(JSON.stringify({ keys: [wrongEmail.publicJwk] })),
-  }), /email domain/i);
+  const wrongEmail = await fixtureJwt({ email: "other@pecunies.com" });
+  await assert.rejects(() => verifyAccessJwt(wrongEmail.token, options(wrongEmail)), /email refused/i);
 
   const expired = await fixtureJwt({ exp: valid.now - 1 });
-  await assert.rejects(() => verifyAccessJwt(expired.token, {
-    teamDomain: "idol-clpi.cloudflareaccess.com", audience: "idol-platform-aud", emailDomain: "pecunies.com", now: () => expired.now * 1000,
-    fetcher: async () => new Response(JSON.stringify({ keys: [expired.publicJwk] })),
-  }), /expired/i);
+  await assert.rejects(() => verifyAccessJwt(expired.token, options(expired)), /expired/i);
+
+  const future = await fixtureJwt({ iat: valid.now + 600 });
+  await assert.rejects(() => verifyAccessJwt(future.token, options(future)), /issued-at/i);
 
   const [, p, s] = valid.token.split(".");
   const noneHeader = b64url(JSON.stringify({ alg: "none", kid: "test-key" }));
-  await assert.rejects(() => verifyAccessJwt(`${noneHeader}.${p}.${s}`, {
-    teamDomain: "idol-clpi.cloudflareaccess.com", audience: "idol-platform-aud", emailDomain: "pecunies.com", now: () => valid.now * 1000, fetcher,
-  }), /algorithm/i);
+  await assert.rejects(() => verifyAccessJwt(`${noneHeader}.${p}.${s}`, options(valid)), /algorithm/i);
+});
+
+test("Access JWT input is bounded and domain fallback remains explicit", async () => {
+  const fixture = await fixtureJwt();
+  await assert.rejects(() => verifyAccessJwt("x".repeat(17 * 1024), options(fixture)), /too large/i);
+  const identity = await verifyAccessJwt(fixture.token, options(fixture, { email: "", emailDomain: "pecunies.com" }));
+  assert.equal(identity.email, "chris@pecunies.com");
 });
 
 test("API token material is prefix-addressable, random, digest-only, and scoped", async () => {
