@@ -22,27 +22,27 @@ function identityOf(identity) {
 
 export function createRepositoryService({
   store,
-  appendAudit,
   authorityPin,
   now = () => new Date().toISOString(),
   randomBytes = (length) => crypto.getRandomValues(new Uint8Array(length)),
 } = {}) {
   if (!store) throw new TypeError("repository store is required");
-  if (typeof appendAudit !== "function") throw new TypeError("repository audit sink is required");
+  if (typeof store.commitObservation !== "function" || typeof store.commitScaffold !== "function") {
+    throw new TypeError("repository store must atomically commit records with audit events");
+  }
   if (!authorityPin?.language?.commit || !authorityPin?.native?.commit) throw new TypeError("repository authority pin is required");
 
   const nowIso = () => instant(now());
-  async function audit(identity, type, target, metadata) {
-    const event = {
+  function auditEvent(identity, type, target, metadata, createdAt) {
+    return Object.freeze({
       id: randomIdentifier("audit", randomBytes),
       subject: identity.subject,
       actor_email: identity.email,
       type,
       target,
       metadata: Object.freeze({ ...metadata }),
-      created_at: nowIso(),
-    };
-    await appendAudit(event);
+      created_at: createdAt,
+    });
   }
 
   async function saveObservation(rawIdentity, draft) {
@@ -51,24 +51,26 @@ export function createRepositoryService({
     const id = randomIdentifier("obs", randomBytes);
     const createdAt = nowIso();
     const document = Object.freeze({ ...draft, id, created_at: createdAt });
-    const saved = await store.insertObservation({
+    const record = Object.freeze({
       id,
       subject: identity.subject,
       provider: draft.provider,
       namespace: draft.namespace,
       repository: draft.repository,
       resolved_revision: draft.resolved_revision,
+      file_count: draft.inventory.file_count,
+      inventory_truncated: Boolean(draft.inventory.truncated),
       document,
       created_at: createdAt,
     });
-    await audit(identity, "repository.observed", id, {
+    const event = auditEvent(identity, "repository.observed", id, {
       provider: draft.provider,
       coordinate: draft.coordinate,
       revision: draft.resolved_revision,
       file_count: draft.inventory.file_count,
       truncated: draft.inventory.truncated,
-    });
-    return saved;
+    }, createdAt);
+    return store.commitObservation(record, event);
   }
 
   async function listObservations(rawIdentity, limit = 50) {
@@ -86,18 +88,31 @@ export function createRepositoryService({
   async function createScaffold(rawIdentity, observationId, input) {
     const identity = identityOf(rawIdentity);
     const observation = await getObservation(identity, observationId);
-    const draft = createRepositoryScaffold(observation, input, { authorityPin, createdAt: nowIso });
+    const createdAt = nowIso();
+    const draft = createRepositoryScaffold(observation, input, { authorityPin, createdAt: () => createdAt });
     const id = randomIdentifier("scf", randomBytes);
-    const document = Object.freeze({ ...draft, id, observation_id: observation.id });
-    const saved = await store.insertScaffold({ id, subject: identity.subject, observation_id: observation.id, document, created_at: draft.created_at || nowIso() });
-    await audit(identity, draft.status === "preview" ? "repository.scaffold.previewed" : "repository.scaffold.refused", id, {
+    const document = Object.freeze({ ...draft, id, observation_id: observation.id, created_at: draft.created_at || createdAt });
+    const record = Object.freeze({
+      id,
+      subject: identity.subject,
       observation_id: observation.id,
-      capabilities: draft.capabilities || [],
-      status: draft.status,
-      refusal: draft.refusal?.code || null,
-      file_count: draft.files?.length || 0,
+      document,
+      created_at: document.created_at,
     });
-    return saved;
+    const event = auditEvent(
+      identity,
+      draft.status === "preview" ? "repository.scaffold.previewed" : "repository.scaffold.refused",
+      id,
+      {
+        observation_id: observation.id,
+        capabilities: draft.capabilities || [],
+        status: draft.status,
+        refusal: draft.refusal?.code || null,
+        file_count: draft.files?.length || 0,
+      },
+      document.created_at,
+    );
+    return store.commitScaffold(record, event);
   }
 
   async function listScaffolds(rawIdentity, limit = 50) {
