@@ -1,7 +1,7 @@
 /* Session-gated entry for the protected Repository Observatory.
-   This adapter also owns the public Program M presentation and repository
-   token-scope controls so the classic Platform shell cannot drift from the
-   deployed transport contract. */
+   This adapter owns the public Program M/Program N presentation and repository
+   token-scope controls so the Platform shell cannot drift from deployed
+   transport or authority boundaries. */
 (function installPlatformRepositoryEntry(global) {
 "use strict";
 
@@ -9,6 +9,7 @@ const REPOSITORY_SCOPES = Object.freeze([
   "repository:read",
   "repository:observe",
   "repository:scaffold",
+  "repository:transform",
 ]);
 
 function programCard(letter) {
@@ -30,22 +31,34 @@ function replaceFacts(card, values) {
   }));
 }
 
-function reconcileProgramCard() {
-  const card = programCard("M");
+function setProgram(card, { statusText, titleText, copyText, facts }) {
   if (!card) return;
   const status = card.querySelector(".status");
   if (status) {
-    status.textContent = "live";
+    status.textContent = statusText;
     status.classList.remove("planned");
     status.classList.add("live");
   }
   const title = card.querySelector("h3");
-  if (title) title.textContent = "Repository Observatory";
+  if (title) title.textContent = titleText;
   const copy = card.querySelector("p");
-  if (copy) {
-    copy.textContent = "Observe one exact public GitHub, GitLab, or Bitbucket revision and generate review-only Idol scaffold patches. No provider credential, source checkout, or repository write.";
-  }
-  replaceFacts(card, ["public metadata", "exact revisions", "review-only patch"]);
+  if (copy) copy.textContent = copyText;
+  replaceFacts(card, facts);
+}
+
+function reconcileProgramCards() {
+  setProgram(programCard("M"), {
+    statusText: "live",
+    titleText: "Repository Observatory",
+    copyText: "Observe one exact public GitHub, GitLab, or Bitbucket revision and generate review-only Idol scaffold patches. No provider credential, source checkout, or repository write.",
+    facts: ["public metadata", "exact revisions", "review-only patch"],
+  });
+  setProgram(programCard("N"), {
+    statusText: "preview live",
+    titleText: "Derived-world transformation previews",
+    copyText: "Project one exact scaffold delta into an isolated derived-world preview with digest, grants, and unresolved evidence. Nothing executes, mutates a repository, or publishes a world.",
+    facts: ["exact delta", "derived isolation", "unexecuted evidence"],
+  });
 }
 
 function ensureRepositoryScopes() {
@@ -73,7 +86,7 @@ function ensureRepositoryScopes() {
 }
 
 function install() {
-  reconcileProgramCard();
+  reconcileProgramCards();
   ensureRepositoryScopes();
 
   const signed = document.getElementById("signed-in");
@@ -82,7 +95,7 @@ function install() {
   card.id = "platform-repository-entry";
   card.hidden = true;
   card.style.cssText = "margin-bottom:18px;padding:14px;border:1px solid var(--rule-2);border-radius:12px;background:rgba(114,200,208,.035)";
-  card.innerHTML = '<strong style="display:block;margin-bottom:7px">Repository Observatory</strong><p style="margin:0 0 12px;color:var(--ink-3);line-height:1.55">Resolve an exact public GitHub, GitLab, or Bitbucket revision and preview a review-only Idol scaffold. No provider credential, source checkout, or repository write.</p><a class="button primary" href="/repo">Open repository workbench</a>';
+  card.innerHTML = '<strong style="display:block;margin-bottom:7px">Repository Observatory</strong><p style="margin:0 0 12px;color:var(--ink-3);line-height:1.55">Resolve an exact public revision, preview an Idol scaffold, and project a non-executing derived-world transformation. No provider credential, source checkout, repository write, or world publication.</p><a class="button primary" href="/repo">Open repository workbench</a>';
   signed.prepend(card);
   const render = () => { card.hidden = signed.hidden; };
   new MutationObserver(render).observe(signed, { attributes: true, attributeFilter: ["hidden"] });
