@@ -128,8 +128,10 @@ test("rename write select and removal preserve deterministic active selection", 
   workspace = selectFile(workspace, "file-a");
   workspace = writeFile(workspace, "file-a", "a2", { now: "2026-08-26T00:00:02.000Z" });
   workspace = renameFile(workspace, "file-a", "src/a.id", { now: "2026-08-26T00:00:03.000Z" });
-  assert.equal(workspace.files.find((file) => file.id === "file-a").source, "a2");
-  assert.equal(workspace.files.find((file) => file.id === "file-a").path, "src/a.id");
+  const fileA = workspace.files.find((file) => file.id === "file-a");
+  assert.ok(fileA, "file-a should exist");
+  assert.equal(fileA.source, "a2");
+  assert.equal(fileA.path, "src/a.id");
   workspace = removeFile(workspace, "file-a", { now: "2026-08-26T00:00:04.000Z" });
   assert.equal(workspace.active, "file-b");
   workspace = removeFile(workspace, "file-b");
