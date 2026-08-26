@@ -4,9 +4,12 @@ CREATE TABLE IF NOT EXISTS platform_repository_observation (
   provider TEXT NOT NULL,
   namespace TEXT NOT NULL,
   repository TEXT NOT NULL,
+  coordinate TEXT NOT NULL,
+  requested_ref TEXT NOT NULL,
+  default_branch TEXT NOT NULL,
   resolved_revision TEXT NOT NULL,
   file_count INTEGER NOT NULL,
-  inventory_truncated INTEGER NOT NULL CHECK (inventory_truncated IN (0, 1)),
+  truncated INTEGER NOT NULL CHECK (truncated IN (0, 1)),
   document TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY(subject) REFERENCES platform_profile(subject) ON DELETE CASCADE
