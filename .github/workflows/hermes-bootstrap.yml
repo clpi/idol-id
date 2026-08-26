@@ -19,53 +19,23 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Configure dedicated r16 SSH hostname on existing tunnel
+      - name: Inspect Cloudflare Access capability
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          abase="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
-          tunnels="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel?is_deleted=false&per_page=100")"
-          tid=""; cfg=""
-          while IFS=$'\t' read -r id name status; do
-            candidate="$(curl -fsS "${auth[@]}" "$abase/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
-            if [ -n "$candidate" ] && echo "$candidate" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then tid="$id"; cfg="$candidate"; fi
-          done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
-          test -n "$tid"
-          current="$(echo "$cfg" | jq '.result.config')"
-          if ! echo "$current" | jq -e --arg h "$SSH_HOST" '.ingress[] | select(.hostname==$h and .service=="ssh://localhost:22")' >/dev/null; then
-            updated="$(echo "$current" | jq --arg h "$SSH_HOST" '.ingress as $i | .ingress = (($i[0:-1]) + [{hostname:$h,service:"ssh://localhost:22"}] + [$i[-1]])')"
-            body="$(jq -n --argjson c "$updated" '{config:$c}')"
-            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$body" "$abase/cfd_tunnel/$tid/configurations" | jq -e '.success == true' >/dev/null
-          fi
-          zones="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=idol.id&status=active')"
-          zid="$(echo "$zones" | jq -r '.result[0].id // empty')"; test -n "$zid"
-          dnsbase="https://api.cloudflare.com/client/v4/zones/$zid/dns_records"
-          existing="$(curl -fsS "${auth[@]}" "$dnsbase?type=CNAME&name=$SSH_HOST")"
-          target="$tid.cfargotunnel.com"; rid="$(echo "$existing" | jq -r '.result[0].id // empty')"
-          payload="$(jq -n --arg name "$SSH_HOST" --arg content "$target" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')"
-          if [ -n "$rid" ]; then curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase/$rid" | jq -e '.success == true' >/dev/null; else curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$payload" "$dnsbase" | jq -e '.success == true' >/dev/null; fi
-          echo "r16 SSH route ready: $SSH_HOST"
+          base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          echo '--- Access applications ---'
+          apps="$(curl -sS "${auth[@]}" "$base/access/apps?per_page=100")"
+          echo "$apps" | jq -c '{success,errors,result:[.result[]? | {id,name,domain,type,session_duration}]}'
+          echo '--- Service token API capability ---'
+          toks="$(curl -sS "${auth[@]}" "$base/access/service_tokens?per_page=100")"
+          echo "$toks" | jq -c '{success,errors,count:(.result|length? // 0),names:[.result[]?.name]}'
 
-      - name: Probe portable C execution through the live r16 compiler service
+      - name: Confirm r16 public SSH route still resolves
         shell: bash
         run: |
           set -euo pipefail
-          payload='{"source":"main: i64 = ()\n  42","args":["--backend=c"]}'
-          echo '--- r16 idol run --backend=c ---'
-          curl -fsS -H 'content-type: application/json' --data "$payload" https://r16.idol.id/api/run | jq -c '{rc,stdout,stderr}'
-
-      - name: Probe SSH protocol with supported ProxyCommand
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -L --fail --silent --show-error https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
-          chmod +x /tmp/cloudflared
-          set +e
-          ssh -vv -o "ProxyCommand=/tmp/cloudflared access ssh --hostname %h" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=15 clp@$SSH_HOST true 2>&1 | grep -E 'Remote protocol version|Authentications that can continue|Permission denied|websocket|bad handshake|Connection closed' | tail -n 40
-          rc=${PIPESTATUS[0]}
-          set -e
-          echo "SSH_PROBE_RC=$rc"
+          getent ahosts "$SSH_HOST" | head
