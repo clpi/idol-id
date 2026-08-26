@@ -1,0 +1,85 @@
+/* Shared surface refinements layered after theme.css.
+   UI/prose is sans; code and exact identities remain Iosevka-first mono. */
+
+body,
+button,
+.btn,
+.tab,
+select,
+input[type="text"],
+input[type="search"] {
+  font-family: var(--sans);
+}
+
+code,
+pre,
+textarea,
+.editor-input,
+.codelayer,
+.codelayer-pre,
+.gutter,
+kbd,
+.statusbar,
+.mono,
+.mono-note,
+.identity,
+.hash,
+.graph-id,
+.version-id {
+  font-family: var(--mono);
+  font-variant-ligatures: none;
+}
+
+.prose {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.72;
+  color: var(--ink-2);
+}
+
+.identity {
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+  font-size: 0.94em;
+}
+
+.topbar {
+  min-width: 0;
+}
+
+.topbar .nav {
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.topbar .nav::-webkit-scrollbar { display: none; }
+.topbar .nav a { min-height: 42px; flex: none; }
+
+.mobile-sheet {
+  background: var(--bg-raise);
+  border: 1px solid var(--rule-2);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.touch-target { min-width: 44px; min-height: 44px; }
+
+@media (max-width: 699px) {
+  .topbar { height: 48px; }
+  .topbar .brand { min-height: 48px; padding-inline: 12px; }
+  .topbar .crumbs { display: none; }
+  .topbar .nav a { min-height: 48px; padding-inline: 12px; font-size: 10px; }
+  .statusbar { min-height: 30px; height: auto; padding-block: 6px; }
+  .statusbar .keys { display: none; }
+  button, .btn { min-height: 44px; }
+  input[type="text"], input[type="search"], select { min-height: 44px; font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
