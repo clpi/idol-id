@@ -156,10 +156,16 @@ test("D1 scaffold lists return bounded summaries without files or patches", asyn
   assert.equal("patch" in listed[0], false);
 });
 
-test("repository migration stores bounded observation and scaffold summary facts", async () => {
-  const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
-  assert.match(migration, /file_count INTEGER NOT NULL/);
-  assert.match(migration, /inventory_truncated INTEGER NOT NULL/);
-  assert.match(migration, /status TEXT NOT NULL/);
-  assert.match(migration, /refusal_code TEXT/);
+test("forward migration stores and backfills bounded repository summary facts", async () => {
+  const [shipped, forward] = await Promise.all([
+    readFile("migrations/0002_repository_observation.sql", "utf8"),
+    readFile("migrations/0003_repository_summary_columns.sql", "utf8"),
+  ]);
+  assert.doesNotMatch(shipped, /file_count|inventory_truncated|refusal_code/);
+  assert.match(forward, /file_count INTEGER NOT NULL DEFAULT 0/);
+  assert.match(forward, /inventory_truncated INTEGER NOT NULL DEFAULT 0/);
+  assert.match(forward, /status TEXT NOT NULL DEFAULT 'preview'/);
+  assert.match(forward, /refusal_code TEXT/);
+  assert.match(forward, /json_extract\(document, '\$\.inventory\.file_count'\)/);
+  assert.match(forward, /json_array_length\(document, '\$\.files'\)/);
 });
