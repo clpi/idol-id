@@ -22,6 +22,8 @@ test("build emits worlds and platform in one deployment", async () => {
   assert.match(worldsHtml, /compare/i);
   assert.match(worldsHtml, /@media \(max-width: 699px\)/);
   assert.match(shellJs, /function decodeWorldHash\(/);
+  assert.match(shellJs, /function worldFromPath\(/);
+  assert.match(shellJs, /addEventListener\("popstate"/);
   assert.match(surfaceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
   assert.match(platformHtml, /Platform/);
   assert.match(platformHtml, /not yet enabled/i);
