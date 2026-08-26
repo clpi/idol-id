@@ -1,3 +1,5 @@
+import { parseImportRequest, planForeignImport } from "../shared/foreign.js";
+
 const HOSTS = Object.freeze({
   "idol.id": { app: "site", surface: "site", origin: true },
   "www.idol.id": { app: "site", surface: "site", origin: true, redirect: "https://idol.id" },
@@ -17,6 +19,7 @@ const PASSTHROUGH_PREFIXES = ["/api/"];
 const PASSTHROUGH_PATHS = new Set(["/health", "/info", "/origin-health", "/origin-info"]);
 const CACHEABLE_EXT = /\.(?:css|js|mjs|json|md|txt|svg|png|jpe?g|gif|webp|ico|woff2?|wasm|map)$/i;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const IMPORT_BODY_LIMIT = 32 * 1024;
 
 export function resolveHost(hostname) {
   const host = String(hostname || "").toLowerCase().replace(/:\d+$/, "");
@@ -76,6 +79,16 @@ async function asset(env, request, pathname, options = {}) {
   return secure(response, options);
 }
 
+async function readJsonAsset(env, request, pathname) {
+  const response = await env.ASSETS.fetch(assetRequest(request, pathname));
+  if (!response.ok) return { response: json({ error: "runtime projection unavailable", path: pathname }, { status: response.status }) };
+  try {
+    return { value: await response.json() };
+  } catch {
+    return { response: json({ error: "runtime projection is invalid JSON", path: pathname }, { status: 500 }) };
+  }
+}
+
 async function appShell(env, request, app) {
   return asset(env, request, `/apps/${app}/index.html`, { html: true });
 }
@@ -116,6 +129,54 @@ function localSurface(surface) {
   return { app: "site", surface: "site", origin: true };
 }
 
+function decodePathPart(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+async function worldTransport(request, env, pathname) {
+  if ((request.method === "GET" || request.method === "HEAD") && pathname === "/v1/world/foreign") {
+    const loaded = await readJsonAsset(env, request, "/runtime/foreign.json");
+    return loaded.response || json(loaded.value);
+  }
+
+  const integration = /^\/v1\/world\/([^/]+)\/integration$/.exec(pathname);
+  if ((request.method === "GET" || request.method === "HEAD") && integration) {
+    const slug = decodePathPart(integration[1]);
+    if (slug === null) return json({ error: "invalid world slug encoding" }, { status: 400 });
+    const loaded = await readJsonAsset(env, request, "/runtime/foreign.json");
+    if (loaded.response) return loaded.response;
+    const world = (loaded.value.worlds || []).find((candidate) => candidate.slug === slug);
+    if (!world) return json({ error: "foreign world integration not found", slug }, { status: 404 });
+    return json({ schema: "idol.web.integration.v1", authority: loaded.value.authority, world });
+  }
+
+  if (request.method === "POST" && pathname === "/v1/world/import-plan") {
+    const announced = Number(request.headers.get("content-length") || 0);
+    if (announced > IMPORT_BODY_LIMIT) return json({ error: "import plan body too large" }, { status: 413 });
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > IMPORT_BODY_LIMIT) return json({ error: "import plan body too large" }, { status: 413 });
+    let input;
+    try {
+      input = JSON.parse(raw);
+    } catch {
+      return json({ error: "invalid JSON" }, { status: 400 });
+    }
+    const loaded = await readJsonAsset(env, request, "/runtime/foreign.json");
+    if (loaded.response) return loaded.response;
+    try {
+      return json(planForeignImport(parseImportRequest(input), loaded.value));
+    } catch (error) {
+      return json({ error: error.message }, { status: error instanceof RangeError ? 422 : 400 });
+    }
+  }
+
+  return null;
+}
+
 export async function handle(request, env) {
   const url = new URL(request.url);
   const host = url.hostname.toLowerCase();
@@ -144,6 +205,9 @@ export async function handle(request, env) {
       }),
     );
   }
+
+  const worldResponse = await worldTransport(request, env, url.pathname);
+  if (worldResponse) return worldResponse;
 
   if (shouldProxy(url.pathname, request.method)) {
     if (originless(info)) return noOrigin(info);
