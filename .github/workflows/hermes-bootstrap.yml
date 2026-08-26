@@ -1,0 +1,51 @@
+name: Hermes bootstrap discovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/hermes-bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Discover r16 Cloudflare Tunnel authority
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "missing production CLOUDFLARE_API_TOKEN"; exit 2; }
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+
+          echo '::group::active tunnels'
+          tunnels="$(curl -fsS "${auth[@]}" "$base/cfd_tunnel?is_deleted=false&per_page=100")"
+          echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv'
+          echo '::endgroup::'
+
+          found=0
+          while IFS=$'\t' read -r id name status; do
+            cfg="$(curl -fsS "${auth[@]}" "$base/cfd_tunnel/$id/configurations" 2>/dev/null || true)"
+            if [ -n "$cfg" ] && echo "$cfg" | jq -e '.. | strings | select(. == "r16.idol.id")' >/dev/null 2>&1; then
+              found=1
+              echo "R16_TUNNEL_ID=$id"
+              echo "R16_TUNNEL_NAME=$name"
+              echo "R16_TUNNEL_STATUS=$status"
+              echo "$cfg" | jq -c '{version:.result.version, ingress:[.result.config.ingress[] | {hostname,path,service,originRequest}]}'
+            fi
+          done < <(echo "$tunnels" | jq -r '.result[] | [.id,.name,.status] | @tsv')
+
+          if [ "$found" -eq 0 ]; then
+            echo 'No remotely-managed tunnel configuration containing r16.idol.id was visible to this token.'
+            exit 3
+          fi
