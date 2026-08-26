@@ -12,6 +12,22 @@ function decodeAudit(row) {
   return { ...row, metadata: JSON.parse(row.metadata || "{}") };
 }
 
+export function preparePlatformAuditStatement(database, event) {
+  if (!database?.prepare) throw new TypeError("D1 database binding is required");
+  return database.prepare(`
+    INSERT INTO platform_audit(id, subject, actor_email, type, target, metadata, created_at)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+  `).bind(
+    event.id,
+    event.subject,
+    event.actor_email,
+    event.type,
+    event.target,
+    JSON.stringify(event.metadata || {}),
+    event.created_at,
+  );
+}
+
 export function createD1PlatformRepository(database) {
   if (!database?.prepare) throw new TypeError("D1 database binding is required");
 
@@ -93,18 +109,7 @@ export function createD1PlatformRepository(database) {
     },
 
     async appendAudit(event) {
-      await database.prepare(`
-        INSERT INTO platform_audit(id, subject, actor_email, type, target, metadata, created_at)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-      `).bind(
-        event.id,
-        event.subject,
-        event.actor_email,
-        event.type,
-        event.target,
-        JSON.stringify(event.metadata || {}),
-        event.created_at,
-      ).run();
+      await preparePlatformAuditStatement(database, event).run();
       return event;
     },
 

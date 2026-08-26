@@ -1,3 +1,5 @@
+import { preparePlatformAuditStatement } from "./platform-d1.js";
+
 function rows(result) {
   return Array.isArray(result?.results) ? result.results : [];
 }
@@ -11,37 +13,78 @@ function decodeObservation(row) {
   return Object.freeze({ ...decodeJson(row.document, {}), id: row.id, created_at: row.created_at });
 }
 
+function decodeObservationSummary(row) {
+  if (!row) return null;
+  const provider = String(row.provider || "");
+  const namespace = String(row.namespace || "");
+  const repository = String(row.repository || "");
+  return Object.freeze({
+    schema: "idol.web.repository.observation.summary.v1",
+    id: row.id,
+    provider,
+    namespace,
+    repository,
+    coordinate: `${provider}:${namespace}/${repository}`,
+    resolved_revision: row.resolved_revision,
+    inventory: Object.freeze({
+      file_count: Number(row.file_count || 0),
+      truncated: Boolean(Number(row.inventory_truncated)),
+    }),
+    created_at: row.created_at,
+  });
+}
+
 function decodeScaffold(row) {
   if (!row) return null;
   return Object.freeze({ ...decodeJson(row.document, {}), id: row.id, observation_id: row.observation_id, created_at: row.created_at });
 }
 
+function requireBatch(database) {
+  if (typeof database.batch !== "function") throw new TypeError("D1 database binding must support transactional batch");
+}
+
 export function createD1RepositoryStore(database) {
   if (!database?.prepare) throw new TypeError("D1 database binding is required");
+
   return Object.freeze({
-    async insertObservation(record) {
-      await database.prepare(`
+    async commitObservation(record, event) {
+      requireBatch(database);
+      const observation = database.prepare(`
         INSERT INTO platform_repository_observation(
-          id, subject, provider, namespace, repository, resolved_revision, document, created_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+          id, subject, provider, namespace, repository, resolved_revision,
+          file_count, inventory_truncated, document, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
       `).bind(
-        record.id, record.subject, record.provider, record.namespace, record.repository,
-        record.resolved_revision, JSON.stringify(record.document), record.created_at,
-      ).run();
-      return decodeObservation(await database.prepare(
-        "SELECT id, document, created_at FROM platform_repository_observation WHERE id = ?1 AND subject = ?2",
-      ).bind(record.id, record.subject).first());
+        record.id,
+        record.subject,
+        record.provider,
+        record.namespace,
+        record.repository,
+        record.resolved_revision,
+        Number(record.file_count || 0),
+        record.inventory_truncated ? 1 : 0,
+        JSON.stringify(record.document),
+        record.created_at,
+      );
+      await database.batch([observation, preparePlatformAuditStatement(database, event)]);
+      return decodeObservation({
+        id: record.id,
+        document: JSON.stringify(record.document),
+        created_at: record.created_at,
+      });
     },
 
     async listObservations(subject, limit = 50) {
       const result = await database.prepare(`
-        SELECT id, document, created_at
+        SELECT
+          id, provider, namespace, repository, resolved_revision,
+          file_count, inventory_truncated, created_at
         FROM platform_repository_observation
         WHERE subject = ?1
         ORDER BY created_at DESC, rowid DESC
         LIMIT ?2
       `).bind(subject, limit).all();
-      return rows(result).map(decodeObservation);
+      return rows(result).map(decodeObservationSummary);
     },
 
     async getObservation(subject, id) {
@@ -50,14 +93,25 @@ export function createD1RepositoryStore(database) {
       ).bind(subject, id).first());
     },
 
-    async insertScaffold(record) {
-      await database.prepare(`
+    async commitScaffold(record, event) {
+      requireBatch(database);
+      const scaffold = database.prepare(`
         INSERT INTO platform_repository_scaffold(id, subject, observation_id, document, created_at)
         VALUES (?1, ?2, ?3, ?4, ?5)
-      `).bind(record.id, record.subject, record.observation_id, JSON.stringify(record.document), record.created_at).run();
-      return decodeScaffold(await database.prepare(
-        "SELECT id, observation_id, document, created_at FROM platform_repository_scaffold WHERE id = ?1 AND subject = ?2",
-      ).bind(record.id, record.subject).first());
+      `).bind(
+        record.id,
+        record.subject,
+        record.observation_id,
+        JSON.stringify(record.document),
+        record.created_at,
+      );
+      await database.batch([scaffold, preparePlatformAuditStatement(database, event)]);
+      return decodeScaffold({
+        id: record.id,
+        observation_id: record.observation_id,
+        document: JSON.stringify(record.document),
+        created_at: record.created_at,
+      });
     },
 
     async listScaffolds(subject, limit = 50) {

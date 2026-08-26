@@ -142,20 +142,20 @@ async function observeBitbucket(locator, fetcher, timeoutMs) {
     "Bitbucket repository tree",
     timeoutMs,
   )).value;
-  const entries = Array.isArray(page.values) ? page.values : [];
-  const files = entries
+  const values = Array.isArray(page.values) ? page.values : [];
+  const files = values
     .filter((entry) => /file$/i.test(String(entry?.type || "")))
     .map((entry) => fileRecord(entry.path, entry.size))
     .filter(Boolean);
-  const reachedDepthBoundary = entries.some((entry) => {
+  const depthLimitReached = values.some((entry) => {
     if (!/directory$/i.test(String(entry?.type || ""))) return false;
-    return text(entry.path).split("/").filter(Boolean).length >= BITBUCKET_MAX_DEPTH;
+    return String(entry.path || "").split("/").filter(Boolean).length >= BITBUCKET_MAX_DEPTH;
   });
   return {
     default_branch: defaultBranch,
     resolved_revision: sha,
     files,
-    truncated: Boolean(page.next) || entries.length >= 100 || reachedDepthBoundary,
+    truncated: Boolean(page.next) || values.length >= 100 || depthLimitReached,
   };
 }
 

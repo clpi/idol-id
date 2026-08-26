@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS platform_repository_observation (
   namespace TEXT NOT NULL,
   repository TEXT NOT NULL,
   resolved_revision TEXT NOT NULL,
+  file_count INTEGER NOT NULL CHECK(file_count >= 0),
+  inventory_truncated INTEGER NOT NULL CHECK(inventory_truncated IN (0, 1)),
   document TEXT NOT NULL,
   created_at TEXT NOT NULL
 );

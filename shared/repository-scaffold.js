@@ -49,19 +49,17 @@ function generatedFiles(observation, capabilities, authorityPin) {
   return files;
 }
 
-function refusedScaffold(observation, capabilities, timestamp, code, detail, paths = []) {
+function refusedScaffold(observation, capabilities, code, detail, paths = []) {
   return Object.freeze({
     schema: "idol.web.repository.scaffold.v1",
     status: "refused",
     refusal: Object.freeze({ code, detail, paths: Object.freeze([...paths]) }),
-    authority: REPOSITORY_AUTHORITY_BOUNDARY,
     observation_id: observation.id || null,
     capabilities,
     files: Object.freeze([]),
     patch: "",
     semantic_id: null,
     identity_status: "not-published",
-    created_at: timestamp,
     executed: false,
     repository_written: false,
   });
@@ -78,14 +76,12 @@ export function createRepositoryScaffold(observation, input, { authorityPin, cre
   if (!observation || observation.schema !== "idol.web.repository.observation.v1") throw new RepositoryError("OBSERVATION_REQUIRED", "valid repository observation required", 422);
   if (!authorityPin?.language?.commit || !authorityPin?.native?.commit) throw new RepositoryError("AUTHORITY_PIN_REQUIRED", "language and native authority pins are required", 500);
   const capabilities = normalizeCapabilities(input?.capabilities);
-  const timestamp = exact(createdAt(), "scaffold time", 64);
   if (observation.inventory?.truncated) {
     return refusedScaffold(
       observation,
       capabilities,
-      timestamp,
       "SCAFFOLD_INCOMPLETE_INVENTORY",
-      "generated scaffold paths cannot be proven absent from an incomplete repository inventory",
+      "provider inventory is incomplete, so generated path absence cannot be established",
     );
   }
   const files = generatedFiles(observation, capabilities, authorityPin);
@@ -95,7 +91,6 @@ export function createRepositoryScaffold(observation, input, { authorityPin, cre
     return refusedScaffold(
       observation,
       capabilities,
-      timestamp,
       "SCAFFOLD_PATH_CONFLICT",
       "generated scaffold would overwrite existing repository paths",
       conflicts,
@@ -113,7 +108,7 @@ export function createRepositoryScaffold(observation, input, { authorityPin, cre
     capabilities,
     files: frozenFiles,
     patch: unifiedAddPatch(frozenFiles),
-    created_at: timestamp,
+    created_at: exact(createdAt(), "scaffold time", 64),
     executed: false,
     repository_written: false,
   });
