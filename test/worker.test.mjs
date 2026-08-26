@@ -9,6 +9,8 @@ function envWithAssets() {
     ["/apps/lib/index.html", ["text/html", "<html>lib</html>"]],
     ["/apps/api/index.html", ["text/html", "<html>api</html>"]],
     ["/apps/graph/index.html", ["text/html", "<html>graph</html>"]],
+    ["/apps/worlds/index.html", ["text/html", "<html>worlds</html>"]],
+    ["/apps/platform/index.html", ["text/html", "<html>platform</html>"]],
     ["/shared/web.js", ["application/javascript", "web"]],
     ["/manifest.json", ["application/json", "{\"ok\":true}"]],
   ]);
@@ -27,13 +29,18 @@ function envWithAssets() {
 }
 
 const originalFetch = globalThis.fetch;
-test.after(() => {
+test.afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
 test("host map uses one graph application for graph and architecture aliases", () => {
-  assert.deepEqual(resolveHost("graph.idol.id"), { app: "graph", surface: "graph" });
-  assert.deepEqual(resolveHost("r16.idol.id"), { app: "graph", surface: "r16" });
+  assert.deepEqual(resolveHost("graph.idol.id"), { app: "graph", surface: "graph", origin: true });
+  assert.deepEqual(resolveHost("r16.idol.id"), { app: "graph", surface: "r16", origin: true });
+});
+
+test("worlds and platform are originless custom-domain surfaces", () => {
+  assert.deepEqual(resolveHost("worlds.idol.id"), { app: "worlds", surface: "worlds", origin: false });
+  assert.deepEqual(resolveHost("platform.idol.id"), { app: "platform", surface: "platform", origin: false });
 });
 
 test("root serves the site shell with security headers", async () => {
@@ -48,6 +55,13 @@ test("graph aliases receive the graph shell", async () => {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
   assert.equal(await response.text(), "<html>graph</html>");
+});
+
+test("worlds navigation receives the atlas shell", async () => {
+  const response = await handle(new Request("https://worlds.idol.id/world/std", {
+    headers: { "sec-fetch-mode": "navigate" },
+  }), envWithAssets());
+  assert.equal(await response.text(), "<html>worlds</html>");
 });
 
 test("config reports the precise host surface and authority", async () => {
@@ -65,6 +79,14 @@ test("api requests preserve the existing tunnel origin", async () => {
   assert.equal(await response.text(), "origin:/api/authority");
 });
 
+test("originless surfaces refuse dynamic proxy paths instead of recursing", async () => {
+  let called = false;
+  globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
+  const response = await handle(new Request("https://worlds.idol.id/api/worlds"), envWithAssets());
+  assert.equal(response.status, 404);
+  assert.equal(called, false);
+});
+
 test("legacy health remains the compiler origin while edge health is explicit", async () => {
   globalThis.fetch = async (request) => new Response(`origin:${new URL(request.url).pathname}`);
   let response = await handle(new Request("https://idol.id/health"), envWithAssets());
@@ -75,8 +97,12 @@ test("legacy health remains the compiler origin while edge health is explicit", 
 });
 
 test("local development can select every surface without DNS", async () => {
-  const response = await handle(new Request("http://localhost/?surface=lib"), envWithAssets());
+  let response = await handle(new Request("http://localhost/?surface=lib"), envWithAssets());
   assert.equal(await response.text(), "<html>lib</html>");
+  response = await handle(new Request("http://localhost/?surface=worlds"), envWithAssets());
+  assert.equal(await response.text(), "<html>worlds</html>");
+  response = await handle(new Request("http://localhost/?surface=platform"), envWithAssets());
+  assert.equal(await response.text(), "<html>platform</html>");
 });
 
 test("unknown hosts fail closed", async () => {
