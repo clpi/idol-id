@@ -51,7 +51,12 @@ function browserRequest(path, init = {}) {
   });
 }
 
-const env = { ACCESS_TEAM_DOMAIN: "team.example", ACCESS_AUD: "aud", ACCESS_EMAIL: "user@example.com", PLATFORM_DB: {} };
+const env = {
+  ACCESS_TEAM_DOMAIN: "team.example",
+  REPOSITORY_ACCESS_AUD: "repo-aud",
+  ACCESS_EMAIL: "user@example.com",
+  PLATFORM_DB: {},
+};
 
 test("repository status is public only on Platform and names exact boundaries", async () => {
   let response = await handleRepositoryTransport(new Request("https://platform.idol.id/v1/repository/status"), env, "/v1/repository/status", platformInfo);
@@ -60,6 +65,7 @@ test("repository status is public only on Platform and names exact boundaries", 
   assert.equal(body.visibility, "public-only");
   assert.equal(body.mutation, false);
   assert.deepEqual(body.providers, ["github", "gitlab", "bitbucket"]);
+  assert.equal(body.configured.access, true);
   response = await handleRepositoryTransport(new Request("https://api.idol.id/v1/repository/status"), env, "/v1/repository/status", apiInfo);
   assert.equal(response.status, 404);
 });
