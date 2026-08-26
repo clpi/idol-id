@@ -28,8 +28,8 @@ function envWithAssets() {
 
 function browserRequest(body, init = {}) {
   const headers = new Headers(init.headers || {});
-  headers.set("origin", "https://platform.idol.id");
-  headers.set("x-idol-request", "browser");
+  if (!headers.has("origin")) headers.set("origin", "https://platform.idol.id");
+  if (!headers.has("x-idol-request")) headers.set("x-idol-request", "browser");
   if (!headers.has("content-type")) headers.set("content-type", "application/json");
   return new Request("https://platform.idol.id/v1/ide/analyze", {
     method: "POST",
@@ -165,7 +165,7 @@ test("admitted IDE analysis makes one fixed upstream call and audits metadata wi
   assert.equal(body.schema, "idol.web.ide.analysis.v1");
   assert.equal(body.capability, "remote-native");
   assert.equal(body.authority.repository, "clpi/idol");
-  assert.equal(body.authority.commit, "f33bb3773484e7d954a297a6f2570475a89aa16cbda3a".replace("7021da878cf62a297a6f2570475a89aa16cbda3a", "f33bb3773484e7d954a2975211e683dfa89edab5"));
+  assert.equal(body.authority.commit, "f33bb3773484e7d954a2975211e683dfa89edab5");
   assert.match(body.source_hash, /^[0-9a-f]{64}$/);
   assert.equal(body.result.graph.nodes.length, 0);
   assert.equal(response.headers.get("cache-control"), "no-store");
