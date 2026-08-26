@@ -34,6 +34,19 @@ function decodeScaffold(row) {
   return Object.freeze({ ...decodeJson(row.document, {}), id: row.id, observation_id: row.observation_id, created_at: row.created_at });
 }
 
+function decodeScaffoldSummary(row) {
+  if (!row) return null;
+  return Object.freeze({
+    schema: "idol.web.repository.scaffold.summary.v1",
+    id: row.id,
+    observation_id: row.observation_id,
+    status: row.status,
+    file_count: Number(row.file_count || 0),
+    refusal_code: row.refusal_code || null,
+    created_at: row.created_at,
+  });
+}
+
 function auditInsert(database, event) {
   return database.prepare(`
     INSERT INTO platform_audit(id, subject, actor_email, type, target, metadata, created_at)
@@ -100,9 +113,19 @@ export function createD1RepositoryStore(database) {
     async commitScaffold(record, event) {
       requireBatch(database);
       const insert = database.prepare(`
-        INSERT INTO platform_repository_scaffold(id, subject, observation_id, document, created_at)
-        VALUES (?1, ?2, ?3, ?4, ?5)
-      `).bind(record.id, record.subject, record.observation_id, JSON.stringify(record.document), record.created_at);
+        INSERT INTO platform_repository_scaffold(
+          id, subject, observation_id, status, file_count, refusal_code, document, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+      `).bind(
+        record.id,
+        record.subject,
+        record.observation_id,
+        record.status,
+        record.file_count,
+        record.refusal_code,
+        JSON.stringify(record.document),
+        record.created_at,
+      );
       await database.batch([insert, auditInsert(database, event)]);
       return Object.freeze({
         ...record.document,
@@ -114,13 +137,13 @@ export function createD1RepositoryStore(database) {
 
     async listScaffolds(subject, limit = 50) {
       const result = await database.prepare(`
-        SELECT id, observation_id, document, created_at
+        SELECT id, observation_id, status, file_count, refusal_code, created_at
         FROM platform_repository_scaffold
         WHERE subject = ?1
         ORDER BY created_at DESC, rowid DESC
         LIMIT ?2
       `).bind(subject, limit).all();
-      return rows(result).map(decodeScaffold);
+      return rows(result).map(decodeScaffoldSummary);
     },
 
     async getScaffold(subject, id) {
