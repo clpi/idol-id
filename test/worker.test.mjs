@@ -47,7 +47,9 @@ test("root serves the site shell with security headers", async () => {
   const response = await handle(new Request("https://idol.id/"), envWithAssets());
   assert.equal(response.status, 200);
   assert.equal(await response.text(), "<html>site</html>");
-  assert.match(response.headers.get("content-security-policy"), /default-src/);
+  const policy = response.headers.get("content-security-policy");
+  assert.match(policy, /default-src/);
+  assert.match(policy, /font-src[^;]*https:\/\/cdn\.jsdelivr\.net/);
 });
 
 test("graph aliases receive the graph shell", async () => {
