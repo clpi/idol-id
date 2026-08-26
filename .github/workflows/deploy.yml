@@ -86,6 +86,7 @@ jobs:
           Immutable public projections:
           - /runtime/worlds.json
           - /runtime/foreign.json
+          - /runtime/manifest.json includes the IDE capability contract
 
           Public foreign-world transport:
           - GET /v1/world/foreign
@@ -99,4 +100,12 @@ jobs:
           - GET /v1/platform/status remains public only on platform.idol.id
           - GET /v1/platform/api/whoami accepts scoped Idol bearer tokens only on api.idol.id
           - transport identity never grants an Idol world capability
+
+          Local-first browser IDE:
+          - platform.idol.id/ide and /ide/workspace/* are Access protected
+          - workspaces persist locally in IndexedDB; no automatic project upload
+          - lexical preview never claims semantic identity
+          - POST /v1/ide/analyze requires Access, same-origin browser proof, normalized bounded input, and audit storage
+          - source is sent only after explicit Analyze remotely action
+          - audit records hashes, sizes, path, and identities but not source text
           SUMMARY
