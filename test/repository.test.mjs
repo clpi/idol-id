@@ -92,7 +92,7 @@ test("Bitbucket observation requests bounded recursion and retains nested files"
     },
   });
   const treeUrl = new URL(seen.at(-1).url);
-  assert.equal(treeUrl.searchParams.get("max_depth"), "20");
+  assert.equal(treeUrl.searchParams.get("max_depth"), "25");
   assert.equal(treeUrl.searchParams.get("pagelen"), "100");
   assert.equal(observation.inventory.paths.includes("src/main.rs"), true);
   assert.equal(observation.inventory.truncated, false);
@@ -156,7 +156,7 @@ test("scaffold refuses incomplete inventories before claiming paths are unused",
     createdAt: () => "2026-08-26T12:00:00.000Z",
   });
   assert.equal(scaffold.status, "refused");
-  assert.equal(scaffold.refusal.code, "SCAFFOLD_INVENTORY_INCOMPLETE");
+  assert.equal(scaffold.refusal.code, "SCAFFOLD_INCOMPLETE_INVENTORY");
   assert.deepEqual(scaffold.files, []);
   assert.equal(scaffold.patch, "");
 });
