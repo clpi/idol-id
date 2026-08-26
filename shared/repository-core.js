@@ -143,9 +143,10 @@ export function repositoryObservationSummary(record) {
   const provider = exact(record.provider, "repository provider", 32);
   const namespace = exact(record.namespace, "repository namespace", 320);
   const repository = exact(record.repository, "repository name", 160);
+  const coordinate = exact(record.coordinate || `${provider}:${namespace}/${repository}`, "repository coordinate", 520);
   const count = Number(record.file_count ?? record.inventory?.file_count ?? 0);
   const fileCount = Number.isFinite(count) && count >= 0 ? Math.trunc(count) : 0;
-  const rawTruncated = record.inventory_truncated ?? record.inventory?.truncated ?? false;
+  const rawTruncated = record.truncated ?? record.inventory_truncated ?? record.inventory?.truncated ?? false;
   const truncated = rawTruncated === true || rawTruncated === 1 || rawTruncated === "1";
   return Object.freeze({
     schema: "idol.web.repository.observation.summary.v1",
@@ -153,7 +154,9 @@ export function repositoryObservationSummary(record) {
     provider,
     namespace,
     repository,
-    coordinate: `${provider}:${namespace}/${repository}`,
+    coordinate,
+    requested_ref: exact(record.requested_ref, "requested repository ref", 160),
+    default_branch: exact(record.default_branch, "default repository branch", 160),
     resolved_revision: exact(record.resolved_revision, "resolved repository revision", 128),
     inventory: Object.freeze({ file_count: fileCount, truncated }),
     created_at: exact(record.created_at, "observation creation time", 64),
