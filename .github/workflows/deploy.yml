@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 22
       - name: Repository authority and transport security
-        run: node --test test/repository-platform-errors.test.mjs test/repository-worker.test.mjs
+        run: node --test test/repository-platform-errors.test.mjs test/repository-worker.test.mjs test/repository-transformation-worker.test.mjs
       - name: Test and build every surface
         run: npm run check
       - name: Validate Worker bundle
@@ -83,10 +83,12 @@ jobs:
           - exact pinned Zig bootstrap seed; self-hosted release remains false
 
           Repository Observatory:
-          - platform.idol.id/repo and /repo/{observation,scaffold}/:id are Access protected
+          - platform.idol.id/repo and /repo/{observation,scaffold,transformation}/:id are Access protected
           - public GitHub/GitLab/Bitbucket metadata and tree projections only
-          - exact resolved revisions, D1 subject ownership and audit
+          - exact resolved revisions, D1 subject ownership and append-only audit
           - review-only scaffold/patch; no source content, provider credential or repository mutation
+          - isolated derived-world transformation previews with exact selected delta and SHA-256
+          - all execution, source-world mutation, repository write and world publication facts remain false
           - scoped API transport on api.idol.id/v1/repository/api/*
 
           Browser IDE and prior public worlds/foreign/platform routes remain in the same deployment.
