@@ -22,7 +22,7 @@ function json(value, status = 200, headers = {}) {
 
 function configured(env) {
   return {
-    access: Boolean(env.ACCESS_TEAM_DOMAIN && (env.REPOSITORY_ACCESS_AUD || env.ACCESS_AUD) && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN)),
+    access: Boolean(env.ACCESS_TEAM_DOMAIN && env.REPOSITORY_ACCESS_AUD && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN)),
     storage: Boolean(env.PLATFORM_DB),
   };
 }
@@ -33,7 +33,7 @@ async function browserIdentity(request, env, dependencies) {
   if (!assertion) return null;
   return verifyAccessJwt(assertion, {
     teamDomain: env.ACCESS_TEAM_DOMAIN,
-    audience: env.REPOSITORY_ACCESS_AUD || env.ACCESS_AUD,
+    audience: env.REPOSITORY_ACCESS_AUD,
     email: env.ACCESS_EMAIL,
     emailDomain: env.ACCESS_EMAIL_DOMAIN,
     fetcher: dependencies.accessFetcher || fetch,
