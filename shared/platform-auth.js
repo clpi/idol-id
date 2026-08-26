@@ -1,5 +1,6 @@
 const ACCESS_CERT_CACHE = new Map();
 const ACCESS_CERT_TTL_MS = 5 * 60 * 1000;
+const ACCESS_JWT_MAX_BYTES = 16 * 1024;
 const TOKEN_PATTERN = /^idol_pat_([A-Za-z0-9_-]{12,})\.([A-Za-z0-9_-]{32,})$/;
 
 export const PLATFORM_SCOPES = Object.freeze([
@@ -40,11 +41,11 @@ function includesAudience(claim, expected) {
   return Array.isArray(claim) ? claim.includes(expected) : claim === expected;
 }
 
-async function fetchAccessKeys(teamDomain, fetcher, now) {
+async function fetchAccessKeys(teamDomain, fetcher, now, force = false) {
   const key = teamDomain.toLowerCase();
   const useCache = fetcher === globalThis.fetch;
   const cached = useCache ? ACCESS_CERT_CACHE.get(key) : null;
-  if (cached && cached.expiresAt > now) return cached.keys;
+  if (!force && cached && cached.expiresAt > now) return cached.keys;
 
   const response = await fetcher(`https://${teamDomain}/cdn-cgi/access/certs`, {
     headers: { accept: "application/json" },
@@ -56,15 +57,31 @@ async function fetchAccessKeys(teamDomain, fetcher, now) {
   return document.keys;
 }
 
+async function signingKey(teamDomain, keyId, fetcher, now) {
+  let keys = await fetchAccessKeys(teamDomain, fetcher, now);
+  let jwk = keys.find((candidate) => candidate.kid === keyId);
+  if (!jwk && fetcher === globalThis.fetch) {
+    keys = await fetchAccessKeys(teamDomain, fetcher, now, true);
+    jwk = keys.find((candidate) => candidate.kid === keyId);
+  }
+  if (!jwk) throw new Error("Access JWT signing key not found");
+  return jwk;
+}
+
 export async function verifyAccessJwt(token, {
   teamDomain,
   audience,
+  email,
   emailDomain,
   fetcher = globalThis.fetch,
   now = () => Date.now(),
 } = {}) {
-  if (!teamDomain || !audience || !emailDomain) throw new Error("Access verification is not configured");
-  const parts = String(token || "").split(".");
+  const admittedEmail = String(email || "").trim().toLowerCase();
+  const admittedDomain = String(emailDomain || "").trim().toLowerCase();
+  if (!teamDomain || !audience || (!admittedEmail && !admittedDomain)) throw new Error("Access verification is not configured");
+  const source = String(token || "");
+  if (encoder.encode(source).byteLength > ACCESS_JWT_MAX_BYTES) throw new Error("Access JWT is too large");
+  const parts = source.split(".");
   if (parts.length !== 3) throw new Error("invalid Access JWT shape");
   const [encodedHeader, encodedPayload, encodedSignature] = parts;
   const header = base64urlJson(encodedHeader, "header");
@@ -79,13 +96,13 @@ export async function verifyAccessJwt(token, {
   if (!includesAudience(payload.aud, audience)) throw new Error("Access JWT audience mismatch");
   if (!Number.isFinite(payload.exp) || payload.exp <= currentSeconds) throw new Error("Access JWT expired");
   if (Number.isFinite(payload.nbf) && payload.nbf > currentSeconds + 30) throw new Error("Access JWT is not active");
+  if (Number.isFinite(payload.iat) && payload.iat > currentSeconds + 60) throw new Error("Access JWT issued-at is in the future");
   if (!payload.sub || !payload.email) throw new Error("Access JWT identity claims missing");
-  const email = String(payload.email).trim().toLowerCase();
-  if (!email.endsWith(`@${String(emailDomain).toLowerCase()}`)) throw new Error("Access JWT email domain refused");
+  const claimedEmail = String(payload.email).trim().toLowerCase();
+  if (admittedEmail && claimedEmail !== admittedEmail) throw new Error("Access JWT email refused");
+  if (!admittedEmail && !claimedEmail.endsWith(`@${admittedDomain}`)) throw new Error("Access JWT email domain refused");
 
-  const keys = await fetchAccessKeys(teamDomain, fetcher, currentMs);
-  const jwk = keys.find((candidate) => candidate.kid === header.kid);
-  if (!jwk) throw new Error("Access JWT signing key not found");
+  const jwk = await signingKey(teamDomain, header.kid, fetcher, currentMs);
   const publicKey = await crypto.subtle.importKey(
     "jwk",
     jwk,
@@ -103,7 +120,7 @@ export async function verifyAccessJwt(token, {
 
   return Object.freeze({
     subject: String(payload.sub),
-    email,
+    email: claimedEmail,
     displayName: String(payload.name || payload.email).trim(),
     issuer,
     audience,
