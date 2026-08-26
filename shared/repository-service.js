@@ -57,9 +57,12 @@ export function createRepositoryService({
       provider: draft.provider,
       namespace: draft.namespace,
       repository: draft.repository,
+      coordinate: draft.coordinate,
+      requested_ref: draft.requested_ref,
+      default_branch: draft.default_branch,
       resolved_revision: draft.resolved_revision,
       file_count: draft.inventory.file_count,
-      inventory_truncated: Boolean(draft.inventory.truncated),
+      truncated: Boolean(draft.inventory.truncated),
       document,
       created_at: createdAt,
     });
