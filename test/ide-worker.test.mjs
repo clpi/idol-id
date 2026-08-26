@@ -52,12 +52,15 @@ function validBody(overrides = {}) {
 function successfulDependencies(overrides = {}) {
   const calls = [];
   const audits = [];
+  let nextId = 0;
   return {
     calls,
     audits,
     value: {
       verifyAccess: async () => identity,
       fetcher: async (request) => {
+        assert.equal(audits.length, 1, "request audit must exist before source transfer");
+        assert.equal(audits[0].type, "ide.analysis.requested");
         calls.push(request);
         return new Response(JSON.stringify({
           graph: { nodes: [], edges: [], applications: [] },
@@ -66,7 +69,7 @@ function successfulDependencies(overrides = {}) {
       },
       audit: async (event) => { audits.push(structuredClone(event)); },
       now: () => "2026-08-26T07:00:00.000Z",
-      idFactory: () => "audit-1",
+      idFactory: () => `audit-${++nextId}`,
       ...overrides,
     },
   };
@@ -146,12 +149,12 @@ test("IDE analysis validates JSON bounds identifiers paths and source", async ()
   }
 
   response = await handle(browserRequest(validBody(), {
-    headers: { "content-length": String(2 * 1024 * 1024 + 1000) },
+    headers: { "content-length": String(3 * 1024 * 1024) },
   }), envWithAssets(), dependencies);
   assert.equal(response.status, 413);
 });
 
-test("admitted IDE analysis makes one fixed upstream call and audits metadata without source", async () => {
+test("admitted IDE analysis audits before and after one fixed upstream call without source", async () => {
   const dependencies = successfulDependencies();
   const response = await handle(browserRequest(validBody()), envWithAssets(), dependencies.value);
   assert.equal(response.status, 200);
@@ -170,45 +173,62 @@ test("admitted IDE analysis makes one fixed upstream call and audits metadata wi
   assert.equal(body.result.graph.nodes.length, 0);
   assert.equal(response.headers.get("cache-control"), "no-store");
 
-  assert.equal(dependencies.audits.length, 1);
-  const audit = dependencies.audits[0];
-  assert.equal(audit.type, "ide.analysis.requested");
-  assert.equal(audit.subject, identity.subject);
-  assert.deepEqual(audit.metadata, {
+  assert.equal(dependencies.audits.length, 2);
+  const [requested, completed] = dependencies.audits;
+  assert.equal(requested.id, "audit-1");
+  assert.equal(requested.type, "ide.analysis.requested");
+  assert.equal(requested.subject, identity.subject);
+  assert.deepEqual(requested.metadata, {
     workspace_id: "workspace-1",
     file_id: "file-1",
     path: "src/main.id",
     source_hash: body.source_hash,
     source_bytes: 8,
-    upstream_status: 200,
+    upstream_status: null,
   });
-  assert.equal(JSON.stringify(audit).includes("main() 0"), false);
+  assert.equal(completed.id, "audit-2");
+  assert.equal(completed.type, "ide.analysis.completed");
+  assert.equal(completed.metadata.upstream_status, 200);
+  assert.equal(JSON.stringify(dependencies.audits).includes("main() 0"), false);
 });
 
-test("IDE upstream failures are bounded 502 evidence rather than Worker exceptions", async () => {
-  let response = await handle(browserRequest(validBody()), envWithAssets(), successfulDependencies({
+test("IDE upstream failures are bounded 502 evidence with refusal audit", async () => {
+  let dependencies = successfulDependencies({
     fetcher: async () => new Response(JSON.stringify({ error: "compiler unavailable", internal: "x".repeat(5000) }), { status: 503 }),
-  }).value);
+  });
+  let response = await handle(browserRequest(validBody()), envWithAssets(), dependencies.value);
   assert.equal(response.status, 502);
   let body = await response.json();
   assert.equal(body.error, "IDE_UPSTREAM_REFUSED");
   assert.equal(body.upstream_status, 503);
   assert.ok(JSON.stringify(body).length < 1500);
+  assert.deepEqual(dependencies.audits.map((event) => event.type), ["ide.analysis.requested", "ide.analysis.refused"]);
 
-  response = await handle(browserRequest(validBody()), envWithAssets(), successfulDependencies({
+  dependencies = successfulDependencies({
     fetcher: async () => new Response("not json", { status: 200 }),
-  }).value);
+  });
+  response = await handle(browserRequest(validBody()), envWithAssets(), dependencies.value);
   assert.equal(response.status, 502);
   body = await response.json();
   assert.equal(body.error, "IDE_UPSTREAM_INVALID");
+  assert.deepEqual(dependencies.audits.map((event) => event.type), ["ide.analysis.requested", "ide.analysis.refused"]);
 });
 
-test("IDE analysis fails closed when audit storage is unavailable", async () => {
+test("IDE analysis fails closed before source transfer when audit storage is unavailable", async () => {
   const env = envWithAssets();
   delete env.PLATFORM_DB;
-  const dependencies = successfulDependencies();
+  let dependencies = successfulDependencies();
   delete dependencies.value.audit;
-  const response = await handle(browserRequest(validBody()), env, dependencies.value);
+  let response = await handle(browserRequest(validBody()), env, dependencies.value);
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, "IDE_AUDIT_UNAVAILABLE");
+  assert.equal(dependencies.calls.length, 0);
+
+  dependencies = successfulDependencies({
+    audit: async () => { throw new Error("D1 write refused"); },
+    fetcher: async () => { throw new Error("source must not leave browser"); },
+  });
+  response = await handle(browserRequest(validBody()), envWithAssets(), dependencies.value);
   assert.equal(response.status, 503);
   assert.equal((await response.json()).error, "IDE_AUDIT_UNAVAILABLE");
   assert.equal(dependencies.calls.length, 0);
