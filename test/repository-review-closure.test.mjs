@@ -56,7 +56,7 @@ function fixedBytes() {
 }
 
 test("Bitbucket observation requests a bounded recursive source projection", async () => {
-  const expectedTree = "https://api.bitbucket.org/2.0/repositories/acme/demo/src/abcdef123456/?max_depth=25&pagelen=100";
+  const expectedTree = "https://api.bitbucket.org/2.0/repositories/acme/demo/src/abcdef123456/?max_depth=20&pagelen=100";
   const responses = new Map([
     ["https://api.bitbucket.org/2.0/repositories/acme/demo", { is_private: false, mainbranch: { name: "main" } }],
     ["https://api.bitbucket.org/2.0/repositories/acme/demo/commit/main", { hash: "abcdef123456" }],
@@ -90,7 +90,7 @@ test("scaffolding refuses an incomplete provider inventory before asserting path
     createdAt: () => "2026-08-26T12:00:00.000Z",
   });
   assert.equal(scaffold.status, "refused");
-  assert.equal(scaffold.refusal.code, "SCAFFOLD_INCOMPLETE_INVENTORY");
+  assert.equal(scaffold.refusal.code, "SCAFFOLD_INVENTORY_INCOMPLETE");
   assert.equal(scaffold.patch, "");
   assert.deepEqual(scaffold.files, []);
 });
@@ -161,9 +161,12 @@ test("D1 record and audit writes use one transactional batch", async () => {
     provider: document.provider,
     namespace: document.namespace,
     repository: document.repository,
+    coordinate: document.coordinate,
+    requested_ref: document.requested_ref,
+    default_branch: document.default_branch,
     resolved_revision: document.resolved_revision,
     file_count: document.inventory.file_count,
-    inventory_truncated: document.inventory.truncated,
+    truncated: document.inventory.truncated,
     document,
     created_at: document.created_at,
   }, event);
@@ -189,9 +192,12 @@ test("D1 observation lists select bounded summary columns instead of full docume
                 provider: "github",
                 namespace: "acme",
                 repository: "demo",
+                coordinate: "github:acme/demo",
+                requested_ref: "main",
+                default_branch: "main",
                 resolved_revision: "abcdef123456",
                 file_count: 5000,
-                inventory_truncated: 1,
+                truncated: 1,
                 created_at: "2026-08-26T12:00:00.000Z",
               }] };
             },
@@ -209,14 +215,18 @@ test("D1 observation lists select bounded summary columns instead of full docume
     namespace: "acme",
     repository: "demo",
     coordinate: "github:acme/demo",
+    requested_ref: "main",
+    default_branch: "main",
     resolved_revision: "abcdef123456",
     inventory: { file_count: 5000, truncated: true },
     created_at: "2026-08-26T12:00:00.000Z",
   }]);
 });
 
-test("repository migration stores the bounded observation summary facts", async () => {
-  const migration = await readFile("migrations/0002_repository_observation.sql", "utf8");
-  assert.match(migration, /file_count INTEGER NOT NULL/);
-  assert.match(migration, /inventory_truncated INTEGER NOT NULL/);
+test("follow-up migration stores the canonical bounded observation summary facts", async () => {
+  const migration = await readFile("migrations/0003_repository_observation_summary.sql", "utf8");
+  for (const column of ["coordinate", "requested_ref", "default_branch", "file_count", "truncated"]) {
+    assert.match(migration, new RegExp(`ALTER TABLE platform_repository_observation\\s+ADD COLUMN ${column}\\b`), column);
+  }
+  assert.match(migration, /UPDATE platform_repository_observation/);
 });
