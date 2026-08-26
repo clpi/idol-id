@@ -13,13 +13,14 @@ permissions:
 env:
   CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
   SSH_HOST: ssh-r16.idol.id
+  R16_ACCESS_APP: e5373039-3d29-4dd4-9c92-65aeba364ce6
 
 jobs:
   discover:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Inspect Cloudflare Access capability
+      - name: Inspect existing r16 Access policy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -27,15 +28,40 @@ jobs:
           set -euo pipefail
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
-          echo '--- Access applications ---'
-          apps="$(curl -sS "${auth[@]}" "$base/access/apps?per_page=100")"
-          echo "$apps" | jq -c '{success,errors,result:[.result[]? | {id,name,domain,type,session_duration}]}'
-          echo '--- Service token API capability ---'
-          toks="$(curl -sS "${auth[@]}" "$base/access/service_tokens?per_page=100")"
-          echo "$toks" | jq -c '{success,errors,count:(.result|length? // 0),names:[.result[]?.name]}'
+          curl -fsS "${auth[@]}" "$base/access/apps/$R16_ACCESS_APP/policies?per_page=100" \
+            | jq -c '{success,errors,result:[.result[]? | {id,name,decision,precedence,include:[.include[]? | keys[]],require:[.require[]? | keys[]],exclude:[.exclude[]? | keys[]]}]}'
 
-      - name: Confirm r16 public SSH route still resolves
+      - name: Inventory configured bootstrap secrets without values
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CLOUDFLARE_ACCESS_CLIENT_ID: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+          CLOUDFLARE_ACCESS_CLIENT_SECRET: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
+          CFO_CLIENT_ID: ${{ secrets.CFO_CLIENT_ID }}
+          CFO_CLIENT_SECRET: ${{ secrets.CFO_CLIENT_SECRET }}
+          R16_SSH_PRIVATE_KEY: ${{ secrets.R16_SSH_PRIVATE_KEY }}
+          R16_SSH_PASSWORD: ${{ secrets.R16_SSH_PASSWORD }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         shell: bash
         run: |
           set -euo pipefail
-          getent ahosts "$SSH_HOST" | head
+          for n in CF_ACCESS_CLIENT_ID CF_ACCESS_CLIENT_SECRET CLOUDFLARE_ACCESS_CLIENT_ID CLOUDFLARE_ACCESS_CLIENT_SECRET CFO_CLIENT_ID CFO_CLIENT_SECRET R16_SSH_PRIVATE_KEY R16_SSH_PASSWORD SSH_PRIVATE_KEY SSH_PASSWORD TAILSCALE_AUTHKEY; do
+            if [ -n "${!n:-}" ]; then echo "$n=yes"; else echo "$n=no"; fi
+          done
+
+      - name: Probe process-world execution through live r16 compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload=$(jq -nc --arg source $'main: i64 = ()\n  os.execute("id > /tmp/hermes_probe_id")\n  os.execute("cat /tmp/hermes_probe_id")\n  0' '{source:$source,args:[]}')
+          curl -fsS -H 'content-type: application/json' --data "$payload" https://r16.idol.id/api/run \
+            | jq -c '{rc,stdout,stderr}'
+
+      - name: Confirm r16 routes resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          getent ahosts "$SSH_HOST" | head -n 2
+          getent ahosts r16.pecunies.com | head -n 2
