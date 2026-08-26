@@ -15,7 +15,7 @@ function decodeAudit(row) {
 export function createD1PlatformRepository(database) {
   if (!database?.prepare) throw new TypeError("D1 database binding is required");
 
-  return Object.freeze({
+  const repository = {
     async getProfile(subject) {
       return database.prepare(
         "SELECT subject, email, display_name, created_at, updated_at FROM platform_profile WHERE subject = ?1",
@@ -30,14 +30,14 @@ export function createD1PlatformRepository(database) {
           email = excluded.email,
           updated_at = excluded.updated_at
       `).bind(identity.subject, identity.email, identity.displayName || identity.email, now).run();
-      return this.getProfile(identity.subject);
+      return repository.getProfile(identity.subject);
     },
 
     async updateProfile(subject, patch, now) {
       await database.prepare(
         "UPDATE platform_profile SET display_name = ?2, updated_at = ?3 WHERE subject = ?1",
       ).bind(subject, patch.display_name, now).run();
-      return this.getProfile(subject);
+      return repository.getProfile(subject);
     },
 
     async insertToken(record) {
@@ -66,7 +66,7 @@ export function createD1PlatformRepository(database) {
         SELECT id, subject, name, prefix, scopes, created_at, expires_at, revoked_at, last_used_at
         FROM platform_token
         WHERE subject = ?1
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, rowid DESC
       `).bind(subject).all();
       return rows(result).map(decodeToken);
     },
@@ -113,10 +113,12 @@ export function createD1PlatformRepository(database) {
         SELECT id, subject, actor_email, type, target, metadata, created_at
         FROM platform_audit
         WHERE subject = ?1
-        ORDER BY created_at DESC, id DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT ?2
       `).bind(subject, limit).all();
       return rows(result).map(decodeAudit);
     },
-  });
+  };
+
+  return Object.freeze(repository);
 }
