@@ -2,6 +2,7 @@ import { TEXT, MAX_FILES, REPOSITORY_AUTHORITY_BOUNDARY, RepositoryError, exact,
 
 const RESPONSE_LIMIT = 2 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
+const BITBUCKET_MAX_DEPTH = 25;
 
 function timeoutError(label) {
   return new RepositoryError("REPOSITORY_PROVIDER_TIMEOUT", `${label} exceeded the admitted time limit`, 504);
@@ -135,12 +136,27 @@ async function observeBitbucket(locator, fetcher, timeoutMs) {
   const ref = locator.requested_ref === "HEAD" ? defaultBranch : locator.requested_ref;
   const commit = (await providerJson(`${base}/commit/${encodeURIComponent(ref)}`, fetcher, "Bitbucket repository revision", timeoutMs)).value;
   const sha = exact(commit.hash, "Bitbucket revision", 128);
-  const page = (await providerJson(`${base}/src/${encodeURIComponent(sha)}/?pagelen=100`, fetcher, "Bitbucket repository tree", timeoutMs)).value;
-  const files = (Array.isArray(page.values) ? page.values : [])
+  const page = (await providerJson(
+    `${base}/src/${encodeURIComponent(sha)}/?max_depth=${BITBUCKET_MAX_DEPTH}&pagelen=100`,
+    fetcher,
+    "Bitbucket repository tree",
+    timeoutMs,
+  )).value;
+  const entries = Array.isArray(page.values) ? page.values : [];
+  const files = entries
     .filter((entry) => /file$/i.test(String(entry?.type || "")))
     .map((entry) => fileRecord(entry.path, entry.size))
     .filter(Boolean);
-  return { default_branch: defaultBranch, resolved_revision: sha, files, truncated: Boolean(page.next) || files.length >= 100 };
+  const reachedDepthBoundary = entries.some((entry) => {
+    if (!/directory$/i.test(String(entry?.type || ""))) return false;
+    return text(entry.path).split("/").filter(Boolean).length >= BITBUCKET_MAX_DEPTH;
+  });
+  return {
+    default_branch: defaultBranch,
+    resolved_revision: sha,
+    files,
+    truncated: Boolean(page.next) || entries.length >= 100 || reachedDepthBoundary,
+  };
 }
 
 export async function observePublicRepository(input, {
