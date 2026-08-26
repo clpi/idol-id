@@ -13,8 +13,17 @@ const APPS = [
   { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Platform" },
 ];
 
+function ensureSurfaceStyles() {
+  if (document.querySelector('link[href="/shared/surface.css"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/shared/surface.css";
+  document.head.appendChild(link);
+}
+
 function boot(app, opts) {
   opts = opts || {};
+  ensureSurfaceStyles();
   document.title = (opts.title || app) + " — idol.id";
 
   const bar = document.querySelector(".topbar") || (() => {
