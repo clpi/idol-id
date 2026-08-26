@@ -52,7 +52,7 @@ function ensureRepositoryScopes() {
   const grid = document.querySelector("#token-form .scope-grid") || document.querySelector(".scope-grid");
   if (!grid) return;
   const existing = new Set(
-    [...grid.querySelectorAll('input[name="scopes"]')]
+    [...grid.querySelectorAll('input[name="scope"]')]
       .map((input) => String(input.value || "").trim())
       .filter(Boolean),
   );
@@ -62,7 +62,7 @@ function ensureRepositoryScopes() {
     label.className = "scope";
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.name = "scopes";
+    input.name = "scope";
     input.value = scope;
     const code = document.createElement("code");
     code.textContent = scope;
