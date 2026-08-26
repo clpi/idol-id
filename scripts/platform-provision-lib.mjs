@@ -106,6 +106,39 @@ function applicationDocument(otp) {
   };
 }
 
+function setEquals(left, right, key = (value) => String(value)) {
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  const a = new Set(left.map(key));
+  const b = new Set(right.map(key));
+  return a.size === b.size && [...a].every((value) => b.has(value));
+}
+
+function requiredDestinationsAreSafe(existing) {
+  const required = new Set(DESTINATIONS.map(destinationKey));
+  for (const destination of destinationsOf(existing)) {
+    if (!required.has(destinationKey(destination))) {
+      throw new Error(`${APPLICATION_NAME} exists with an unknown destination: ${destination.uri || "<missing>"}`);
+    }
+  }
+}
+
+function applicationMatches(existing, required) {
+  if (!setEquals(destinationsOf(existing), required.destinations, destinationKey)) return false;
+  if (!setEquals(existing.allowed_idps, required.allowed_idps)) return false;
+  for (const field of [
+    "name",
+    "type",
+    "session_duration",
+    "auto_redirect_to_identity",
+    "app_launcher_visible",
+    "skip_interstitial",
+    "custom_deny_message",
+  ]) {
+    if (existing[field] !== required[field]) return false;
+  }
+  return true;
+}
+
 async function ensureApplication(context, otp) {
   const listed = await cloudflare(context, "/access/apps?per_page=100");
   const existing = Array.isArray(listed) ? listed.find((app) => app.name === APPLICATION_NAME) : null;
@@ -117,15 +150,8 @@ async function ensureApplication(context, otp) {
     });
   }
 
-  const required = new Set(DESTINATIONS.map(destinationKey));
-  const present = destinationsOf(existing);
-  for (const destination of present) {
-    if (!required.has(destinationKey(destination))) {
-      throw new Error(`${APPLICATION_NAME} exists with an unknown destination: ${destination.uri || "<missing>"}`);
-    }
-  }
-  const current = new Set(present.map(destinationKey));
-  if (required.size === current.size && [...required].every((key) => current.has(key))) return existing;
+  requiredDestinationsAreSafe(existing);
+  if (applicationMatches(existing, document)) return existing;
 
   return cloudflare(context, `/access/apps/${encodeURIComponent(existing.id)}`, {
     method: "PUT",
