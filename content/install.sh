@@ -1,10 +1,10 @@
 #!/bin/sh
-# Idol bootstrap-seed installer. This builds the exact pinned source authority;
-# it is not a claim that a self-hosted production compiler release exists.
+# Idol bootstrap-seed installer. This builds the exact authority currently
+# projected by idol.id; it is not a claim that a self-hosted release exists.
 set -eu
 
-IDOL_AUTHORITY="${IDOL_AUTHORITY:-f33bb3773484e7d954a2975211e683dfa89edab5}"
 CANONICAL_IDOL_REPOSITORY="https://github.com/clpi/idol.git"
+AUTHORITY_ENDPOINT="https://idol.id/runtime/authority.json"
 IDOL_PREFIX="${IDOL_PREFIX:-${HOME}/.local}"
 
 fail() { printf '%s\n' "idol install: $*" >&2; exit 1; }
@@ -17,6 +17,20 @@ IDOL_REPOSITORY="$CANONICAL_IDOL_REPOSITORY"
 
 need git
 need zig
+if [ -z "${IDOL_AUTHORITY:-}" ]; then
+  need curl
+  IDOL_AUTHORITY="$(curl -fsSL "$AUTHORITY_ENDPOINT" | awk '
+    /"language"[[:space:]]*:/ { language = 1 }
+    language && /"commit"[[:space:]]*:/ {
+      line = $0
+      sub(/^.*"commit"[[:space:]]*:[[:space:]]*"/, "", line)
+      sub(/".*$/, "", line)
+      print line
+      exit
+    }
+  ')"
+fi
+printf '%s\n' "$IDOL_AUTHORITY" | grep -Eq '^[0-9a-f]{40}$' || fail "authority endpoint did not publish an exact commit"
 
 case "$(uname -s 2>/dev/null || true)" in
   Darwin|Linux) ;;
@@ -50,6 +64,7 @@ cat > "$IDOL_PREFIX/share/idol/authority.json" <<JSON
   "repository": "clpi/idol",
   "source": "$CANONICAL_IDOL_REPOSITORY",
   "commit": "$IDOL_AUTHORITY",
+  "authority_projection": "$AUTHORITY_ENDPOINT",
   "kind": "bootstrap-seed",
   "self_hosted": false
 }

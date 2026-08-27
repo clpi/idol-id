@@ -16,9 +16,14 @@ const teamName = process.env.IDOL_ACCESS_TEAM_NAME || "idol-clpi";
 const webCommit = process.env.GITHUB_SHA || process.env.IDOL_WEB_COMMIT || "development";
 
 try {
+  const authorityProjection = JSON.parse(await readFile(resolve(root, "runtime/authority.json"), "utf8"));
+  const authorityCommit = String(authorityProjection?.language?.commit || "").trim();
+  if (!/^[0-9a-f]{40}$/.test(authorityCommit)) throw new Error("runtime/authority.json has no exact language commit");
+
   const provisioned = await provisionPlatform({ accountId, apiToken, bootstrapEmail, teamName });
   const base = parseJsonc(await readFile(resolve(root, "wrangler.jsonc"), "utf8"));
   const production = renderProductionWrangler(base, provisioned, { webCommit });
+  production.vars = { ...(production.vars || {}), IDOL_AUTHORITY: authorityCommit };
   await writeFile(resolve(root, ".platform-provision.json"), `${JSON.stringify(provisioned, null, 2)}\n`, { mode: 0o600 });
   await writeFile(resolve(root, ".wrangler.production.jsonc"), `${JSON.stringify(production, null, 2)}\n`);
 
@@ -30,6 +35,7 @@ try {
       `access_application_id=${provisioned.accessApplicationId}`,
       `access_audience=${provisioned.accessAudience}`,
       `bootstrap_email=${provisioned.bootstrapEmail}`,
+      `language_authority=${authorityCommit}`,
       "config=.wrangler.production.jsonc",
       "",
     ].join("\n"), { flag: "a" });
@@ -44,6 +50,7 @@ try {
     access_audience: provisioned.accessAudience,
     bootstrap_email: provisioned.bootstrapEmail,
     web_commit: webCommit,
+    language_authority: authorityCommit,
     config: ".wrangler.production.jsonc",
   }, null, 2));
 } catch (error) {

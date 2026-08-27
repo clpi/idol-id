@@ -1,8 +1,8 @@
 # Idol bootstrap-seed installer for Windows.
-# Builds the exact pinned source authority; does not claim self-hosting.
+# Builds the exact authority projected by idol.id; does not claim self-hosting.
 $ErrorActionPreference = "Stop"
-$authority = if ($env:IDOL_AUTHORITY) { $env:IDOL_AUTHORITY } else { "f33bb3773484e7d954a2975211e683dfa89edab5" }
 $canonicalRepository = "https://github.com/clpi/idol.git"
+$authorityEndpoint = "https://idol.id/runtime/authority.json"
 if ($env:IDOL_REPOSITORY -and $env:IDOL_REPOSITORY -ne $canonicalRepository) {
   throw "idol install: IDOL_REPOSITORY overrides are not admitted; installer provenance is pinned to clpi/idol"
 }
@@ -14,6 +14,14 @@ function Require-Command([string]$Name) {
 }
 Require-Command "git"
 Require-Command "zig"
+
+$authority = if ($env:IDOL_AUTHORITY) {
+  $env:IDOL_AUTHORITY
+} else {
+  try { (Invoke-RestMethod -Uri $authorityEndpoint -Method Get).language.commit }
+  catch { throw "idol install: unable to read $authorityEndpoint — $($_.Exception.Message)" }
+}
+if ($authority -notmatch '^[0-9a-f]{40}$') { throw "idol install: authority endpoint did not publish an exact commit" }
 
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ("idol-install-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $work | Out-Null
@@ -48,6 +56,7 @@ try {
     repository = "clpi/idol"
     source = $canonicalRepository
     commit = $authority
+    authority_projection = $authorityEndpoint
     kind = "bootstrap-seed"
     self_hosted = $false
   } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $share "authority.json")

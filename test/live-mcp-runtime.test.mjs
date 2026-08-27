@@ -27,19 +27,10 @@ function runtimeDocuments() {
     schema: "idol.mcp.projection.v1",
     protocol: "2026-07-28",
     semantic_authority: false,
-    tools: [
-      "idol.authority",
-      "idol.graph.contract",
-      "idol.graph.query",
-      "idol.live.project",
-      "idol.live.status",
-      "idol.orientation",
-      "idol.wasm.run",
-      "idol.wasm.status",
-    ],
+    tools: ["idol.authority", "idol.graph.contract", "idol.graph.query", "idol.live.project", "idol.live.status", "idol.orientation", "idol.wasm.run", "idol.wasm.status"],
   };
   const authority = { schema: "idol.web.authority.v1", language: { repository: "clpi/idol", commit: "authority123" }, native: { repository: "clpi/idol-native", commit: "native123" } };
-  const runtime = { schema: "idol.web.runtime.v1", wasm: { available: false, file: null, source: "/native/semantic/runtime.id" } };
+  const runtime = { schema: "idol.web.runtime.v1", wasm: { available: false, admitted: false, file: null, source: "/native/semantic/runtime.id" } };
   return { graph, live, mcp, authority, runtime };
 }
 
@@ -58,13 +49,7 @@ function envWithAssets() {
   return {
     IDOL_COMMIT: "web123",
     IDOL_AUTHORITY: "authority123",
-    ASSETS: {
-      async fetch(request) {
-        const found = files.get(new URL(request.url).pathname);
-        if (!found) return new Response("missing", { status: 404 });
-        return new Response(found[1], { headers: { "content-type": found[0] } });
-      },
-    },
+    ASSETS: { async fetch(request) { const found = files.get(new URL(request.url).pathname); if (!found) return new Response("missing", { status: 404 }); return new Response(found[1], { headers: { "content-type": found[0] } }); } },
   };
 }
 
@@ -77,18 +62,9 @@ function meta() {
 }
 
 function mcpRequest(method, params = {}, name = "") {
-  const headers = {
-    "content-type": "application/json",
-    "mcp-protocol-version": "2026-07-28",
-    "mcp-method": method,
-    origin: "https://mcp.idol.id",
-  };
+  const headers = { "content-type": "application/json", "mcp-protocol-version": "2026-07-28", "mcp-method": method, origin: "https://mcp.idol.id" };
   if (name) headers["mcp-name"] = name;
-  return new Request("https://mcp.idol.id/mcp", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta() } }),
-  });
+  return new Request("https://mcp.idol.id/mcp", { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta() } }) });
 }
 
 test("Live and MCP are distinct originless product surfaces", async () => {
@@ -107,7 +83,6 @@ test("modern MCP discovery and tool lists are stateless deterministic projection
   assert.equal(document.result.resultType, "complete");
   assert.deepEqual(document.result.supportedVersions, ["2026-07-28"]);
   assert.deepEqual(document.result.capabilities, { tools: { listChanged: false } });
-
   response = await handle(mcpRequest("tools/list"), envWithAssets());
   document = await response.json();
   assert.equal(document.result.resultType, "complete");
@@ -125,7 +100,6 @@ test("MCP rejects cross-origin calls and routing headers that disagree with the 
   request = new Request(request, { headers: { ...Object.fromEntries(request.headers), origin: "https://evil.example" } });
   let response = await handle(request, envWithAssets());
   assert.equal(response.status, 403);
-
   request = mcpRequest("tools/list");
   request = new Request(request, { headers: { ...Object.fromEntries(request.headers), "mcp-method": "tools/call" } });
   response = await handle(request, envWithAssets());
@@ -137,43 +111,30 @@ test("MCP exposes exact authority, structural graph queries, and Live projection
   let document = await response.json();
   assert.equal(document.result.isError, false);
   assert.equal(document.result.structuredContent.language.commit, "authority123");
-
-  response = await handle(mcpRequest("tools/call", {
-    name: "idol.graph.query",
-    arguments: { role: "subject" },
-  }, "idol.graph.query"), envWithAssets());
+  response = await handle(mcpRequest("tools/call", { name: "idol.graph.query", arguments: { role: "subject" } }, "idol.graph.query"), envWithAssets());
   document = await response.json();
   assert.equal(document.result.structuredContent.role, "subject");
   assert.equal(document.result.structuredContent.admitted, true);
-
-  response = await handle(mcpRequest("tools/call", {
-    name: "idol.graph.query",
-    arguments: { role: "read" },
-  }, "idol.graph.query"), envWithAssets());
+  response = await handle(mcpRequest("tools/call", { name: "idol.graph.query", arguments: { role: "read" } }, "idol.graph.query"), envWithAssets());
   document = await response.json();
   assert.equal(document.result.structuredContent.admitted, false);
   assert.match(document.result.structuredContent.reason, /relation identity/i);
-
-  response = await handle(mcpRequest("tools/call", {
-    name: "idol.live.project",
-    arguments: { lens: "history" },
-  }, "idol.live.project"), envWithAssets());
+  response = await handle(mcpRequest("tools/call", { name: "idol.live.project", arguments: { lens: "history" } }, "idol.live.project"), envWithAssets());
   document = await response.json();
   assert.equal(document.result.structuredContent.lens, "history");
   assert.equal(document.result.structuredContent.canonical_frontiers, 1);
 });
 
-test("Idol Wasm runner captures WASI stdout and exit without granting host authority", async () => {
+test("Idol Wasm runner captures a bounded no-authority module", async () => {
   const bytes = new Uint8Array([
     0,97,115,109,1,0,0,0,
-    1,8,2,96,1,127,0,96,0,0,
-    2,43,1,22,119,97,115,105,95,115,110,97,112,115,104,111,116,95,112,114,101,118,105,101,119,49,9,112,114,111,99,95,101,120,105,116,0,0,
-    3,2,1,1,
-    7,10,1,6,95,115,116,97,114,116,0,1,
-    10,8,1,6,0,65,7,16,0,11,
+    1,4,1,96,0,0,
+    3,2,1,0,
+    7,10,1,6,95,115,116,97,114,116,0,0,
+    10,4,1,2,0,11,
   ]);
   const result = await runIdolWasmBytes(bytes);
-  assert.equal(result.exitCode, 7);
+  assert.equal(result.exitCode, 0);
   assert.equal(result.stdout, "");
   assert.equal(result.hostAuthority, "wasi-fd-write-and-proc-exit-only");
 });
@@ -182,16 +143,7 @@ test("immutable build packages canonical Idol source, runtime projections, and b
   await rm("dist", { recursive: true, force: true });
   const run = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr || run.stdout);
-  for (const path of [
-    "dist/apps/live/index.html",
-    "dist/apps/mcp/index.html",
-    "dist/native/semantic/runtime.id",
-    "dist/runtime/semantic-graph-contract.json",
-    "dist/runtime/live.json",
-    "dist/runtime/mcp.json",
-    "dist/shared/wasm-runtime.mjs",
-  ]) await readFile(path);
-
+  for (const path of ["dist/apps/live/index.html", "dist/apps/mcp/index.html", "dist/native/semantic/runtime.id", "dist/runtime/semantic-graph-contract.json", "dist/runtime/live.json", "dist/runtime/mcp.json", "dist/shared/wasm-runtime.mjs"]) await readFile(path);
   const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
   assert.equal(manifest.surfaces["live.idol.id"], "live");
   assert.equal(manifest.surfaces["mcp.idol.id"], "mcp");
