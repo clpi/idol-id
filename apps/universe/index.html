@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Universe Views — idol.id</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+:root{--u-cyan:#7cc9ce;--u-gold:#d6b36e;--u-violet:#aa9bd8;--u-green:#94b598;--u-red:#d98f8f;--u-panel:rgba(10,12,14,.84)}
+*{box-sizing:border-box}html,body{min-height:100%;background:#050607}body{overflow:auto;color:var(--ink);font-family:var(--sans)}
+.universe{min-height:100vh;padding-bottom:calc(56px + env(safe-area-inset-bottom));position:relative}
+.universe::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 13% 3%,rgba(124,201,206,.08),transparent 29%),radial-gradient(circle at 89% 17%,rgba(170,155,216,.07),transparent 30%),linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:auto,auto,48px 48px,48px 48px}
+.topbar,.statusbar{position:relative}.universe-head{position:relative;max-width:1540px;margin:0 auto;padding:clamp(24px,4vw,54px) clamp(16px,3vw,42px) 22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end;border-bottom:1px solid var(--rule)}
+.eyebrow{font:10px/1 var(--mono);letter-spacing:.17em;text-transform:uppercase;color:var(--u-cyan)}h1{margin-top:14px;font:520 clamp(38px,6vw,82px)/.9 var(--sans);letter-spacing:-.065em}.lede{margin-top:16px;max-width:72ch;color:var(--ink-3);font-size:clamp(13px,1.25vw,17px);line-height:1.65}
+.mode{align-self:start;padding:9px 12px;border:1px solid var(--rule-2);border-radius:999px;color:var(--ink-3);font:10px/1 var(--mono);white-space:nowrap}.mode.live{color:var(--u-green)}
+.boundary-banner{position:relative;max-width:1540px;margin:14px auto 0;padding:0 clamp(16px,3vw,42px)}.boundary-banner>div{padding:12px 14px;border:1px solid rgba(214,179,110,.24);border-radius:12px;background:rgba(214,179,110,.04);color:var(--ink-3);font-size:12px;line-height:1.55}.boundary-banner strong{color:var(--u-gold)}
+.universe-grid{position:relative;max-width:1540px;margin:18px auto 0;padding:0 clamp(16px,3vw,42px);display:grid;grid-template-columns:minmax(230px,.65fr) minmax(420px,1.55fr) minmax(260px,.8fr);gap:12px;align-items:start}
+.pane{min-width:0;border:1px solid var(--rule-2);border-radius:16px;background:var(--u-panel);overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.18)}.pane-head{min-height:66px;padding:14px 16px;display:flex;align-items:end;gap:12px;border-bottom:1px solid var(--rule)}.pane-head h2{font:520 20px/1 var(--sans);letter-spacing:-.035em}.pane-head .spacer{flex:1}.count{color:var(--ink-4);font:10px/1 var(--mono)}
+.catalog-tools,.view-form,.pane-body{padding:14px}.catalog-tools{display:grid;gap:8px;border-bottom:1px solid var(--rule)}input,select,textarea,button{font:13px/1.25 var(--sans)}input,select,textarea{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--rule-2);border-radius:10px;background:rgba(255,255,255,.02);color:var(--ink);outline:none}input:focus,select:focus,textarea:focus{border-color:rgba(124,201,206,.5);box-shadow:0 0 0 3px rgba(124,201,206,.07)}textarea{min-height:78px;resize:vertical}
+button,.button{min-height:44px;padding:9px 13px;border:1px solid var(--rule-2);border-radius:10px;background:rgba(255,255,255,.025);color:var(--ink-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none}button:hover,.button:hover{border-color:var(--rule-3);color:var(--ink)}button.primary,.button.primary{background:var(--ink);border-color:var(--ink);color:#050607}.small{min-height:36px;padding:7px 9px;font-size:11px}.danger{color:var(--u-red)}button:disabled{opacity:.42;cursor:not-allowed}
+.catalog-list,.history-list{max-height:calc(100vh - 300px);overflow:auto;padding:8px}.world-card,.history-card{width:100%;padding:12px;border:1px solid transparent;border-radius:11px;background:transparent;text-align:left;display:block}.world-card:hover,.history-card:hover,.history-card.here{border-color:var(--rule-2);background:rgba(255,255,255,.025)}.world-title,.history-title{display:flex;align-items:center;gap:8px;color:var(--ink-2);font-weight:560}.source-dot{width:7px;height:7px;border-radius:50%;background:var(--u-violet);flex:0 0 auto}.source-dot.foreign{background:var(--u-gold)}.world-key,.history-meta{margin-top:6px;color:var(--ink-4);font:10px/1.45 var(--mono);overflow-wrap:anywhere}.world-summary{margin-top:8px;color:var(--ink-4);font-size:11px;line-height:1.5}.empty{min-height:160px;display:grid;place-items:center;text-align:center;padding:24px;color:var(--ink-4);line-height:1.6}
+.view-form{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px;gap:10px;border-bottom:1px solid var(--rule)}.view-form .wide{grid-column:1/-1}.policy-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.policy{min-height:44px;padding:9px 10px;border:1px solid var(--rule-2);border-radius:10px;color:var(--ink-3);display:flex;align-items:center;gap:8px;font-size:11px}.policy input{width:17px;min-height:17px;height:17px;padding:0}.form-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}.public-link{margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:10px/1 var(--mono)}
+.constellation{padding:12px;border-bottom:1px solid var(--rule);display:flex;gap:7px;flex-wrap:wrap;min-height:58px}.selection{min-height:38px;padding:7px 9px;border:1px solid var(--rule-2);border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.018);font-size:11px}.selection code{font:10px/1 var(--mono);color:var(--ink-2)}.selection button{min-height:25px;width:25px;padding:0;border-radius:50%;border:0;background:transparent;color:var(--ink-4)}
+.lens-tabs{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--rule);overflow:auto}.lens-tabs button{min-height:38px;white-space:nowrap;border-color:transparent;background:transparent}.lens-tabs button.here{border-color:var(--rule-2);background:rgba(255,255,255,.03);color:var(--u-cyan)}
+.analysis{padding:16px;min-height:360px}.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.metric{padding:12px;border:1px solid var(--rule-2);border-radius:11px;background:rgba(255,255,255,.016)}.metric .label{color:var(--ink-4);font-size:10px;text-transform:uppercase;letter-spacing:.09em}.metric .value{margin-top:10px;color:var(--ink);font:520 23px/1 var(--mono)}.section{margin-top:18px}.section h3{font:520 16px/1 var(--sans)}.facts{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}.fact{padding:5px 8px;border:1px solid var(--rule-2);border-radius:999px;color:var(--ink-3);font:10px/1 var(--mono)}.resolved-list,.violation-list{margin-top:10px;display:grid;gap:8px}.resolved,.violation{padding:12px;border:1px solid var(--rule-2);border-radius:11px}.resolved strong{font-size:12px}.resolved code,.violation code{display:block;margin-top:6px;color:var(--ink-4);font:10px/1.5 var(--mono);overflow-wrap:anywhere}.violation{border-color:rgba(217,143,143,.27);background:rgba(217,143,143,.035);color:var(--u-red)}
+.boundary-list{padding:12px;display:grid;gap:8px}.boundary-row{padding:11px;border:1px solid var(--rule-2);border-radius:10px}.boundary-row .label{color:var(--ink-4);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.boundary-row .value{margin-top:7px;color:var(--ink-2);font:11px/1.4 var(--mono);overflow-wrap:anywhere}.boundary-row.good .value{color:var(--u-green)}.boundary-row.warn .value{color:var(--u-gold)}
+.history-list{max-height:260px;border-top:1px solid var(--rule)}.rail-actions{padding:12px;display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid var(--rule)}
+.mobile-nav{display:none;position:fixed;z-index:50;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));padding:5px;border:1px solid var(--rule-2);border-radius:14px;background:rgba(7,8,9,.94);backdrop-filter:blur(16px);grid-template-columns:repeat(4,1fr)}.mobile-nav button{border:0;background:transparent;border-radius:9px;font-size:10px}.mobile-nav button.here{background:rgba(124,201,206,.08);color:var(--u-cyan)}
+.toast{position:fixed;z-index:80;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(92vw,560px);padding:11px 14px;border:1px solid var(--rule-3);border-radius:999px;background:#0b0d0f;color:var(--ink-2);font-size:12px;opacity:0;pointer-events:none;transition:opacity .16s}.toast.show{opacity:1}
+@media(max-width:1080px){.universe-grid{grid-template-columns:250px minmax(0,1fr)}.boundary-pane{grid-column:1/-1}.boundary-list{grid-template-columns:repeat(4,minmax(0,1fr))}.history-list{display:none}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.universe-head{grid-template-columns:1fr;padding-top:22px}.mode{position:absolute;right:16px;top:22px;max-width:48vw;overflow:hidden;text-overflow:ellipsis}.universe-grid{display:block;padding:0 10px;margin-top:10px}.pane{display:none;border-radius:14px}.universe[data-mobile="catalog"] .catalog-pane,.universe[data-mobile="view"] .view-pane,.universe[data-mobile="analysis"] .view-pane,.universe[data-mobile="boundary"] .boundary-pane{display:block}.universe[data-mobile="analysis"] .view-form,.universe[data-mobile="analysis"] .constellation{display:none}.catalog-list{max-height:none}.view-form{grid-template-columns:1fr}.view-form>*{grid-column:1!important}.policy-grid{grid-template-columns:1fr}.public-link{margin-left:0;width:100%}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.boundary-list{grid-template-columns:1fr}.mobile-nav{display:grid}.universe-head,.boundary-banner{padding-left:16px;padding-right:16px}.analysis{padding:13px}.lens-tabs{scrollbar-width:none}}
+@media(max-width:380px){h1{font-size:37px}.metric-grid{grid-template-columns:1fr}.universe-head{padding-left:13px;padding-right:13px}.boundary-banner{padding-left:13px;padding-right:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="universe" id="universe" data-mobile="view">
+<div class="topbar"></div>
+<header class="universe-head">
+  <div><div class="eyebrow">@ · saved graph projection</div><h1>Universe Views</h1><p class="lede">Select exact published and foreign-origin world records, preserve uncertainty, and save an operational constellation over Idol’s one semantic universe.</p></div>
+  <div class="mode" id="universe-mode">loading boundary</div>
+</header>
+<section class="boundary-banner"><div><strong>One semantic universe.</strong> This operational view reports published facts and refusals. It does not prove composition, equivalence, compatibility, injection, or reachability and does not grant authority.</div></section>
+<main class="universe-grid">
+  <section class="pane catalog-pane" id="universe-catalog">
+    <div class="pane-head"><div><div class="eyebrow">catalog</div><h2>World records</h2></div><span class="spacer"></span><span class="count" id="catalog-count">0</span></div>
+    <div class="catalog-tools"><input id="catalog-search" type="search" placeholder="Search exact world records" aria-label="Search world records"><select id="catalog-source" aria-label="World source"><option value="all">published + foreign</option><option value="published">published</option><option value="foreign">foreign-origin</option></select></div>
+    <div class="catalog-list" id="catalog-list"><div class="empty">Loading immutable world projections…</div></div>
+  </section>
+  <section class="pane view-pane" id="universe-constellation">
+    <div class="pane-head"><div><div class="eyebrow">operational projection</div><h2 id="view-heading">New constellation</h2></div><span class="spacer"></span><span class="count" id="selection-count">0 / 32</span></div>
+    <form class="view-form" id="view-form">
+      <input id="view-title" required maxlength="120" placeholder="View title" aria-label="Universe view title">
+      <select id="view-lens" aria-label="Universe lens"><option value="constellation">constellation</option><option value="reach">reach</option><option value="authority">authority</option><option value="projection">projection</option><option value="security">security</option></select>
+      <select id="view-visibility" aria-label="Universe visibility"><option value="private">private</option><option value="public">public read-only</option></select>
+      <textarea class="wide" id="view-query" maxlength="512" placeholder="Optional saved graph/query intent"></textarea>
+      <div class="policy-grid"><label class="policy"><input id="policy-evidence" type="checkbox">require published evidence</label><label class="policy"><input id="policy-identity" type="checkbox">refuse unpublished identity</label><label class="policy"><input id="policy-projection" type="checkbox">refuse unverified projection</label></div>
+      <div class="form-actions"><button class="primary" type="submit" id="save-view">Save view</button><button type="button" id="new-view">New</button><a class="button public-link" id="public-link" hidden></a></div>
+    </form>
+    <div class="constellation" id="selection-tray"><div class="empty">Choose at least one exact world record.</div></div>
+    <div class="lens-tabs" aria-label="Universe analysis lens"><button data-lens="constellation" class="here">constellation</button><button data-lens="reach">reach</button><button data-lens="authority">authority</button><button data-lens="projection">projection</button><button data-lens="security">security</button></div>
+    <section class="analysis" id="universe-analysis"><div class="empty">Save or open a view to inspect evidence-safe analysis.</div></section>
+  </section>
+  <aside class="pane boundary-pane" id="universe-boundary">
+    <div class="pane-head"><div><div class="eyebrow">no hidden grant</div><h2>Boundary rail</h2></div></div>
+    <div class="boundary-list" id="boundary-list"></div>
+    <div class="rail-actions"><a class="button small" href="https://worlds.idol.id">World Atlas</a><a class="button small" href="https://graph.idol.id">Graph</a><a class="button small" href="https://docs.idol.id">Law</a></div>
+    <div class="history-list" id="view-history"><div class="empty">Private and public view history appears after admission.</div></div>
+  </aside>
+</main>
+<nav class="mobile-nav" aria-label="Universe Views navigation"><button data-view="catalog">catalog</button><button data-view="view" class="here">view</button><button data-view="analysis">analysis</button><button data-view="boundary">boundary</button></nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="statusbar"></div>
+</div>
+<script src="/shared/idol.js"></script>
+<script src="/shared/shell.js"></script>
+<script type="module" src="/shared/universe-app.js"></script>
+</body>
+</html>
