@@ -45,7 +45,7 @@ function infoFor(url) {
   if (LOCAL.has(url.hostname) && (url.searchParams.get("surface") === "universe" || localUniversePath(url.pathname))) {
     const publicMode = url.searchParams.get("mode") === "public";
     return publicMode
-      ? { app: "worlds", surface: "worlds", origin: false, local_universe: true }
+      ? { app: "lib", surface: "lib", origin: false, local_universe: true }
       : { app: "platform", surface: "platform", origin: false, local_universe: true };
   }
   return null;
@@ -82,6 +82,11 @@ export async function handle(request, env, dependencies = {}) {
   if (url.pathname === "/install.ps1" && url.hostname === "idol.id") {
     return asset(env, request, "/content/install.ps1", { immutable: false });
   }
+
+  // Compatibility hosts are redirects before any product transport can observe
+  // them as independent applications.
+  if (info?.redirect) return baseHandle(request, env, dependencies);
+
   if (info) {
     const universeResponse = await handleUniverseTransport(request, env, url.pathname, info, dependencies);
     if (universeResponse) return secure(universeResponse);
@@ -92,7 +97,7 @@ export async function handle(request, env, dependencies = {}) {
     if (info.surface === "platform" && repositoryNavigation(request, url.pathname)) {
       return asset(env, request, "/apps/repository/index.html", { html: true });
     }
-    if ((info.surface === "platform" || info.surface === "worlds") && universeNavigation(request, url.pathname)) {
+    if ((info.surface === "platform" || info.surface === "lib") && universeNavigation(request, url.pathname)) {
       return asset(env, request, "/apps/universe/index.html", { html: true });
     }
   }
