@@ -3,14 +3,29 @@
   "language": {
     "repository": "clpi/idol",
     "branch": "main",
-    "commit": "f33bb3773484e7d954a2975211e683dfa89edab5"
+    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
+    "compact_law": "docs/spec/law.md",
+    "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552",
+    "constitution": "docs/spec/constitution.md",
+    "source_projection": "docs/spec/source.md",
+    "source_law": {
+      "schema": "idol.source.law.v1",
+      "sha256": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b"
+    }
   },
   "native": {
     "repository": "clpi/idol-native",
     "branch": "main",
-    "commit": "d422ef33c88811b99523ef0cc19a03bd158dd3c0"
+    "commit": "ad438a856daa8786e77ac9f033d38deb9e8f5c29"
   },
-  "rule": "semantic identity persists; web, wasm, dom, worker and machine are realizations",
+  "web_projection": {
+    "source_law": "/runtime/source-law.json",
+    "examples": "/content/source-examples.json",
+    "semantic_authority": false,
+    "grammar_authority": false,
+    "lexical_preview_may_publish_semantic_identity": false
+  },
+  "rule": "clpi/idol compact law wins; web, wasm, dom, worker and machine are projections or realizations and cannot mint syntax or semantics",
   "wasm_artifact": {
     "required_for_claim": "measured Idol-Wasm performance claims",
     "build_input": "IDOL_WASM_PATH",

@@ -3,191 +3,182 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idol — idol.id</title>
+<title>Idol — semantic identity, exact facts, lawful realization</title>
+<meta name="description" content="Idol is Lua progressively specialized into native execution through one semantic graph, exact demand, lawful transformation, and late physical realization.">
 <link rel="stylesheet" href="/shared/theme.css">
 <script src="/config.js"></script>
 <style>
   body { overflow: auto; }
   .site { min-height: 100vh; display: flex; flex-direction: column; }
-  .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; position: relative; }
-  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; }
-  .hero .inner { position: relative; }
-  .hero h1 {
-    font-size: clamp(64px, 13vw, 190px); font-weight: 700; letter-spacing: -0.045em;
-    line-height: 0.92; color: var(--ink);
-  }
+  .hero { flex: 1; display: flex; align-items: center; padding: 72px 8vw 58px; position: relative; overflow: hidden; }
+  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .42; pointer-events: none; }
+  .hero .inner { position: relative; width: min(980px, 100%); }
+  .eyebrow { display: flex; gap: 9px; align-items: center; margin-bottom: 18px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .eyebrow .authority { color: var(--signal); }
+  .hero h1 { font-family: var(--sans); font-size: clamp(66px, 13vw, 184px); font-weight: 670; letter-spacing: -.065em; line-height: .85; color: var(--ink); }
   .hero h1 .sigil { color: var(--signal); }
-  .hero .tag { margin-top: 18px; color: var(--ink-2); font-size: 13px; max-width: 60ch; line-height: 1.8; }
-  .hero .tag b { color: var(--ink); font-weight: 500; }
-  .faces { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
-  .faces .f {
-    border: 1px solid var(--rule-2); padding: 10px 16px; border-radius: var(--radius);
-    color: var(--ink-2); font-size: 11px; transition: border-color var(--t), color var(--t), transform var(--t);
-    cursor: default;
-  }
-  .faces .f:hover { border-color: var(--ink-3); color: var(--ink); transform: translateY(-1px); }
-  .hero-code { margin-top: 26px; max-width: 640px; opacity: 0.92; }
-  .hero-code pre { max-width: 640px; }
-  .corpus { display: flex; gap: 26px; padding: 12px 8vw; border-top: 1px solid var(--rule); color: var(--ink-4); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; flex-wrap: wrap; }
+  .hero .tag { margin-top: 25px; color: var(--ink-2); font-family: var(--sans); font-size: clamp(15px, 1.7vw, 20px); max-width: 720px; line-height: 1.55; letter-spacing: -.012em; }
+  .hero .tag strong { color: var(--ink); font-weight: 560; }
+  .lawline { display: flex; gap: 8px; margin-top: 28px; flex-wrap: wrap; }
+  .lawface { display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: baseline; border: 1px solid var(--rule-2); padding: 9px 12px; min-height: 44px; border-radius: 7px; background: rgba(0,0,0,.38); }
+  .lawface code { color: var(--signal); font-size: 14px; }
+  .lawface span { color: var(--ink-3); font-family: var(--sans); font-size: 11px; }
+  .source-panel { margin-top: 32px; max-width: 760px; border: 1px solid var(--rule-2); background: rgba(4,4,4,.78); border-radius: 9px; overflow: hidden; }
+  .source-head { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+  .source-head .title { color: var(--ink); font-family: var(--sans); font-weight: 530; }
+  .source-head .status { margin-left: auto; padding: 4px 7px; border: 1px solid rgba(230,180,80,.34); border-radius: 999px; color: var(--signal); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+  .source-head .pin { color: var(--ink-4); font-size: 9px; }
+  .source-note { padding: 0 14px 13px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; line-height: 1.6; }
+  .hero-code pre { max-height: 210px; overflow: auto; padding: 14px; }
+  .source-failure { padding: 17px; color: var(--danger); font-family: var(--sans); }
+  .corpus { display: flex; gap: 26px; padding: 12px 8vw; border-top: 1px solid var(--rule); color: var(--ink-4); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; flex-wrap: wrap; }
   .corpus b { color: var(--ink); font-weight: 500; }
   .corpus .sig { color: var(--signal); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); border-top: 1px solid var(--rule); }
-  .cell-a { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 30px 30px 34px; position: relative; overflow: hidden; cursor: pointer;
-    transition: background var(--t); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); border-top: 1px solid var(--rule); }
+  .cell-a { border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 30px 30px 34px; position: relative; overflow: hidden; cursor: pointer; transition: background var(--t); min-height: 180px; }
   .cell-a:hover { background: var(--bg-hover); }
-  .cell-a .n { color: var(--ink); font-size: 15px; margin-bottom: 6px; }
-  .cell-a .u { color: var(--ink-4); font-size: 10.5px; letter-spacing: 0.08em; margin-bottom: 12px; }
-  .cell-a .d { color: var(--ink-3); font-size: 11.5px; line-height: 1.7; max-width: 40ch; }
+  .cell-a .n { color: var(--ink); font-family: var(--sans); font-size: 16px; margin-bottom: 6px; }
+  .cell-a .u { color: var(--ink-4); font-size: 10px; letter-spacing: .08em; margin-bottom: 12px; }
+  .cell-a .d { color: var(--ink-3); font-family: var(--sans); font-size: 12px; line-height: 1.7; max-width: 42ch; }
   .cell-a .arrow { position: absolute; right: 22px; top: 26px; color: var(--ink-5); transition: color var(--t), transform var(--t); }
   .cell-a:hover .arrow { color: var(--ink); transform: translate(2px, -2px); }
-  footer { padding: 18px 8vw; color: var(--ink-5); font-size: 10px; letter-spacing: 0.08em; display: flex; gap: 20px; }
+  .boundary { padding: 28px 8vw 32px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr); gap: 36px; border-top: 1px solid var(--rule); }
+  .boundary h2 { font-family: var(--sans); font-size: 20px; margin-bottom: 9px; }
+  .boundary p, .boundary li { color: var(--ink-3); font-family: var(--sans); font-size: 12px; line-height: 1.75; }
+  .boundary ul { list-style: none; display: grid; gap: 5px; }
+  .boundary li::before { content: "—"; color: var(--signal); margin-right: 8px; }
+  footer { padding: 18px 8vw; color: var(--ink-5); font-size: 10px; letter-spacing: .08em; display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--rule); }
   footer a { color: var(--ink-4); border: 0; }
+  @media (max-width: 720px) {
+    .hero { padding: 54px 18px 40px; }
+    .lawline { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .boundary { padding: 24px 18px 28px; grid-template-columns: 1fr; }
+    .corpus, footer { padding-left: 18px; padding-right: 18px; }
+    .source-head { align-items: flex-start; flex-wrap: wrap; }
+    .source-head .status { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { canvas { display: none; } }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar"></div>
-  <div class="site">
-    <div class="hero">
-      <canvas id="bg"></canvas>
+  <main class="site">
+    <section class="hero">
+      <canvas id="bg" aria-hidden="true"></canvas>
       <div class="inner">
+        <div class="eyebrow"><span class="authority">current law projection</span><span>·</span><span id="law-edition">loading exact authority</span></div>
         <h1>ID<span class="sigil">@</span>L</h1>
-        <div class="tag">
-          <b>Semantic identity, exact facts, lawful realization.</b><br>
-          One graph holds the meaning of every program. Names are provenance,
-          delimiters are law, worlds carry authority — and the machine does the
-          rest. Every token on every page of this site answers your cursor.
+        <p class="tag"><strong>Semantic identity persists. Representation changes.</strong> Idol keeps one graph of exact meaning, projects occurrence demand, admits witnessed transformations, and chooses physical realization only when observation requires it.</p>
+        <div class="lawline" aria-label="Permanent delimiter meanings">
+          <div class="lawface"><code>()</code><span>ordinary application</span></div>
+          <div class="lawface"><code>[]</code><span>computed projection</span></div>
+          <div class="lawface"><code>{}</code><span>structured pack</span></div>
+          <div class="lawface"><code>.</code><span>one static projection</span></div>
+          <div class="lawface"><code>:</code><span>subject relation</span></div>
+          <div class="lawface"><code>@</code><span>current world</span></div>
         </div>
-        <div class="faces">
-          <span class="f">()<span class="d">application</span></span>
-          <span class="f">[]<span class="d">projection</span></span>
-          <span class="f">{}<span class="d">structure</span></span>
-          <span class="f">.<span class="d">one static projection</span></span>
-          <span class="f">:<span class="d">subject relation</span></span>
-        </div>
-        <div id="hero-code" class="hero-code"></div>
+        <section class="source-panel" aria-labelledby="source-title">
+          <div class="source-head">
+            <span class="title" id="source-title">Subject and projection specialization</span>
+            <span class="pin" id="source-pin"></span>
+            <span class="status" id="source-status">authority loading</span>
+          </div>
+          <div id="hero-code" class="hero-code" data-source-manifest="/content/source-examples.json"></div>
+          <p class="source-note" id="source-note">This surface projects semantic law. It does not claim that the current production parser, lowering path, or machine backend realizes every lawful face.</p>
+        </section>
       </div>
-    </div>
-    <div class="corpus" id="corpus"></div>
-    <div class="grid">
-      <a class="cell-a" href="https://graph.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
-        <div class="n">Explorer</div><div class="u">GRAPH.IDOL.ID</div>
-        <div class="d">Write Idol. Watch the semantic graph assemble. Lower to
-        native, Wasm, or C. Run it. Interrogate every fact.</div>
-        <div class="arrow">↗</div>
-      </a>
-      <a class="cell-a" href="https://lib.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
-        <div class="n">Registry</div><div class="u">LIB.IDOL.ID</div>
-        <div class="d">Homes and published worlds. Source, graph facts, and
-        provenance travel together — not just a tarball and a README.</div>
-        <div class="arrow">↗</div>
-      </a>
-      <a class="cell-a" href="https://docs.idol.id/" style="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)">
-        <div class="n">Law</div><div class="u">DOCS.IDOL.ID</div>
-        <div class="d">The supreme compact law, the source faces, the graph and
-        world references — the whole language on one page each.</div>
-        <div class="arrow">↗</div>
-      </a>
-      <a class="cell-a" href="https://api.idol.id/" style="border:0;border-bottom:1px solid var(--rule)">
-        <div class="n">API</div><div class="u">API.IDOL.ID</div>
-        <div class="d">The same semantic surface as HTTP. Analyze, lower, run,
-        publish — every endpoint live and documented.</div>
-        <div class="arrow">↗</div>
-      </a>
-    </div>
-    <footer>
-      <span>IDOL · .ID</span>
-      <a href="https://github.com/clpi/idol">source</a>
-      <a href="https://github.com/clpi/idol-native">native</a>
-      <a href="https://docs.idol.id/law">law</a>
-      <span style="margin-left:auto" id="auth-edition"></span>
-    </footer>
-  </div>
+    </section>
+    <div class="corpus" id="corpus"><span>registry projection loading</span></div>
+    <nav class="grid" aria-label="Idol product surfaces">
+      <a class="cell-a" href="https://graph.idol.id/"><div class="n">Semantic Observatory</div><div class="u">GRAPH.IDOL.ID</div><div class="d">Inspect exact compiler-published source spans, graph identities, facts, demand, transformations, and realization evidence. Lexical preview remains visibly non-semantic.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://lib.idol.id/"><div class="n">Registry</div><div class="u">LIB.IDOL.ID</div><div class="d">Published semantic facts, worlds, source, artifacts, versions, and provenance without a second package or namespace ontology.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://worlds.idol.id/"><div class="n">World Atlas</div><div class="u">WORLDS.IDOL.ID</div><div class="d">Explore origin-qualified worlds and foreign candidates while preserving uncertainty, explicit witnesses, and authority boundaries.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://docs.idol.id/"><div class="n">Law and blueprints</div><div class="u">DOCS.IDOL.ID</div><div class="d">The exact compact-law mirror, bounded source projections, the authoritative specification blueprint, and the separate Idol Live product thesis.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://platform.idol.id/"><div class="n">Platform</div><div class="u">PLATFORM.IDOL.ID</div><div class="d">Authenticated operational projections over the same semantic universe. Product records never become language authority.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://api.idol.id/"><div class="n">Semantic API</div><div class="u">API.IDOL.ID</div><div class="d">Transport projections of published facts and explicitly bounded operations. HTTP names are routes, not language identities.</div><div class="arrow">↗</div></a>
+    </nav>
+    <section class="boundary">
+      <div><h2>One authority, many projections</h2><p><code>clpi/idol</code> owns language and semantic law. This web repository owns presentation and transport only. Browser tokenization cannot infer a keyword, relation, subject, descriptor, world, reference, or semantic identity from spelling or adjacency. Exact identities appear only when a compiler projection supplies an exact source span.</p></div>
+      <ul><li>compact law wins over every page and example</li><li>semantic law and implementation support are reported separately</li><li>foreign source retains exact foreign law and origin</li><li>unmeasured and unsupported remain explicit states</li></ul>
+    </section>
+    <footer><span>IDOL · .ID</span><a href="https://github.com/clpi/idol">language authority</a><a href="https://github.com/clpi/idol-native">native evidence</a><a href="https://docs.idol.id/law">compact law</a><a href="https://docs.idol.id/spec">specification blueprint</a><a href="https://docs.idol.id/live">Idol Live</a><span style="margin-left:auto" id="auth-edition"></span></footer>
+  </main>
   <div class="statusbar"></div>
 </div>
-
 <script src="/shared/idol.js"></script>
 <script src="/shared/shell.js"></script>
 <script>
-(function () {
+(() => {
   Shell.boot("site", { title: "Idol" });
 
-  // living background: drifting semantic graph, grayscale + one signal hue
-  const cv = document.getElementById("bg");
-  const ctx = cv.getContext("2d");
-  let W, H, nodes = [], edges = [];
-  function seed() {
-    W = cv.width = cv.offsetWidth * devicePixelRatio;
-    H = cv.height = cv.offsetHeight * devicePixelRatio;
-    const n = Math.min(70, Math.floor(W * H / 26000));
-    nodes = Array.from({ length: n }, (_, i) => ({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: 0, vy: 0, r: 1 + Math.random() * 2.2,
-      s: Math.random() < 0.12,
-    }));
-    edges = [];
-    for (let i = 0; i < n; i++) {
-      const a = nodes[i], b = nodes[(Math.random() * n) | 0];
-      if (a !== b) edges.push([a, b]);
-    }
-  }
+  const canvas = document.getElementById("bg");
+  const context = canvas.getContext("2d");
+  let width = 0;
+  let height = 0;
+  let nodes = [];
+  let edges = [];
+  const seed = () => {
+    width = canvas.width = canvas.offsetWidth * devicePixelRatio;
+    height = canvas.height = canvas.offsetHeight * devicePixelRatio;
+    const count = Math.min(64, Math.floor(width * height / 30000));
+    nodes = Array.from({ length: count }, () => ({ x: Math.random() * width, y: Math.random() * height, vx: 0, vy: 0, r: 1 + Math.random() * 2, signal: Math.random() < .1 }));
+    edges = Array.from({ length: count }, (_, index) => [nodes[index], nodes[(Math.random() * count) | 0]]).filter(([left, right]) => left !== right);
+  };
   seed();
   addEventListener("resize", seed);
-  (function frame() {
-    ctx.clearRect(0, 0, W, H);
-    for (const nd of nodes) {
-      nd.vx += (Math.random() - 0.5) * 0.12; nd.vy += (Math.random() - 0.5) * 0.12;
-      nd.vx *= 0.96; nd.vy *= 0.96; nd.x += nd.vx; nd.y += nd.vy;
-      if (nd.x < 0 || nd.x > W) nd.vx *= -1, nd.x = Math.max(0, Math.min(W, nd.x));
-      if (nd.y < 0 || nd.y > H) nd.vy *= -1, nd.y = Math.max(0, Math.min(H, nd.y));
+  const draw = () => {
+    context.clearRect(0, 0, width, height);
+    for (const node of nodes) {
+      node.vx = (node.vx + (Math.random() - .5) * .1) * .96;
+      node.vy = (node.vy + (Math.random() - .5) * .1) * .96;
+      node.x = Math.max(0, Math.min(width, node.x + node.vx));
+      node.y = Math.max(0, Math.min(height, node.y + node.vy));
     }
-    ctx.lineWidth = devicePixelRatio * 0.5;
-    for (const [a, b] of edges) {
-      ctx.strokeStyle = "rgba(255,255,255,0.05)";
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    context.lineWidth = devicePixelRatio * .5;
+    for (const [left, right] of edges) {
+      context.strokeStyle = "rgba(255,255,255,.045)";
+      context.beginPath(); context.moveTo(left.x, left.y); context.lineTo(right.x, right.y); context.stroke();
     }
-    for (const nd of nodes) {
-      ctx.fillStyle = nd.s ? "rgba(230,180,80,0.75)" : "rgba(255,255,255,0.35)";
-      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * devicePixelRatio, 0, 7); ctx.fill();
+    for (const node of nodes) {
+      context.fillStyle = node.signal ? "rgba(230,180,80,.72)" : "rgba(255,255,255,.31)";
+      context.beginPath(); context.arc(node.x, node.y, node.r * devicePixelRatio, 0, Math.PI * 2); context.fill();
     }
-    requestAnimationFrame(frame);
-  })();
+    requestAnimationFrame(draw);
+  };
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) draw();
 
-  // the landing claim, made literal: hoverable law on the front page
-  if (window.Idol && Idol.doccode) {
-    Idol.doccode(document.getElementById("hero-code"), {
-      source: [
-        "-- subject-oriented declaration — the ruling face",
-        "body:weight(kg) = (m, g) -> m * g",
-        "",
-        "main = () -> io.print(str.from(body:weight(80, 9.8)))",
-      ].join("\n"),
-      maxH: "180px",
-      onLib: (v) => window.open("https://lib.idol.id/#" + encodeURIComponent(v), "_blank"),
-    });
-  }
-
-  // live corpus counters — the registry answers, not a hard-coded number
   Promise.all([
-    fetch("/api/libs").then((r) => r.json()).catch(() => ({ libs: [] })),
-    fetch("/api/worlds").then((r) => r.json()).catch(() => ({ worlds: [] })),
-  ]).then(([a, b]) => {
-    const libs = a.libs || [], worlds = b.worlds || [];
-    const lines = libs.reduce((s, x) => s + (x.lines || 0), 0);
-    const rels = libs.reduce((s, x) => s + ((x.relations || []).length), 0);
-    const el2 = document.getElementById("corpus");
-    el2.innerHTML =
-      `<span><b>${libs.length}</b> homes</span>` +
-      `<span><b class="sig">${worlds.length}</b> published ${worlds.length === 1 ? "world" : "worlds"}</span>` +
-      `<span><b>${lines.toLocaleString()}</b> lines</span>` +
-      `<span><b>${rels.toLocaleString()}</b> relation names</span>` +
-      `<span>live from the registry</span>`;
-  }).catch(() => {});
+    fetch("/runtime/source-law.json", { cache: "no-store" }).then((response) => {
+      if (!response.ok) throw new Error(`source law ${response.status}`);
+      return response.json();
+    }),
+    fetch("/content/source-examples.json", { cache: "no-store" }).then((response) => {
+      if (!response.ok) throw new Error(`source examples ${response.status}`);
+      return response.json();
+    }),
+  ]).then(([law, manifest]) => {
+    const example = manifest.examples.find((candidate) => candidate.id === "declaration-specialization");
+    if (!example) throw new Error("authority example absent");
+    Idol.doccode(document.getElementById("hero-code"), { source: example.source, maxH: "210px" });
+    document.getElementById("source-status").textContent = example.status.replaceAll("-", " ");
+    document.getElementById("source-pin").textContent = manifest.authority.commit.slice(0, 8);
+    document.getElementById("law-edition").textContent = `${law.source_law.schema} · ${law.source_law.sha256.slice(0, 12)}`;
+    document.getElementById("auth-edition").textContent = `law ${law.authority.commit.slice(0, 8)} · web projection`;
+  }).catch((error) => {
+    document.getElementById("hero-code").innerHTML = `<div class="source-failure">Source authority unavailable: ${String(error.message || error)}</div>`;
+    document.getElementById("source-status").textContent = "refused";
+  });
 
-  fetch("/api/authority").then((r) => r.json()).then((a) => {
-    const el = document.getElementById("auth-edition");
-    if (a && a.source_law) el.textContent = "source law · " + a.source_law.schema;
-  }).catch(() => {});
+  Promise.all([
+    fetch("/api/libs").then((response) => response.json()).catch(() => ({ libs: [] })),
+    fetch("/api/worlds").then((response) => response.json()).catch(() => ({ worlds: [] })),
+  ]).then(([libraryDocument, worldDocument]) => {
+    const libraries = libraryDocument.libs || [];
+    const worlds = worldDocument.worlds || [];
+    const lines = libraries.reduce((sum, value) => sum + Number(value.lines || 0), 0);
+    document.getElementById("corpus").innerHTML = `<span><b>${libraries.length}</b> homes</span><span><b class="sig">${worlds.length}</b> published world projections</span><span><b>${lines.toLocaleString()}</b> source lines</span><span>live registry evidence</span>`;
+  });
 })();
 </script>
 </body>
