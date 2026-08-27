@@ -1,0 +1,9 @@
+{
+  "schema": "idol.web.authored-source.v1",
+  "authority": {
+    "repository": "clpi/idol",
+    "commit": "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99",
+    "source_law": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b"
+  },
+  "sources": []
+}

@@ -1,0 +1,57 @@
+name: reconcile Idol authority
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: idol-id-authority-sync
+  cancel-in-progress: true
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Require explicit private authority-read credential
+        env:
+          IDOL_AUTHORITY_READ_TOKEN: ${{ secrets.IDOL_AUTHORITY_READ_TOKEN }}
+        run: |
+          test -n "$IDOL_AUTHORITY_READ_TOKEN" || {
+            echo 'IDOL_AUTHORITY_READ_TOKEN is required to read private clpi/idol without widening idol-id permissions.'
+            exit 2
+          }
+      - name: Reconcile commit-only upstream movement
+        env:
+          IDOL_AUTHORITY_READ_TOKEN: ${{ secrets.IDOL_AUTHORITY_READ_TOKEN }}
+        run: node scripts/sync-authority.mjs --write
+      - name: Verify generated authority consumers
+        run: npm run authority:check
+      - name: Open or update authority pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git diff --quiet && { echo "No authority drift"; exit 0; }
+          branch=bot/reconcile-idol-authority
+          git config user.name idol-authority-bot
+          git config user.email actions@users.noreply.github.com
+          git checkout -B "$branch"
+          git add runtime authority content README.md wrangler.jsonc test
+          git commit -m "chore: reconcile current Idol authority"
+          git push --force-with-lease origin "$branch"
+          gh pr view "$branch" >/dev/null 2>&1 || gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore: reconcile current Idol authority" \
+            --body "Automated commit-only authority reconciliation. Source-law, compact-law or constitution changes fail closed for manual semantic review."

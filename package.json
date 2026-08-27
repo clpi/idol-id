@@ -6,9 +6,12 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test --test-concurrency=1",
-    "check": "npm test && npm run build",
+    "check": "npm run authority:check && npm test && npm run build",
     "dev": "npm run build && npx --yes wrangler@4.125.0 dev",
-    "deploy": "npm run build && npx --yes wrangler@4.125.0 deploy"
+    "deploy": "npm run build && npx --yes wrangler@4.125.0 deploy",
+    "authority:check": "node scripts/check-authority.mjs",
+    "authority:upstream": "node scripts/check-upstream-authority.mjs",
+    "recovery:check": "npm run authority:check"
   },
   "engines": {
     "node": ">=22"

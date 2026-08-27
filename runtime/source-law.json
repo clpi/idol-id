@@ -3,7 +3,7 @@
   "authority": {
     "repository": "clpi/idol",
     "branch": "main",
-    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
+    "commit": "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99",
     "compact_law": {
       "path": "docs/spec/law.md",
       "git_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552"

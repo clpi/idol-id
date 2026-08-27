@@ -1,12 +1,13 @@
 {
-  "schema": "idol.web.authority.v1",
+  "schema": "idol.web.authority.v2",
   "language": {
     "repository": "clpi/idol",
     "branch": "main",
-    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
+    "commit": "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99",
     "compact_law": "docs/spec/law.md",
     "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552",
     "constitution": "docs/spec/constitution.md",
+    "constitution_blob": "56ec285b3d320981711a190d8414c4f557bade4b",
     "source_projection": "docs/spec/source.md",
     "source_law": {
       "schema": "idol.source.law.v1",
@@ -16,8 +17,10 @@
   "native": {
     "repository": "clpi/idol-native",
     "branch": "main",
-    "commit": "ad438a856daa8786e77ac9f033d38deb9e8f5c29"
+    "commit": "ad438a856daa8786e77ac9f033d38deb9e8f5c29",
+    "role": "realization-and-evidence"
   },
+  "research_projection": "/authority/manifest.json",
   "web_projection": {
     "source_law": "/runtime/source-law.json",
     "examples": "/content/source-examples.json",
@@ -25,10 +28,18 @@
     "grammar_authority": false,
     "lexical_preview_may_publish_semantic_identity": false
   },
-  "rule": "clpi/idol compact law wins; web, wasm, dom, worker and machine are projections or realizations and cannot mint syntax or semantics",
+  "rule": "clpi/idol compact law wins; web, wasm, DOM, Worker and machine are projections or realizations and cannot mint syntax or semantics",
   "wasm_artifact": {
-    "required_for_claim": "measured Idol-Wasm performance claims",
+    "required_for_admission": [
+      "artifact sha256",
+      "artifact-bound descriptor",
+      "language authority",
+      "native authority",
+      "source-law edition",
+      "declared capabilities"
+    ],
     "build_input": "IDOL_WASM_PATH",
+    "descriptor_input": "IDOL_WASM_DESCRIPTOR_PATH",
     "current_status": "not admitted in this repository"
   }
 }

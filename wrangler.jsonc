@@ -4,22 +4,64 @@
   "main": "./worker/entry.js",
   "compatibility_date": "2026-08-25",
   "workers_dev": false,
-  "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
   "routes": [
-    { "pattern": "idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "docs.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "lib.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "api.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "graph.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "worlds.idol.id", "custom_domain": true },
-    { "pattern": "platform.idol.id", "custom_domain": true },
-    { "pattern": "r8a.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "r8b.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "r16.idol.id/*", "zone_name": "idol.id" }
+    {
+      "pattern": "idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "www.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "docs.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "lib.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "api.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "graph.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "worlds.idol.id",
+      "custom_domain": true
+    },
+    {
+      "pattern": "platform.idol.id",
+      "custom_domain": true
+    },
+    {
+      "pattern": "r8a.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "r8b.idol.id/*",
+      "zone_name": "idol.id"
+    },
+    {
+      "pattern": "r16.idol.id/*",
+      "zone_name": "idol.id"
+    }
   ],
   "vars": {
-    "IDOL_AUTHORITY": "f33bb3773484e7d954a2975211e683dfa89edab5",
+    "IDOL_AUTHORITY": "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99",
+    "IDOL_NATIVE_AUTHORITY": "ad438a856daa8786e77ac9f033d38deb9e8f5c29",
+    "IDOL_SOURCE_LAW": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b",
     "IDOL_LOCAL_DEVELOPMENT": "1"
   },
-  "observability": { "enabled": true }
+  "observability": {
+    "enabled": true
+  }
 }

@@ -191,10 +191,18 @@ test("generated production Wrangler config binds D1, Access, and immutable web i
     teamDomain: "idol-clpi.cloudflareaccess.com",
     accessAudience: "app-aud",
     bootstrapEmail: "chris@pecunies.com",
-  }, { webCommit: "web-sha" });
+  }, {
+    webCommit: "web-sha",
+    authority: {
+      language: { commit: "language-sha", source_law: { sha256: "source-law-sha" } },
+      native: { commit: "native-sha" },
+    },
+  });
   assert.deepEqual(rendered.d1_databases, [{ binding: "PLATFORM_DB", database_name: "idol-platform", database_id: "d1-uuid", migrations_dir: "migrations" }]);
   assert.deepEqual(rendered.vars, {
-    IDOL_AUTHORITY: "authority",
+    IDOL_AUTHORITY: "language-sha",
+    IDOL_NATIVE_AUTHORITY: "native-sha",
+    IDOL_SOURCE_LAW: "source-law-sha",
     IDOL_COMMIT: "web-sha",
     ACCESS_TEAM_DOMAIN: "idol-clpi.cloudflareaccess.com",
     ACCESS_AUD: "app-aud",

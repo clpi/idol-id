@@ -71,11 +71,22 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx --yes wrangler@4.125.0 deploy --config .wrangler.production.jsonc
+      - name: Verify deployed authority and every configured host
+        env:
+          EXPECTED_WEB_COMMIT: ${{ github.sha }}
+          IDOL_VERIFY_ATTEMPTS: 30
+          IDOL_VERIFY_DELAY_MS: 4000
+        run: node scripts/verify-production.mjs
       - name: Deployment summary
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
-          ## idol.id deployed
-          One immutable Worker version serves root, docs, lib, api, graph, worlds, platform, r8a, r8b and r16.
+          ## idol.id deployed and converged
+          One immutable Worker version serves root, www redirect, docs, lib, api, graph, worlds, platform, r8a, r8b and r16.
+
+          Authority:
+          - `/__idol/version`, `/__idol/health`, browser config, installers and runtime manifests project one immutable authority document
+          - post-deploy verification checks the exact web commit, Idol authority, idol-native authority and source-law edition on every configured hostname
+          - no Wasm artifact is admitted from path existence alone
 
           Distribution:
           - curl -fsSL https://idol.id/install | sh
