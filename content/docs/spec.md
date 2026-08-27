@@ -9,7 +9,7 @@
 > **Pinned research source:** `Spec.md`, SHA-256
 > `0653bf7a543cf399c73b14948dd3b2b87f784d09442fdabe653fc865a2e2fd63`.
 >
-> **Pinned language authority:** `clpi/idol@447c708353bf4b27b0b39bdb7890f713078d769b`,
+> **Pinned language authority:** `clpi/idol@e33b0748f6cb8c092fa99368c31ec76c86673aa4`,
 > source-law edition
 > `95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b`.
 
