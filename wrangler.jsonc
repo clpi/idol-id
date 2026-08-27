@@ -4,7 +4,11 @@
   "main": "./worker/entry.js",
   "compatibility_date": "2026-08-25",
   "workers_dev": false,
-  "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
   "routes": [
     { "pattern": "idol.id/*", "zone_name": "idol.id" },
     { "pattern": "docs.idol.id/*", "zone_name": "idol.id" },
@@ -13,12 +17,13 @@
     { "pattern": "graph.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "worlds.idol.id", "custom_domain": true },
     { "pattern": "platform.idol.id", "custom_domain": true },
+    { "pattern": "live.idol.id", "custom_domain": true },
+    { "pattern": "mcp.idol.id", "custom_domain": true },
     { "pattern": "r8a.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "r8b.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "r16.idol.id/*", "zone_name": "idol.id" }
   ],
   "vars": {
-    "IDOL_AUTHORITY": "f33bb3773484e7d954a2975211e683dfa89edab5",
     "IDOL_LOCAL_DEVELOPMENT": "1"
   },
   "observability": { "enabled": true }

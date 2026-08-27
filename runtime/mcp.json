@@ -1,0 +1,40 @@
+{
+  "schema": "idol.mcp.projection.v1",
+  "authority": {
+    "language": "16ba848af17277b36137fd4ca308ffdb8a2730dd",
+    "native": "ad438a856daa8786e77ac9f033d38deb9e8f5c29",
+    "graph": "/runtime/semantic-graph-contract.json"
+  },
+  "protocol": "2026-07-28",
+  "endpoint": "https://mcp.idol.id/mcp",
+  "transport": "stateless-json-rpc",
+  "semantic_authority": false,
+  "read_only": true,
+  "tools": [
+    "idol.authority",
+    "idol.graph.contract",
+    "idol.graph.query",
+    "idol.live.project",
+    "idol.live.status",
+    "idol.orientation",
+    "idol.wasm.run",
+    "idol.wasm.status"
+  ],
+  "capabilities": {
+    "discovery": true,
+    "tools_list": true,
+    "tools_call": true,
+    "mutation": false,
+    "sessions": false,
+    "subscriptions": false,
+    "dispatcher_access": false
+  },
+  "requirements": {
+    "origin_checked": true,
+    "protocol_header": "MCP-Protocol-Version",
+    "method_header": "Mcp-Method",
+    "name_header_for_tool_call": "Mcp-Name",
+    "per_request_meta": true,
+    "body_limit_bytes": 65536
+  }
+}

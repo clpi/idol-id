@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Idol Live — one canon, explicit history</title>
+<meta name="description" content="A read-only, authority-pinned projection of the Idol Live history, frontier, state, and capability boundary.">
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  body { overflow: auto; }
+  .live-page { min-height: 100%; padding: clamp(24px, 5vw, 72px); display: grid; gap: 26px; align-content: start; }
+  .hero { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(240px,.6fr); gap: 36px; align-items: end; padding-bottom: 26px; border-bottom: 1px solid var(--rule); }
+  .kicker { color: var(--signal); font: 600 11px/1 var(--sans); letter-spacing: .13em; text-transform: uppercase; }
+  h1 { margin-top: 12px; max-width: 12ch; font: 650 clamp(42px,8vw,104px)/.92 var(--sans); letter-spacing: -.055em; }
+  .lede { margin-top: 20px; max-width: 72ch; color: var(--ink-2); font: 15px/1.75 var(--sans); }
+  .pin { border: 1px solid var(--rule-2); border-radius: 10px; padding: 18px; background: var(--bg-panel); }
+  .pin .label, .section-label { color: var(--ink-4); font: 10px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; }
+  .pin code { display: block; margin-top: 9px; color: var(--ink); overflow-wrap: anywhere; }
+  .pin p { margin-top: 12px; color: var(--ink-3); font: 12px/1.65 var(--sans); }
+  .trinity { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border: 1px solid var(--rule-2); border-radius: 12px; overflow: hidden; }
+  .law { padding: 22px; min-height: 188px; border-right: 1px solid var(--rule); background: linear-gradient(180deg,var(--bg-raise),var(--bg)); }
+  .law:last-child { border-right: 0; }
+  .law .symbol { color: var(--signal); font: 500 28px/1 var(--mono); }
+  .law h2 { margin-top: 20px; font: 600 18px/1.2 var(--sans); }
+  .law p { margin-top: 9px; color: var(--ink-3); font: 12px/1.7 var(--sans); }
+  .workspace { display: grid; grid-template-columns: minmax(190px,.28fr) minmax(0,1fr); gap: 1px; border: 1px solid var(--rule-2); background: var(--rule); border-radius: 12px; overflow: hidden; min-height: 360px; }
+  .lens-nav, .lens-view { background: var(--bg-panel); }
+  .lens-nav { padding: 12px; display: grid; align-content: start; gap: 4px; }
+  .lens-nav button { width: 100%; min-height: 42px; text-align: left; border-color: transparent; background: transparent; font-family: var(--sans); text-transform: capitalize; }
+  .lens-nav button.active { color: var(--bg); background: var(--ink); }
+  .lens-view { padding: clamp(18px,3vw,34px); min-width: 0; }
+  .lens-view h2 { font: 600 24px/1.15 var(--sans); text-transform: capitalize; }
+  .lens-view .explain { margin-top: 8px; color: var(--ink-3); font: 13px/1.7 var(--sans); }
+  .record { margin-top: 22px; padding: 16px; border: 1px solid var(--rule-2); border-radius: 8px; background: var(--bg); overflow: auto; }
+  .record pre { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
+  .capabilities { display: grid; gap: 10px; }
+  .cap-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 8px; }
+  .cap { min-height: 80px; padding: 13px; border: 1px solid var(--rule-2); border-radius: 8px; }
+  .cap strong { display: block; font: 560 13px/1.25 var(--sans); }
+  .cap span { display: block; margin-top: 8px; color: var(--ink-3); font: 11px/1.5 var(--sans); }
+  .cap[data-on="true"] strong { color: var(--ok); }
+  .cap[data-on="false"] strong { color: var(--ink-3); }
+  .boundary { border-left: 2px solid var(--signal); padding: 14px 18px; background: var(--signal-dim); color: var(--ink-2); font: 12px/1.7 var(--sans); }
+  @media (max-width: 760px) {
+    .live-page { padding: 24px 14px 48px; gap: 18px; }
+    .hero { grid-template-columns: 1fr; gap: 20px; }
+    .trinity { grid-template-columns: 1fr; }
+    .law { border-right: 0; border-bottom: 1px solid var(--rule); min-height: auto; }
+    .law:last-child { border-bottom: 0; }
+    .workspace { grid-template-columns: 1fr; }
+    .lens-nav { grid-template-columns: repeat(5,minmax(86px,1fr)); overflow-x: auto; }
+    .lens-nav button { text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <main class="live-page">
+    <section class="hero">
+      <div>
+        <div class="kicker">Collaboration truth · read-only bootstrap</div>
+        <h1>One canon. Every attempt remains knowable.</h1>
+        <p class="lede">Idol Live is a separate product projection over purposeful transformations, accountable actors, causal history, and one accepted source frontier. This deployed slice publishes the law and exact missing capabilities; it does not imitate a realtime service with decorative activity.</p>
+      </div>
+      <aside class="pin"><div class="label">Language authority</div><code id="authority">loading</code><p>Live does not own language meaning. It owns collaboration truth only when a persistent service exists.</p></aside>
+    </section>
+    <section class="trinity" aria-label="History frontier state law">
+      <article class="law"><div class="symbol">H</div><h2>History</h2><p>Immutable causal truth: observed attempts, operations, reviews, rejection, admission, evidence, and external injection.</p></article>
+      <article class="law"><div class="symbol">F ⊆ H</div><h2>Frontier</h2><p>Exactly one causally closed normative selection of operations accepted into canonical source.</p></article>
+      <article class="law"><div class="symbol">S</div><h2>State</h2><p>The demanded materialization of history under the accepted frontier, never a competing branch ontology.</p></article>
+    </section>
+    <section class="workspace"><nav class="lens-nav" id="lens-nav" aria-label="Live projection lenses"></nav><div class="lens-view"><h2 id="lens-title">Canon</h2><p class="explain" id="lens-explain"></p><div class="record"><pre id="lens-record">loading exact projection</pre></div></div></section>
+    <section class="capabilities"><div class="section-label">Deployed capability truth</div><div class="cap-grid" id="cap-grid"></div></section>
+    <aside class="boundary">The bootstrap event shown here has no published native Live semantic identity. Persistent operations, Git round-trip, claims, context leases, scheduling, review, admission, and mutation remain unavailable until implemented and evidenced.</aside>
+  </main>
+  <div class="statusbar"></div>
+</div>
+<script src="/shared/shell.js"></script>
+<script>
+(() => {
+  Shell.boot("live", { title: "Idol Live" });
+  IdolShell.crumbs([{ label: "live" }]);
+  const explanations = {
+    canon: "The one accepted frontier and its current materialized state.",
+    history: "All observed causal facts, including facts not admitted to canon.",
+    work: "Goals, tasks, attempts, claims, and delegation. Contract published; service data unavailable.",
+    "live-map": "Active semantic readers, writers, claims, and contention. Not implemented in this slice.",
+    diff: "Text, semantic, world, goal, and authorship projections. Not implemented in this slice.",
+    why: "Rationale, origin, rejected alternatives, and evidence. Not implemented in this slice.",
+    review: "Dependency-scoped review coverage and validity. Not implemented in this slice.",
+    risk: "Changed contracts, worlds, authority, and evidence gaps. Not implemented in this slice.",
+    git: "Git is a compatibility projection; bidirectional transport is not implemented here.",
+    evidence: "Witnesses bound to exact semantic dependencies. No evidence service is deployed."
+  };
+  Promise.all([
+    fetch("/runtime/live.json", { cache: "no-store" }).then(r => r.ok ? r.json() : Promise.reject(new Error(`live ${r.status}`))),
+    fetch("/runtime/authority.json", { cache: "no-store" }).then(r => r.ok ? r.json() : Promise.reject(new Error(`authority ${r.status}`)))
+  ]).then(([live, authority]) => {
+    document.getElementById("authority").textContent = `${authority.language.repository}@${authority.language.commit}`;
+    const nav = document.getElementById("lens-nav");
+    const record = document.getElementById("lens-record");
+    const title = document.getElementById("lens-title");
+    const explain = document.getElementById("lens-explain");
+    function select(lens, button) {
+      nav.querySelectorAll("button").forEach(candidate => candidate.classList.toggle("active", candidate === button));
+      title.textContent = lens.replaceAll("-", " ");
+      explain.textContent = explanations[lens] || "Published projection lens.";
+      let value;
+      if (lens === "canon") value = { frontier: live.frontier, state: live.state };
+      else if (lens === "history") value = live.history;
+      else value = { lens, available: false, reason: explanations[lens] };
+      record.textContent = JSON.stringify(value, null, 2);
+    }
+    live.lenses.forEach((lens, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = lens.replaceAll("-", " ");
+      button.addEventListener("click", () => select(lens, button));
+      nav.appendChild(button);
+      if (index === 0) select(lens, button);
+    });
+    const grid = document.getElementById("cap-grid");
+    Object.entries(live.capabilities).forEach(([name, enabled]) => {
+      const card = document.createElement("article");
+      card.className = "cap";
+      card.dataset.on = String(enabled);
+      const strong = document.createElement("strong");
+      strong.textContent = name.replaceAll("_", " ");
+      const detail = document.createElement("span");
+      detail.textContent = enabled ? "available in this deployment" : "not implemented or not granted";
+      card.append(strong, detail);
+      grid.appendChild(card);
+    });
+  }).catch(error => { document.getElementById("lens-record").textContent = `Projection refused: ${error.message}`; });
+})();
+</script>
+</body>
+</html>

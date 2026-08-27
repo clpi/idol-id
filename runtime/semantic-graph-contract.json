@@ -1,9 +1,11 @@
 {
   "schema": "idol.semantic.graph.contract.v1",
   "version": 1,
+  "semantic_authority": false,
+  "presentation_projection": true,
   "authority": {
     "repository": "clpi/idol",
-    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
+    "commit": "16ba848af17277b36137fd4ca308ffdb8a2730dd",
     "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552",
     "source_law": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b",
     "semantic_authority": true
@@ -26,68 +28,21 @@
     "unknown_absent_false_zero_empty_not_asked": "distinct"
   },
   "entity_views": [
-    "application",
-    "binding",
-    "demand",
-    "descriptor",
-    "evidence",
-    "home",
-    "identity",
-    "origin",
-    "pack",
-    "place",
-    "projection",
-    "provenance",
-    "realization",
-    "relation",
-    "result",
-    "transformation",
-    "value",
-    "witness",
-    "world"
+    "application", "binding", "demand", "descriptor", "evidence", "home",
+    "identity", "origin", "pack", "place", "projection", "provenance",
+    "realization", "relation", "result", "transformation", "value", "witness", "world"
   ],
   "structural_roles": [
-    "binding",
-    "capture",
-    "demand",
-    "descriptor",
-    "member",
-    "operand",
-    "origin",
-    "projection",
-    "provenance",
-    "relation",
-    "result",
-    "subject",
-    "target",
-    "witness"
+    "binding", "capture", "demand", "descriptor", "member", "operand",
+    "origin", "projection", "provenance", "relation", "result", "subject", "target", "witness"
   ],
-  "forbidden_operational_roles": [
-    "compile",
-    "dispatch",
-    "execute",
-    "parse",
-    "read",
-    "transform",
-    "write"
-  ],
+  "forbidden_operational_roles": ["compile", "dispatch", "execute", "parse", "read", "transform", "write"],
   "application": {
     "one_algebra": true,
     "fields": [
-      "identity",
-      "relation",
-      "subject",
-      "operand_pack",
-      "result_pack",
-      "projection_pack",
-      "demand",
-      "effects",
-      "world_requirement",
-      "world_witness",
-      "constraint_witnesses",
-      "source_law",
-      "origin",
-      "provenance"
+      "identity", "relation", "subject", "operand_pack", "result_pack",
+      "projection_pack", "demand", "effects", "world_requirement", "world_witness",
+      "constraint_witnesses", "source_law", "origin", "provenance"
     ],
     "source_orientation_is_provenance": true,
     "subject_is_not_argument_zero": true,
@@ -122,20 +77,9 @@
   "transformation": {
     "witnessed": true,
     "required_fields": [
-      "input_ids",
-      "laws",
-      "preconditions",
-      "world_obligations",
-      "effect_obligations",
-      "stage",
-      "target",
-      "observer_obligations",
-      "replacement_ids",
-      "result_ids",
-      "provenance",
-      "verification_witness",
-      "realization_lineage",
-      "evidence_lineage"
+      "input_ids", "laws", "preconditions", "world_obligations", "effect_obligations",
+      "stage", "target", "observer_obligations", "replacement_ids", "result_ids",
+      "provenance", "verification_witness", "realization_lineage", "evidence_lineage"
     ],
     "destructive_semantic_reconstruction_forbidden": true
   },
@@ -143,18 +87,8 @@
     "late": true,
     "semantic_values_independent_of_representation": true,
     "forms": [
-      "absent",
-      "immediate",
-      "register",
-      "stack",
-      "aggregate",
-      "memory",
-      "shared-region",
-      "simd",
-      "gpu",
-      "wasm",
-      "foreign-abi",
-      "hardware"
+      "absent", "immediate", "register", "stack", "aggregate", "memory",
+      "shared-region", "simd", "gpu", "wasm", "foreign-abi", "hardware"
     ],
     "dnir_role": "physical-realization-encoding-over-graph-identities"
   },
@@ -166,17 +100,7 @@
     "ambiguity": "refuse",
     "no_first_last_load_path_hash_order": true
   },
-  "consumers": [
-    "compiler",
-    "formatter",
-    "lsp",
-    "mcp",
-    "live",
-    "proof",
-    "studio",
-    "wasm",
-    "native"
-  ],
+  "consumers": ["compiler", "formatter", "lsp", "mcp", "live", "proof", "studio", "wasm", "native"],
   "open_gaps": {
     "complete_generated_grammar": false,
     "graph_sovereignty_complete": false,

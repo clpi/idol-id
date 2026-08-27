@@ -3,7 +3,7 @@
   "language": {
     "repository": "clpi/idol",
     "branch": "main",
-    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
+    "commit": "16ba848af17277b36137fd4ca308ffdb8a2730dd",
     "compact_law": "docs/spec/law.md",
     "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552",
     "constitution": "docs/spec/constitution.md",
@@ -21,13 +21,14 @@
   "web_projection": {
     "source_law": "/runtime/source-law.json",
     "examples": "/content/source-examples.json",
+    "language_authority": "/runtime/language-authority.json",
     "semantic_authority": false,
     "grammar_authority": false,
     "lexical_preview_may_publish_semantic_identity": false
   },
-  "rule": "clpi/idol compact law wins; web, wasm, dom, worker and machine are projections or realizations and cannot mint syntax or semantics",
+  "rule": "clpi/idol compact law wins; web, wasm, DOM, Worker, Live, MCP and machine documents are projections or realizations and cannot mint syntax or semantics",
   "wasm_artifact": {
-    "required_for_claim": "measured Idol-Wasm performance claims",
+    "required_for_claim": "artifact-bound capability descriptor, correspondence evidence, and reproducible measurements",
     "build_input": "IDOL_WASM_PATH",
     "current_status": "not admitted in this repository"
   }

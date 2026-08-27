@@ -1,0 +1,51 @@
+{
+  "schema": "idol.live.projection.v1",
+  "authority": {
+    "language": "16ba848af17277b36137fd4ca308ffdb8a2730dd",
+    "native": "ad438a856daa8786e77ac9f033d38deb9e8f5c29",
+    "source": "/content/docs/live.md"
+  },
+  "semantic_authority": false,
+  "collaboration_truth": true,
+  "implementation_status": "bootstrap-projection",
+  "law": {
+    "canonical_frontiers": 1,
+    "history": "immutable causal truth",
+    "frontier": "one causally closed accepted selection",
+    "state": "materialize(history, frontier)",
+    "git": "compatibility projection"
+  },
+  "history": [
+    {
+      "id": "live:bootstrap",
+      "kind": "projection-bootstrap",
+      "status": "observed",
+      "semantic_id": null,
+      "identity_status": "not-published",
+      "provenance": "/content/docs/live.md"
+    }
+  ],
+  "frontier": ["live:bootstrap"],
+  "state": {
+    "materialized_from": { "history": 1, "frontier": 1 },
+    "canonical_frontiers": 1
+  },
+  "lenses": ["canon", "diff", "evidence", "git", "history", "live-map", "review", "risk", "why", "work"],
+  "capabilities": {
+    "read_projection": true,
+    "realtime_store": false,
+    "persistent_identity": false,
+    "git_roundtrip": false,
+    "agent_scheduler": false,
+    "claims": false,
+    "context_leases": false,
+    "mutation": false,
+    "dispatcher_access": false,
+    "evidence": false
+  },
+  "loss": [
+    "No persistent operation store is deployed.",
+    "The bootstrap record is presentation provenance, not a native Live semantic identity.",
+    "No Git, scheduler, claim, admission, review, or realtime mutation operation is exposed."
+  ]
+}

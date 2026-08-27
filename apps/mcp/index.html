@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Idol MCP — exact graph projections</title>
+<meta name="description" content="Stateless MCP 2026-07-28 access to exact Idol authority, graph, Live, and Wasm admission projections.">
+<link rel="stylesheet" href="/shared/theme.css">
+<script src="/config.js"></script>
+<style>
+  body { overflow: auto; }
+  .mcp-page { min-height: 100%; padding: clamp(24px,5vw,72px); display: grid; gap: 24px; align-content: start; }
+  .hero { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(280px,.8fr); gap: 30px; align-items: end; border-bottom: 1px solid var(--rule); padding-bottom: 26px; }
+  .kicker { color: var(--signal); font: 600 11px/1 var(--sans); letter-spacing: .13em; text-transform: uppercase; }
+  h1 { margin-top: 12px; font: 650 clamp(42px,7vw,92px)/.92 var(--sans); letter-spacing: -.05em; }
+  .lede { margin-top: 18px; color: var(--ink-2); max-width: 70ch; font: 14px/1.75 var(--sans); }
+  .endpoint { border: 1px solid var(--rule-2); border-radius: 10px; padding: 16px; background: var(--bg-panel); }
+  .endpoint .label { color: var(--ink-4); font: 10px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; }
+  .endpoint code { display: block; margin-top: 10px; color: var(--ink); overflow-wrap: anywhere; }
+  .endpoint p { margin-top: 10px; color: var(--ink-3); font: 12px/1.6 var(--sans); }
+  .layout { display: grid; grid-template-columns: minmax(260px,.7fr) minmax(0,1.3fr); gap: 12px; }
+  .panel { border: 1px solid var(--rule-2); border-radius: 10px; background: var(--bg-panel); overflow: hidden; min-width: 0; }
+  .panel-head { min-height: 46px; padding: 0 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--rule); font: 560 13px/1 var(--sans); }
+  .tools { display: grid; }
+  .tool { padding: 13px 15px; border-bottom: 1px solid var(--rule); }
+  .tool:last-child { border-bottom: 0; }
+  .tool code { color: var(--signal); }
+  .tool p { margin-top: 6px; color: var(--ink-3); font: 11px/1.55 var(--sans); }
+  .console-actions { padding: 12px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--rule); }
+  .console-actions button { min-height: 40px; }
+  .output { padding: 16px; min-height: 390px; max-height: 62vh; overflow: auto; background: var(--bg); }
+  .output pre { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
+  .boundary { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 8px; }
+  .fact { border: 1px solid var(--rule-2); border-radius: 8px; padding: 13px; }
+  .fact strong { font: 560 12px/1.25 var(--sans); }
+  .fact span { display: block; margin-top: 7px; color: var(--ink-3); font: 11px/1.5 var(--sans); }
+  @media (max-width: 760px) { .mcp-page { padding: 24px 14px 48px; } .hero, .layout { grid-template-columns: 1fr; } .output { min-height: 280px; max-height: 55vh; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"></div>
+  <main class="mcp-page">
+    <section class="hero">
+      <div><div class="kicker">MCP 2026-07-28 · stateless · read-only</div><h1>Agents read the graph. They do not reconstruct it from text.</h1><p class="lede">This endpoint exposes exact authority, structural graph roles, the bounded Idol Live bootstrap projection, and Wasm admission status. Names may generate candidates; they never publish semantic identity.</p></div>
+      <aside class="endpoint"><div class="label">Endpoint</div><code>POST https://mcp.idol.id/mcp</code><p>Every request carries protocol, method, client, capability, and origin evidence. Mutation and dispatcher authority are absent.</p></aside>
+    </section>
+    <section class="layout">
+      <div class="panel"><div class="panel-head">Published tools</div><div class="tools" id="tools"></div></div>
+      <div class="panel"><div class="panel-head">Protocol console <span style="margin-left:auto;color:var(--ink-4)" id="status">ready</span></div><div class="console-actions"><button type="button" data-method="server/discover">Discover</button><button type="button" data-method="tools/list">List tools</button><button type="button" data-tool="idol.authority">Authority</button><button type="button" data-tool="idol.live.status">Live status</button><button type="button" data-tool="idol.wasm.status">Wasm status</button></div><div class="output"><pre id="output">Select one request. The result shown is the exact same-origin MCP response.</pre></div></div>
+    </section>
+    <section class="boundary"><article class="fact"><strong>Semantic authority</strong><span>False. The MCP surface consumes the graph contract published from clpi/idol authority.</span></article><article class="fact"><strong>Mutation</strong><span>False. No write tool, admission operation, world grant, or repository mutation is exposed.</span></article><article class="fact"><strong>Wasm execution</strong><span>Refused until an artifact-bound capability descriptor and correspondence witness are deployed.</span></article><article class="fact"><strong>Sessions</strong><span>None. Requests are independently attributable and stateless.</span></article></section>
+  </main>
+  <div class="statusbar"></div>
+</div>
+<script src="/shared/shell.js"></script>
+<script>
+(() => {
+  Shell.boot("mcp", { title: "Idol MCP" });
+  IdolShell.crumbs([{ label: "mcp" }]);
+  const meta = () => ({ "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientInfo": { name: "idol-browser-console", version: "1" }, "io.modelcontextprotocol/clientCapabilities": {} });
+  async function request(method, params = {}, name = "") {
+    const status = document.getElementById("status");
+    const output = document.getElementById("output");
+    status.textContent = "requesting";
+    const headers = { "content-type": "application/json", "mcp-protocol-version": "2026-07-28", "mcp-method": method };
+    if (name) headers["mcp-name"] = name;
+    const response = await fetch("/mcp", { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params: { ...params, _meta: meta() } }) });
+    const documentValue = await response.json();
+    status.textContent = `${response.status}`;
+    output.textContent = JSON.stringify(documentValue, null, 2);
+  }
+  document.querySelectorAll("[data-method]").forEach(button => button.addEventListener("click", () => request(button.dataset.method)));
+  document.querySelectorAll("[data-tool]").forEach(button => button.addEventListener("click", () => request("tools/call", { name: button.dataset.tool, arguments: {} }, button.dataset.tool)));
+  fetch("/runtime/mcp.json", { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject(new Error(`mcp projection ${response.status}`))).then(mcp => {
+    const tools = document.getElementById("tools");
+    mcp.tools.forEach(name => {
+      const item = document.createElement("article");
+      item.className = "tool";
+      const code = document.createElement("code"); code.textContent = name;
+      const note = document.createElement("p"); note.textContent = name === "idol.wasm.run" ? "Exact refusal unless an admitted artifact exists." : "Read-only exact projection.";
+      item.append(code, note); tools.appendChild(item);
+    });
+  }).catch(error => { document.getElementById("tools").textContent = `Projection refused: ${error.message}`; });
+})();
+</script>
+</body>
+</html>
