@@ -1,0 +1,187 @@
+{
+  "schema": "idol.semantic.graph.contract.v1",
+  "version": 1,
+  "authority": {
+    "repository": "clpi/idol",
+    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
+    "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552",
+    "source_law": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b",
+    "semantic_authority": true
+  },
+  "native": {
+    "repository": "clpi/idol-native",
+    "commit": "ad438a856daa8786e77ac9f033d38deb9e8f5c29",
+    "role": "realization and evidence"
+  },
+  "web": {
+    "repository": "clpi/idol-id",
+    "semantic_authority": false,
+    "role": "transport and presentation projection"
+  },
+  "identity": {
+    "exact": true,
+    "one_semantic_thing_one_id": true,
+    "facts_qualify_identity": true,
+    "names_paths_spans_hashes_representations": "provenance-or-physical-index",
+    "unknown_absent_false_zero_empty_not_asked": "distinct"
+  },
+  "entity_views": [
+    "application",
+    "binding",
+    "demand",
+    "descriptor",
+    "evidence",
+    "home",
+    "identity",
+    "origin",
+    "pack",
+    "place",
+    "projection",
+    "provenance",
+    "realization",
+    "relation",
+    "result",
+    "transformation",
+    "value",
+    "witness",
+    "world"
+  ],
+  "structural_roles": [
+    "binding",
+    "capture",
+    "demand",
+    "descriptor",
+    "member",
+    "operand",
+    "origin",
+    "projection",
+    "provenance",
+    "relation",
+    "result",
+    "subject",
+    "target",
+    "witness"
+  ],
+  "forbidden_operational_roles": [
+    "compile",
+    "dispatch",
+    "execute",
+    "parse",
+    "read",
+    "transform",
+    "write"
+  ],
+  "application": {
+    "one_algebra": true,
+    "fields": [
+      "identity",
+      "relation",
+      "subject",
+      "operand_pack",
+      "result_pack",
+      "projection_pack",
+      "demand",
+      "effects",
+      "world_requirement",
+      "world_witness",
+      "constraint_witnesses",
+      "source_law",
+      "origin",
+      "provenance"
+    ],
+    "source_orientation_is_provenance": true,
+    "subject_is_not_argument_zero": true,
+    "projection_pack_is_not_currying": true
+  },
+  "projection": {
+    "static": ".",
+    "computed": "[]",
+    "subject": ":",
+    "specialization": "relation(levels)",
+    "world": "@",
+    "identity_preserving": true,
+    "cannot_prove_equivalence": true,
+    "cannot_mutate_authority": true,
+    "explicit_loss_required": true
+  },
+  "world": {
+    "closed_fact_table": true,
+    "authority_is_separate_fact": true,
+    "home_is_not_world": true,
+    "home_is_not_subject": true,
+    "value_is_not_place": true,
+    "binding_is_not_place": true,
+    "injection_mutates_source": false,
+    "injection_manufactures_authority": false
+  },
+  "demand": {
+    "occurrence_specific": true,
+    "unobserved_physical_work_may_be_absent": true,
+    "observer_world_target_participate_in_realization_identity": true
+  },
+  "transformation": {
+    "witnessed": true,
+    "required_fields": [
+      "input_ids",
+      "laws",
+      "preconditions",
+      "world_obligations",
+      "effect_obligations",
+      "stage",
+      "target",
+      "observer_obligations",
+      "replacement_ids",
+      "result_ids",
+      "provenance",
+      "verification_witness",
+      "realization_lineage",
+      "evidence_lineage"
+    ],
+    "destructive_semantic_reconstruction_forbidden": true
+  },
+  "realization": {
+    "late": true,
+    "semantic_values_independent_of_representation": true,
+    "forms": [
+      "absent",
+      "immediate",
+      "register",
+      "stack",
+      "aggregate",
+      "memory",
+      "shared-region",
+      "simd",
+      "gpu",
+      "wasm",
+      "foreign-abi",
+      "hardware"
+    ],
+    "dnir_role": "physical-realization-encoding-over-graph-identities"
+  },
+  "query": {
+    "exact_id_first": true,
+    "reverse_traversal": "derived-index",
+    "name_match_may_generate_candidates": true,
+    "name_match_may_publish_identity": false,
+    "ambiguity": "refuse",
+    "no_first_last_load_path_hash_order": true
+  },
+  "consumers": [
+    "compiler",
+    "formatter",
+    "lsp",
+    "mcp",
+    "live",
+    "proof",
+    "studio",
+    "wasm",
+    "native"
+  ],
+  "open_gaps": {
+    "complete_generated_grammar": false,
+    "graph_sovereignty_complete": false,
+    "compiler_b": false,
+    "compiler_c": false,
+    "self_hosted": false
+  }
+}
