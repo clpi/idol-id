@@ -27,6 +27,17 @@ test("Universe workspace is packaged for authenticated Platform and public World
   assert.match(shell, /id:"universe"/);
 });
 
+test("local public Universe mode follows the routing query and canonical config object", async () => {
+  const [app, worker] = await Promise.all([
+    read("shared/universe-app.js"),
+    read("worker/entry.js"),
+  ]);
+  assert.doesNotMatch(app, /IDOL_CONFIG/);
+  assert.match(app, /new URLSearchParams\(location\.search\)\.get\("mode"\) === "public"/);
+  assert.match(app, /window\.IDOL\?\.(?:app|surface) === "worlds"/);
+  assert.match(worker, /url\.searchParams\.get\("mode"\) === "public"/);
+});
+
 test("Universe UI is mobile-first, touch-accessible, and typography-safe", async () => {
   const html = await read("apps/universe/index.html");
   assert.match(html, /viewport-fit=cover/);
