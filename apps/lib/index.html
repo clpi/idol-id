@@ -155,8 +155,8 @@
 
   async function load() {
     try {
-      const document = set === "worlds" ? await Idol.api.get("/api/worlds") : await Idol.api.get("/api/libs");
-      items = document.worlds || document.libs || [];
+      const payload = set === "worlds" ? await Idol.api.get("/api/worlds") : await Idol.api.get("/api/libs");
+      items = payload.worlds || payload.libs || [];
       const lines = items.reduce((sum, item) => sum + Number(item.lines || item.stats?.lines || 0), 0);
       document.getElementById("strip").textContent = `${items.length} ${set === "worlds" ? "worlds" : "homes"} · ${lines.toLocaleString()} lines`;
       render();
@@ -226,7 +226,7 @@
 
     detail.appendChild(Idol.el("div", { class: "actions" },
       Idol.el("button", { class: "primary", onclick: openInExplorerCurrent }, "open in explorer"),
-      Idol.el("button", { onclick: () => copyCoordinate(name, record, world) }, world ? "copy registry URL" : "copy home coordinate"),
+      Idol.el("button", { onclick: () => copyCoordinate(name, record, world) }, world ? "copy world link" : "copy home link"),
       Idol.el("button", { class: "ghost", onclick: () => navigator.clipboard.writeText(record.source || "").then(() => Idol.toast("source copied")) }, "copy source"),
       !world ? Idol.el("button", { class: "signal", onclick: () => publishDialog(name, record.source || "") }, "publish world") : null));
 
@@ -316,8 +316,10 @@
   }
 
   function copyCoordinate(name, record, world) {
-    const coordinate = world ? `https://lib.idol.id/world/${encodeURIComponent(name)}@${encodeURIComponent(record.version || "latest")}` : `home:${name}`;
-    navigator.clipboard.writeText(coordinate).then(() => Idol.toast("coordinate copied"));
+    const url = new URL("https://lib.idol.id/");
+    if (!world) url.searchParams.set("set", "homes");
+    url.hash = encodeURIComponent(name);
+    navigator.clipboard.writeText(url.toString()).then(() => Idol.toast("deep link copied"));
   }
 
   function viewVersion(name, version, editor, tabs) {
