@@ -3,7 +3,7 @@
   "language": {
     "repository": "clpi/idol",
     "branch": "main",
-    "commit": "447c708353bf4b27b0b39bdb7890f713078d769b",
+    "commit": "e33b0748f6cb8c092fa99368c31ec76c86673aa4",
     "compact_law": "docs/spec/law.md",
     "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552",
     "constitution": "docs/spec/constitution.md",
