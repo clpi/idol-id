@@ -24,7 +24,9 @@ test("Universe workspace is packaged for authenticated Platform and public World
   assert.match(worker, /\/apps\/universe\/index\.html/);
   assert.match(build, /"universe"/);
   assert.match(build, /platform-universe-entry\.js/);
-  assert.match(shell, /id:"universe"/);
+  assert.doesNotMatch(shell, /id:\s*"universe"/);
+  assert.match(shell, /public universe views/i);
+  assert.match(shell, /manage universe views/i);
 });
 
 test("local public Universe mode follows the routing query and canonical config object", async () => {
