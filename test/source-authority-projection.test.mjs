@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (path) => readFile(resolve(root, path), "utf8");
 
-const CURRENT_LANGUAGE_COMMIT = "447c708353bf4b27b0b39bdb7890f713078d769b";
+const CURRENT_LANGUAGE_COMMIT = "e33b0748f6cb8c092fa99368c31ec76c86673aa4";
 const CURRENT_COMPACT_LAW_BLOB = "155edf8e9204d00316dab8363676f0fd7b2fb552";
 const CURRENT_SOURCE_LAW = "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b";
 
