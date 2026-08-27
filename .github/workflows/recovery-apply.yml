@@ -53,9 +53,11 @@ jobs:
           authority.write_text(text)
 
           sync = Path(".github/workflows/authority-sync.yml")
-          text = sync.read_text().replace(
+          text = sync.read_text()
+          secret_expression = "$" + "{{ secrets.IDOL_AUTHORITY_READ_TOKEN }}"
+          text = text.replace(
               '      - name: Reconcile commit-only upstream movement\n        run: node scripts/sync-authority.mjs --write',
-              '      - name: Reconcile commit-only upstream movement\n        env:\n          IDOL_AUTHORITY_READ_TOKEN: ${{ secrets.IDOL_AUTHORITY_READ_TOKEN }}\n        run: node scripts/sync-authority.mjs --write',
+              '      - name: Reconcile commit-only upstream movement\n        env:\n          IDOL_AUTHORITY_READ_TOKEN: ' + secret_expression + '\n        run: node scripts/sync-authority.mjs --write',
           )
           sync.write_text(text)
 
@@ -65,6 +67,18 @@ jobs:
               '',
           )
           deploy.write_text(text)
+
+          worker_test = Path("test/worker.test.mjs")
+          text = worker_test.read_text()
+          text = text.replace(
+              '["/runtime/worlds.json", ["application/json", "{\\"schema\\":\\"idol.web.worlds.v1\\",\\"worlds\\":[]}"]],',
+              '["/runtime/worlds.json", ["application/json", "{\\"schema\\":\\"idol.web.worlds.v1\\",\\"worlds\\":[]}"]],\n    ["/runtime/authority.json", ["application/json", "{\\"language\\":{\\"commit\\":\\"authority123\\",\\"source_law\\":{\\"sha256\\":\\"source-law123\\"}},\\"native\\":{\\"commit\\":\\"native123\\"}}"]],',
+          )
+          text = text.replace(
+              'assert.equal(text, configSource(resolveHost("docs.idol.id"), "docs.idol.id", "abc123", "authority123"));',
+              'assert.equal(text, configSource(resolveHost("docs.idol.id"), "docs.idol.id", "abc123", { language: { commit: "authority123", source_law: { sha256: "source-law123" } }, native: { commit: "native123" } }));',
+          )
+          worker_test.write_text(text)
           PY
       - name: Verify focused recovery contract
         run: node --test test/regression-closure.test.mjs
