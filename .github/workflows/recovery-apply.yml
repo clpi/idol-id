@@ -52,22 +52,6 @@ jobs:
           )
           authority.write_text(text)
 
-          sync = Path(".github/workflows/authority-sync.yml")
-          text = sync.read_text()
-          secret_expression = "$" + "{{ secrets.IDOL_AUTHORITY_READ_TOKEN }}"
-          text = text.replace(
-              '      - name: Reconcile commit-only upstream movement\n        run: node scripts/sync-authority.mjs --write',
-              '      - name: Reconcile commit-only upstream movement\n        env:\n          IDOL_AUTHORITY_READ_TOKEN: ' + secret_expression + '\n        run: node scripts/sync-authority.mjs --write',
-          )
-          sync.write_text(text)
-
-          deploy = Path(".github/workflows/deploy.yml")
-          text = deploy.read_text().replace(
-              '      - name: Check current upstream Idol authority\n        run: node scripts/check-upstream-authority.mjs\n',
-              '',
-          )
-          deploy.write_text(text)
-
           worker_test = Path("test/worker.test.mjs")
           text = worker_test.read_text()
           text = text.replace(
@@ -88,10 +72,13 @@ jobs:
         run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
       - name: Refuse whitespace and patch corruption
         run: git diff --check
-      - name: Commit only the verified recovery
+      - name: Commit only the verified non-workflow recovery
         run: |
           set -euo pipefail
-          rm scripts/recovery-apply.py .github/workflows/recovery-apply.yml
+          rm -rf .wrangler-dry-run
+          rm -f .github/workflows/authority-sync.yml
+          git checkout -- .github/workflows
+          grep -qxF '.wrangler-dry-run/' .gitignore || printf '\n.wrangler-dry-run/\n' >> .gitignore
           git config user.name idol-recovery-bot
           git config user.email actions@users.noreply.github.com
           git add -A
