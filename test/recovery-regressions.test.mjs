@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { access, readFile, rm } from "node:fs/promises";
 
 const CURRENT_IDOL = "16ba848af17277b36137fd4ca308ffdb8a2730dd";
 const CURRENT_NATIVE = "ad438a856daa8786e77ac9f033d38deb9e8f5c29";
@@ -58,6 +59,17 @@ test("the uploaded specification and Idol Live thesis have hash-exact, explicitl
   assert.match(live, new RegExp(LIVE_SHA256));
   assert.match(spec, /non-authoritative architecture blueprint/i);
   assert.match(live, /implementation is not claimed/i);
+});
+
+test("immutable deployment carries the same honest research projection manifest", async () => {
+  await rm("dist", { recursive: true, force: true });
+  const build = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8" });
+  assert.equal(build.status, 0, build.stderr || build.stdout);
+  const source = JSON.parse(await read("authority/manifest.json"));
+  const deployed = JSON.parse(await read("dist/authority/manifest.json"));
+  assert.deepEqual(deployed, source);
+  assert.equal(deployed.exact_source_committed, false);
+  assert.equal(deployed.semantic_authority, false);
 });
 
 test("product UI is sans-first while source and exact identities remain Iosevka", async () => {
