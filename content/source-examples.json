@@ -1,0 +1,82 @@
+{
+  "schema": "idol.web.source-examples.v1",
+  "authority": {
+    "repository": "clpi/idol",
+    "commit": "447c708353bf4b27b0b39bdb7890f713078d769b",
+    "source_law": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b",
+    "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552"
+  },
+  "rule": "examples project current law; they do not prove parser, lowering, execution, or performance support",
+  "examples": [
+    {
+      "id": "declaration-specialization",
+      "title": "subject and projection specialization",
+      "status": "lawful-source-implementation-not-claimed",
+      "authority_sections": ["law.md#9-application-and-projection"],
+      "source": "# kg is a stable relation projection; factor is ordinary payload\nbody:weight(kg) = (factor)\n    :mass()\n        * factor",
+      "meaning": [
+        "one relation identity: weight",
+        "subject constraint: body",
+        "projection fact: unit kg",
+        "ordinary operand: factor",
+        "implementation witness: the indented body"
+      ],
+      "refuses": [
+        "nested functions",
+        "bound methods",
+        "automatic currying",
+        "implicit self",
+        "pipeline values"
+      ]
+    },
+    {
+      "id": "projection-faces",
+      "title": "computed and static projection",
+      "status": "current-law",
+      "authority_sections": ["law.md#5-delimiter-and-face-closure", "law.md#9-application-and-projection"],
+      "source": "value = table[key]\ntable[key] = replacement\nencoded = codec.encode(source)",
+      "meaning": [
+        "[] is computed or indexed projection",
+        ". is one statically known projection",
+        "neither face is subject-oriented relation application"
+      ]
+    },
+    {
+      "id": "subject-chain",
+      "title": "direct relation and result chaining",
+      "status": "lawful-source-implementation-not-claimed",
+      "authority_sections": ["law.md#9-application-and-projection", "law.md#10-demand-and-observation"],
+      "source": "prepare = (value)\n    value:validate():normalize():encode()",
+      "meaning": [
+        "ordinary relation applications share one application algebra",
+        "each exact demanded result supplies the next semantic subject",
+        "the tail expression supplies the demanded result",
+        "no pipeline operator or pipeline object exists"
+      ]
+    },
+    {
+      "id": "world",
+      "title": "current world and closed derivation",
+      "status": "current-law",
+      "authority_sections": ["law.md#6-world-home-reach-subject-place"],
+      "source": "current = @member\ncompiled = thing@{ stage = compile }",
+      "meaning": [
+        "@member accesses one exact current-world member",
+        "@{ ... } derives a closed world with an exact fact delta",
+        "world membership does not manufacture authority"
+      ]
+    },
+    {
+      "id": "subject-section",
+      "title": "recoverable one-subject projection section",
+      "status": "lawful-source-implementation-not-claimed",
+      "authority_sections": ["docs/spec/source.md", "docs/spec/constitution.md"],
+      "source": "match = users:find(.id == id)",
+      "meaning": [
+        "the consuming relation demands exactly one recoverable subject",
+        "no lexical self or it binding is created",
+        "ambiguity must fail closed"
+      ]
+    }
+  ]
+}
