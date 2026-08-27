@@ -50,17 +50,23 @@ test("Lib exposes Atlas and public Universe lenses without replacing their canon
   response = await edgeHandle(new Request("https://lib.idol.id/world/std", {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
+  assert.equal(response.status, 200);
   assert.equal(await response.text(), "<html>atlas</html>");
 
   response = await edgeHandle(new Request("https://lib.idol.id/universe", {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
+  assert.equal(response.status, 200);
   assert.equal(await response.text(), "<html>universe</html>");
 });
 
 test("the product model distinguishes package provenance, worlds, homes, and Universe views", async () => {
   await rm("dist", { recursive: true, force: true });
-  const run = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, ["scripts/build.mjs"], {
+    encoding: "utf8",
+    timeout: 30000,
+  });
+  if (run.error) throw run.error;
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const model = JSON.parse(await readFile("dist/runtime/product-model.json", "utf8"));
   const authority = JSON.parse(await readFile("runtime/authority.json", "utf8"));
