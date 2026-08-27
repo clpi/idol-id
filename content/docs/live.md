@@ -7,6 +7,9 @@
 >
 > **Pinned research source:** `Idol-live.md`, SHA-256
 > `af5084dd85b5b82e603245c965788bfb2e9e0e8e11ee4c13933bbc8c3d6fdc75`.
+>
+> The complete uploaded thesis is identified by the hash above; this bounded web
+> projection is not a byte-for-byte copy and cannot amend language law.
 
 ## Product thesis and boundary
 

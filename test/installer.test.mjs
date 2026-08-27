@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const authority = "f33bb3773484e7d954a2975211e683dfa89edab5";
+const authority = "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99";
 const canonical = "https://github.com/clpi/idol.git";
 
 test("Unix installer is user-local, authority-pinned, and honest about bootstrap status", async () => {

@@ -40,7 +40,7 @@ html, body { height: 100%; }
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: var(--fs-ui);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -131,7 +131,7 @@ a:hover { color: var(--ink); border-color: var(--ink-3); }
   padding: 8px 16px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--ink-4); cursor: pointer; position: relative;
   transition: color var(--t), background var(--t);
-  border: none; background: none; font-family: var(--mono);
+  border: none; background: none; font-family: var(--sans);
 }
 .tab:hover { color: var(--ink-2); background: var(--bg-hover); }
 .tab.here { color: var(--ink); }
@@ -140,7 +140,7 @@ a:hover { color: var(--ink); border-color: var(--ink-3); }
 /* ---------------------------------------------------------------- controls */
 
 button, .btn {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+  font-family: var(--sans); font-size: 11px; letter-spacing: 0.06em;
   background: var(--bg-raise); color: var(--ink-2);
   border: 1px solid var(--rule-2); border-radius: var(--radius);
   padding: 5px 12px; cursor: pointer;
@@ -156,13 +156,20 @@ button.ghost:hover { color: var(--ink); background: var(--bg-hover); border-colo
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 button.signal { border-color: rgba(230,180,80,0.4); color: var(--signal); background: var(--signal-dim); }
 
-input[type="text"], input[type="search"], textarea, select {
-  font-family: var(--mono); font-size: var(--fs-ui);
+input[type="text"], input[type="search"], select {
+  font-family: var(--sans); font-size: var(--fs-ui);
   background: var(--bg-panel); color: var(--ink);
   border: 1px solid var(--rule-2); border-radius: var(--radius);
   padding: 6px 10px; outline: none;
   transition: border-color var(--t), box-shadow var(--t);
 }
+textarea {
+  font-family: var(--mono); font-size: var(--fs-code);
+  background: var(--bg-panel); color: var(--ink);
+  border: 1px solid var(--rule-2); border-radius: var(--radius);
+  padding: 6px 10px; outline: none;
+}
+
 input:focus, textarea:focus, select:focus { border-color: var(--ink-3); box-shadow: 0 0 0 1px var(--rule-3); }
 input::placeholder, textarea::placeholder { color: var(--ink-5); }
 

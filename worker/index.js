@@ -2,7 +2,7 @@ import { parseImportRequest, planForeignImport } from "../shared/foreign.js";
 import { handleIdeTransport } from "./ide.js";
 import { handlePlatformTransport } from "./platform.js";
 
-const HOSTS = Object.freeze({
+export const hostMap = Object.freeze({
   "idol.id": { app: "site", surface: "site", origin: true },
   "www.idol.id": { app: "site", surface: "site", origin: true, redirect: "https://idol.id" },
   "docs.idol.id": { app: "docs", surface: "docs", origin: true },
@@ -25,7 +25,7 @@ const IMPORT_BODY_LIMIT = 32 * 1024;
 
 export function resolveHost(hostname) {
   const host = String(hostname || "").toLowerCase().replace(/:\d+$/, "");
-  return HOSTS[host] || null;
+  return hostMap[host] || null;
 }
 
 export function configSource(info, host, commit, authority) {
@@ -36,7 +36,9 @@ export function configSource(info, host, commit, authority) {
     origin: info.origin !== false,
     api: "",
     commit,
-    authority,
+    authority: authority.language.commit,
+    native_authority: authority.native.commit,
+    source_law: authority.language.source_law.sha256,
     runtime: "/runtime/manifest.json",
   };
   return `window.IDOL = Object.freeze(${JSON.stringify(config)});\n`;
@@ -103,6 +105,23 @@ async function readJsonAsset(env, request, pathname) {
   } catch {
     return { response: json({ error: "runtime projection is invalid JSON", path: pathname }, { status: 500 }) };
   }
+}
+
+function validRuntimeAuthority(value) {
+  return Boolean(
+    value &&
+    typeof value.language?.commit === "string" && value.language.commit.length > 0 &&
+    typeof value.native?.commit === "string" && value.native.commit.length > 0 &&
+    typeof value.language?.source_law?.sha256 === "string" && value.language.source_law.sha256.length > 0
+  );
+}
+
+async function loadRuntimeAuthority(env, request) {
+  const loaded = await readJsonAsset(env, request, "/runtime/authority.json");
+  if (loaded.response || !validRuntimeAuthority(loaded.value)) {
+    return { response: json({ error: { code: "RUNTIME_AUTHORITY_UNAVAILABLE", message: "immutable runtime authority projection is unavailable or invalid" } }, { status: 503 }) };
+  }
+  return { value: loaded.value };
 }
 
 async function appShell(env, request, app) {
@@ -204,24 +223,26 @@ export async function handle(request, env, dependencies = {}) {
   if (info.redirect) return Response.redirect(`${info.redirect}${url.pathname}${url.search}`, 308);
 
   const commit = env.IDOL_COMMIT || "development";
-  const authority = env.IDOL_AUTHORITY || "f33bb3773484e7d954a2975211e683dfa89edab5";
 
-  if (url.pathname === "/__idol/version") {
-    return json({ service: "idol-id", commit, authority, app: info.app, surface: info.surface });
+  if (["/__idol/version", "/__idol/health", "/config.js"].includes(url.pathname)) {
+    const loaded = await loadRuntimeAuthority(env, request);
+    if (loaded.response) return loaded.response;
+    const authority = loaded.value;
+    const identity = {
+      commit,
+      authority: authority.language.commit,
+      native_authority: authority.native.commit,
+      source_law: authority.language.source_law.sha256,
+      app: info.app,
+      surface: info.surface,
+    };
+    if (url.pathname === "/__idol/version") return json({ service: "idol-id", ...identity });
+    if (url.pathname === "/__idol/health") return json({ status: "healthy", edge: true, ...identity });
+    return secure(new Response(configSource(info, host, commit, authority), {
+      headers: { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store" },
+    }));
   }
-  if (url.pathname === "/__idol/health") {
-    return json({ status: "healthy", edge: true, commit, authority, app: info.app, surface: info.surface });
-  }
-  if (url.pathname === "/__idol/manifest") {
-    return asset(env, request, "/manifest.json", { immutable: false });
-  }
-  if (url.pathname === "/config.js") {
-    return secure(
-      new Response(configSource(info, host, commit, authority), {
-        headers: { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store" },
-      }),
-    );
-  }
+  if (url.pathname === "/__idol/manifest") return asset(env, request, "/manifest.json", { immutable: false });
 
   const ideResponse = await handleIdeTransport(request, env, url.pathname, info, dependencies);
   if (ideResponse) return secure(ideResponse);

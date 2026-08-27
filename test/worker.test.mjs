@@ -14,6 +14,7 @@ function envWithAssets() {
     ["/apps/ide/index.html", ["text/html", "<html>ide</html>"]],
     ["/shared/web.js", ["application/javascript", "web"]],
     ["/runtime/worlds.json", ["application/json", "{\"schema\":\"idol.web.worlds.v1\",\"worlds\":[]}"]],
+    ["/runtime/authority.json", ["application/json", "{\"language\":{\"commit\":\"authority123\",\"source_law\":{\"sha256\":\"source-law123\"}},\"native\":{\"commit\":\"native123\"}}"]],
     ["/manifest.json", ["application/json", "{\"ok\":true}"]],
   ]);
   return {
@@ -97,7 +98,7 @@ test("config reports the precise host surface and authority", async () => {
   const text = await response.text();
   assert.match(text, /\"app\":\"docs\"/);
   assert.match(text, /\"authority\":\"authority123\"/);
-  assert.equal(text, configSource(resolveHost("docs.idol.id"), "docs.idol.id", "abc123", "authority123"));
+  assert.equal(text, configSource(resolveHost("docs.idol.id"), "docs.idol.id", "abc123", { language: { commit: "authority123", source_law: { sha256: "source-law123" } }, native: { commit: "native123" } }));
 });
 
 test("api requests preserve the existing tunnel origin", async () => {

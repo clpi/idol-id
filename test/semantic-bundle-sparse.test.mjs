@@ -4,7 +4,7 @@ import { remoteBundle } from "../shared/semantic-bundle.js";
 
 const authority = Object.freeze({
   repository: "clpi/idol",
-  commit: "f33bb3773484e7d954a2975211e683dfa89edab5",
+  commit: "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99",
 });
 
 const source = "alpha + beta";

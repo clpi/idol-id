@@ -225,7 +225,7 @@ export async function provisionPlatform({
   });
 }
 
-export function renderProductionWrangler(baseConfig, provisioned, { webCommit } = {}) {
+export function renderProductionWrangler(baseConfig, provisioned, { webCommit, authority } = {}) {
   const config = structuredClone(baseConfig);
   config.d1_databases = [{
     binding: "PLATFORM_DB",
@@ -233,9 +233,15 @@ export function renderProductionWrangler(baseConfig, provisioned, { webCommit } 
     database_id: provisioned.databaseId,
     migrations_dir: "migrations",
   }];
+  if (!authority?.language?.commit || !authority?.native?.commit || !authority?.language?.source_law?.sha256) {
+    throw new Error("renderProductionWrangler requires the immutable runtime authority document");
+  }
   config.vars = {
     ...(config.vars || {}),
     ...(webCommit ? { IDOL_COMMIT: webCommit } : {}),
+    IDOL_AUTHORITY: authority.language.commit,
+    IDOL_NATIVE_AUTHORITY: authority.native.commit,
+    IDOL_SOURCE_LAW: authority.language.source_law.sha256,
     ACCESS_TEAM_DOMAIN: provisioned.teamDomain,
     ACCESS_AUD: provisioned.accessAudience,
     ACCESS_EMAIL: provisioned.bootstrapEmail,

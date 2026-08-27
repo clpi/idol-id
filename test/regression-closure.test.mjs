@@ -191,3 +191,38 @@ test("CI detects upstream authority drift and verifies the deployed multi-surfac
   assert.match(sync, /scripts\/sync-authority\.mjs/);
   assert.match(sync, /pull-requests:\s*write/);
 });
+
+
+test("research specification and Idol Live projections retain exact input hashes without becoming authority", async () => {
+  const manifest = await readJson("authority/manifest.json");
+  const spec = await read("content/docs/spec.md");
+  const live = await read("content/docs/live.md");
+  assert.equal(manifest.semantic_authority, false);
+  assert.equal(manifest.exact_source_committed, false);
+  assert.equal(manifest.language_authority.repository, "clpi/idol");
+  assert.equal(manifest.artifacts["Spec.md"].sha256, "0653bf7a543cf399c73b14948dd3b2b87f784d09442fdabe653fc865a2e2fd63");
+  assert.equal(manifest.artifacts["Idol-live.md"].sha256, "af5084dd85b5b82e603245c965788bfb2e9e0e8e11ee4c13933bbc8c3d6fdc75");
+  assert.match(spec, /0653bf7a543cf399c73b14948dd3b2b87f784d09442fdabe653fc865a2e2fd63/);
+  assert.match(live, /af5084dd85b5b82e603245c965788bfb2e9e0e8e11ee4c13933bbc8c3d6fdc75/);
+});
+
+test("public API examples come only from the authority-pinned example projection", async () => {
+  const api = await read("apps/api/index.html");
+  assert.doesNotMatch(api, /\bstdout\s*:/);
+  assert.match(api, /content\/source-examples\.json/);
+  assert.match(api, /authority-pinned/i);
+});
+
+test("every Worker hostname has an explicit deployment route", async () => {
+  const { hostMap } = await import("../worker/index.js");
+  const wrangler = parseJsonc(await read("wrangler.jsonc"));
+  const routed = new Set((wrangler.routes || []).map((route) => route.pattern.split("/")[0]));
+  for (const hostname of Object.keys(hostMap)) assert.ok(routed.has(hostname), `${hostname} has no Wrangler route`);
+});
+
+test("recovery policy states the enforceable future invariant without an impossible bug-free claim", async () => {
+  const policy = await read("docs/RECOVERY_AND_RELEASE_GATES.md");
+  assert.match(policy, /required pull request/i);
+  assert.match(policy, /branch protection/i);
+  assert.match(policy, /cannot guarantee/i);
+});

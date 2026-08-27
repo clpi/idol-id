@@ -36,7 +36,7 @@
 <script src="/shared/idol.js"></script>
 <script src="/shared/shell.js"></script>
 <script>
-(function () {
+(async function () {
   Shell.boot("api", { title: "API", keys: [["⏎", "run request"]] });
   IdolShell.crumbs([{ label: "api" }]);
 
@@ -45,13 +45,13 @@
     { m: "GET", p: "/info", d: "service + authority edition", try: {} },
     { m: "GET", p: "/api/authority", d: "source-law authority edition", try: {} },
     { m: "POST", p: "/api/analyze", d: "graph + explain + check in one pass",
-      body: { source: 'add = (a, b) a + b\nstdout:write(add(20, 22))' } },
+      body: { source: "" } },
     { m: "POST", p: "/api/lower", d: "realization text for a target",
-      body: { source: 'x = 40 + 2', target: "aarch64-linux", emit: "asm", opt: "3" } },
+      body: { source: "", target: "aarch64-linux", emit: "asm", opt: "3" } },
     { m: "POST", p: "/api/run", d: "native execution",
-      body: { source: 'stdout:write("hello from the graph")' } },
+      body: { source: "" } },
     { m: "POST", p: "/api/fmt", d: "formatter",
-      body: { source: "x=1\ny   =  2" } },
+      body: { source: "" } },
     { m: "GET", p: "/api/libs", d: "indexed homes", try: {} },
     { m: "GET", p: "/api/worlds", d: "published worlds (r2-canonical)", try: {} },
     { m: "GET", p: "/api/lib/:name/detail", d: "source + graph + explain + stats", try: { name: "json" } },
@@ -62,14 +62,24 @@
     { m: "GET", p: "/api/lib/:name/version/:v", d: "source of one version", try: { name: "std", v: "0.1.0" } },
     { m: "GET", p: "/api/whys?subject=X", d: "provenance facts across the corpus", try: { subject: "json" } },
     { m: "POST", p: "/api/publish", d: "publish a world (write token)",
-      body: { name: "example", version: "0.1.0", source: "x = 1", summary: "example" },
+      body: { name: "example", version: "0.1.0", source: "", summary: "example" },
       note: "requires Authorization: Bearer <write token>" },
   ];
+
+  const SOURCE_EXAMPLES = "/content/source-examples.json";
+  let authorityExample = "";
+  try {
+    const response = await fetch(SOURCE_EXAMPLES, { cache: "no-cache" });
+    if (!response.ok) throw new Error(`source example manifest ${response.status}`);
+    const manifest = await response.json();
+    authorityExample = manifest.examples?.find((entry) => entry.status === "current-law")?.source || manifest.examples?.[0]?.source || "";
+    for (const endpoint of EPS) if (endpoint.body && Object.hasOwn(endpoint.body, "source")) endpoint.body.source = authorityExample;
+  } catch (error) { console.warn("authority-pinned source examples unavailable", error); }
 
   const root = document.getElementById("root");
   root.appendChild(Idol.el("h1", null, "API"));
   root.appendChild(Idol.el("div", { class: "lede" },
-    "the same semantic surface behind every face — try any endpoint live. POST bodies are JSON."));
+    "transport console over the deployed compiler and registry. Source defaults come from the authority-pinned example projection; lawful source does not imply parser, lowering, or runtime support."));
 
   for (const ep of EPS) {
     const body = Idol.el("div", { class: "ep" });

@@ -18,7 +18,8 @@ const webCommit = process.env.GITHUB_SHA || process.env.IDOL_WEB_COMMIT || "deve
 try {
   const provisioned = await provisionPlatform({ accountId, apiToken, bootstrapEmail, teamName });
   const base = parseJsonc(await readFile(resolve(root, "wrangler.jsonc"), "utf8"));
-  const production = renderProductionWrangler(base, provisioned, { webCommit });
+  const authority = JSON.parse(await readFile(resolve(root, "runtime", "authority.json"), "utf8"));
+  const production = renderProductionWrangler(base, provisioned, { webCommit, authority });
   await writeFile(resolve(root, ".platform-provision.json"), `${JSON.stringify(provisioned, null, 2)}\n`, { mode: 0o600 });
   await writeFile(resolve(root, ".wrangler.production.jsonc"), `${JSON.stringify(production, null, 2)}\n`);
 
