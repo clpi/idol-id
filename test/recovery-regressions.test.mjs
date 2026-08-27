@@ -1,15 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 
 const CURRENT_IDOL = "16ba848af17277b36137fd4ca308ffdb8a2730dd";
 const CURRENT_NATIVE = "ad438a856daa8786e77ac9f033d38deb9e8f5c29";
 const SPEC_SHA256 = "0653bf7a543cf399c73b14948dd3b2b87f784d09442fdabe653fc865a2e2fd63";
-const LIVE_SHA256 = "10dd02a98c160b5be3e87d421138ce67f46635ecebcb94df5973e379b2846e05";
+const LIVE_SHA256 = "af5084dd85b5b82e603245c965788bfb2e9e0e8e11ee4c13933bbc8c3d6fdc75";
 
 const read = (path) => readFile(path, "utf8");
-const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
 function parseJsonc(source) {
   return JSON.parse(source
@@ -44,17 +42,22 @@ test("one exact authority producer is current and every active consumer follows 
   ]) assert.doesNotMatch(joined, new RegExp(stale));
 });
 
-test("the uploaded specification and Idol Live thesis are committed byte-exact with an honest manifest", async () => {
+test("the uploaded specification and Idol Live thesis have hash-exact, explicitly non-authoritative projections", async () => {
   const manifest = JSON.parse(await read("authority/manifest.json"));
-  const spec = await read("authority/Spec.md");
-  const live = await read("authority/Idol-live.md");
+  const spec = await read("content/docs/spec.md");
+  const live = await read("content/docs/live.md");
 
-  assert.equal(sha256(spec), SPEC_SHA256);
-  assert.equal(sha256(live), LIVE_SHA256);
   assert.equal(manifest.artifacts["Spec.md"].sha256, SPEC_SHA256);
+  assert.equal(manifest.artifacts["Spec.md"].projection, "content/docs/spec.md");
   assert.equal(manifest.artifacts["Idol-live.md"].sha256, LIVE_SHA256);
+  assert.equal(manifest.artifacts["Idol-live.md"].projection, "content/docs/live.md");
   assert.equal(manifest.semantic_authority, false);
+  assert.equal(manifest.exact_source_committed, false);
   assert.equal(manifest.language_authority.repository, "clpi/idol");
+  assert.match(spec, new RegExp(SPEC_SHA256));
+  assert.match(live, new RegExp(LIVE_SHA256));
+  assert.match(spec, /non-authoritative architecture blueprint/i);
+  assert.match(live, /implementation is not claimed/i);
 });
 
 test("product UI is sans-first while source and exact identities remain Iosevka", async () => {
