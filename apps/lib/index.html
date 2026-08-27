@@ -4,56 +4,71 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registry — idol.id</title>
+<meta name="description" content="Idol package and world registry with exact source, graph, version, artifact, and provenance projections.">
 <link rel="stylesheet" href="/shared/theme.css">
 <script src="/config.js"></script>
 <style>
-  .pane-list { width: 320px; flex: none; border-right: 1px solid var(--rule); }
+  .pane-list { width: 330px; flex: none; border-right: 1px solid var(--rule); }
   .pane-list .search { padding: 10px 12px; border-bottom: 1px solid var(--rule); display: flex; gap: 8px; }
   .pane-list .search input { flex: 1; font-size: 11px; }
   .pane-list .sort { display: flex; gap: 4px; }
-  .pane-list .sort button { font-size: 9px; padding: 3px 7px; letter-spacing: 0.08em; }
+  .pane-list .sort button { font-size: 9px; padding: 3px 7px; letter-spacing: .08em; }
   .seg { display: flex; border-bottom: 1px solid var(--rule); }
-  .seg button { flex: 1; border: 0; border-radius: 0; background: none; padding: 7px 0; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4); border-bottom: 1px solid transparent; }
-  .seg button.here { color: var(--ink); border-bottom-color: var(--ink); background: none; }
-  .corpus-strip { padding: 6px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-4); font-size: 9.5px; letter-spacing: 0.06em; display: flex; gap: 12px; }
+  .seg button { flex: 1; border: 0; border-radius: 0; background: none; padding: 8px 0; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4); border-bottom: 1px solid transparent; }
+  .seg button.here { color: var(--ink); border-bottom-color: var(--signal); background: var(--bg-hover); }
+  .boundary-note { padding: 9px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-4); font-family: var(--sans); font-size: 10px; line-height: 1.55; }
+  .boundary-note strong { color: var(--ink-2); font-weight: 530; }
+  .corpus-strip { padding: 7px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-4); font-size: 9.5px; letter-spacing: .06em; display: flex; gap: 12px; }
   .row .metric { color: var(--ink-4); font-size: 10px; flex: none; }
   .row .vbadge { color: var(--signal); font-size: 9px; flex: none; }
-  .pkg-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--rule); }
-  .pkg-head h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.02em; }
-  .pkg-head .sub { color: var(--ink-3); margin-top: 4px; font-size: 11.5px; max-width: 72ch; }
-  .pkg-head .meta { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .pkg-head { padding: 20px 22px 15px; border-bottom: 1px solid var(--rule); }
+  .pkg-head h1 { font-family: var(--sans); font-size: 21px; font-weight: 610; letter-spacing: -.01em; }
+  .pkg-head .sub { color: var(--ink-3); margin-top: 5px; font-family: var(--sans); font-size: 12px; line-height: 1.6; max-width: 72ch; }
+  .pkg-head .meta { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; align-items: center; }
   .statgrid { margin: 16px 20px; }
   .pkg-body { flex: 1; overflow: auto; display: flex; flex-direction: column; min-height: 0; }
-  .read-section { padding: 14px 20px; border-bottom: 1px solid var(--rule); }
-  .read-section h3 { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px; }
-  .read-section p { color: var(--ink-2); font-size: 12px; max-width: 70ch; }
+  .read-section { padding: 15px 20px; border-bottom: 1px solid var(--rule); }
+  .read-section h3 { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px; }
+  .read-section p { color: var(--ink-2); font-family: var(--sans); font-size: 12px; line-height: 1.65; max-width: 76ch; }
   .rel-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .actions { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
-  .editor-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-  .vrow { display: flex; gap: 12px; padding: 8px 20px; border-bottom: 1px solid var(--rule); align-items: center; }
+  .vrow { display: flex; gap: 12px; padding: 9px 20px; border-bottom: 1px solid var(--rule); align-items: center; }
   .vrow .v { color: var(--ink); }
-  .vrow .when { color: var(--ink-4); font-size: 10px; }
   .vrow button { margin-left: auto; font-size: 10px; }
   .vrow button + button { margin-left: 0; }
-  .deps-cols { display: flex; gap: 0; }
-  .deps-cols > div { flex: 1; min-width: 0; }
+  .deps-cols { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .deps-cols > div:first-child { border-right: 1px solid var(--rule); }
-  .deps-cols h3 { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); padding: 12px 16px 8px; }
+  .deps-cols h3 { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); padding: 12px 16px 8px; }
+  .lib-mobile-nav { display: none; }
   dialog { background: var(--bg-raise); color: var(--ink); border: 1px solid var(--rule-3); border-radius: var(--radius); padding: 0; }
-  dialog::backdrop { background: rgba(0,0,0,0.7); }
-  dialog form { display: flex; flex-direction: column; gap: 10px; padding: 18px; min-width: 420px; }
-  dialog h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.06em; }
-  dialog label { display: flex; flex-direction: column; gap: 4px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); }
+  dialog::backdrop { background: rgba(0,0,0,.72); }
+  dialog form { display: flex; flex-direction: column; gap: 10px; padding: 18px; min-width: min(420px, calc(100vw - 30px)); }
+  dialog h2 { font-family: var(--sans); font-size: 14px; font-weight: 550; }
+  dialog label { display: flex; flex-direction: column; gap: 5px; font-family: var(--sans); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
   dialog .row-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  @media (max-width: 699px) {
+    .stage { display: block; overflow: auto; }
+    .pane-list { width: 100%; max-height: 46vh; border-right: 0; border-bottom: 1px solid var(--rule-2); }
+    .pane-list .pane-body { max-height: 28vh; }
+    .pkg-body { min-height: 54vh; overflow: visible; }
+    .lib-mobile-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border-bottom: 1px solid var(--rule); }
+    .lib-mobile-nav a { min-height: 48px; display: flex; align-items: center; justify-content: center; border: 0; border-right: 1px solid var(--rule); color: var(--ink-3); font-family: var(--sans); font-size: 11px; }
+    .lib-mobile-nav a:last-child { border-right: 0; }
+    .pkg-head, .actions, .read-section { padding-left: 16px; padding-right: 16px; }
+    .statgrid { margin-left: 16px; margin-right: 16px; }
+    .deps-cols { grid-template-columns: 1fr; }
+    .deps-cols > div:first-child { border-right: 0; border-bottom: 1px solid var(--rule); }
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar"></div>
+  <nav class="lib-mobile-nav" aria-label="Registry contextual views"><a href="/atlas">World Atlas</a><a href="/universe">Universe views</a></nav>
   <div class="stage">
-    <div class="pane pane-list">
+    <aside class="pane pane-list">
       <div class="search">
-        <input type="search" id="q" placeholder="search worlds… (⌘K)" spellcheck="false">
+        <input type="search" id="q" placeholder="search packages and worlds… (⌘K)" spellcheck="false">
         <div class="sort">
           <button data-sort="rel" class="here">best</button>
           <button data-sort="name">a–z</button>
@@ -61,16 +76,16 @@
         </div>
       </div>
       <div class="seg">
-        <button class="here" data-set="libs">homes</button>
-        <button data-set="worlds">published</button>
+        <button class="here" data-set="worlds">worlds</button>
+        <button data-set="libs">homes</button>
       </div>
+      <div class="boundary-note"><strong>Package provenance is not semantic identity.</strong> A published world keeps its exact registry evidence; a home is reach and provenance, not a world.</div>
       <div class="corpus-strip" id="strip"></div>
       <div class="pane-body"><div class="list" id="list"></div></div>
-    </div>
-    <div class="pane pkg-body" id="detail">
-      <div class="empty" style="flex:1"><div class="glyph">◍</div><div>select a world</div>
-        <div class="mono-note">every .id home · every published world · every token explorable</div></div>
-    </div>
+    </aside>
+    <main class="pane pkg-body" id="detail">
+      <div class="empty" style="flex:1"><div class="glyph">◍</div><div>select a published world</div><div class="mono-note">versions · source · graph · dependencies · provenance</div></div>
+    </main>
   </div>
   <div class="statusbar"></div>
 </div>
@@ -81,373 +96,261 @@
 <script>
 (function () {
   Shell.boot("lib", { title: "Registry", keys: [["hover", "any token"], ["⌘K", "search"], ["⌘E", "explorer"], ["↑↓", "walk list"]] });
-  IdolShell.crumbs([{ label: "registry" }, { label: "…" }]);
+  IdolShell.crumbs([{ label: "registry" }, { label: "published worlds" }]);
 
-  let set = "libs";
+  let set = "worlds";
+  if (new URLSearchParams(location.search).get("set") === "homes") set = "libs";
   let sort = "rel";
   let items = [];
   let current = null;
   let cursor = -1;
   let visible = [];
+  let detCache = null;
   const q = document.getElementById("q");
 
-  document.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); q.focus(); q.select(); }
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") { e.preventDefault(); openInExplorerCurrent(); }
-    if (document.activeElement === q && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      e.preventDefault();
-      cursor = Math.max(0, Math.min(visible.length - 1, cursor + (e.key === "ArrowDown" ? 1 : -1)));
-      paintCursor(); const it = visible[cursor]; if (it) { const r = document.getElementById("list").children[cursor]; r && r.scrollIntoView({ block: "nearest" }); }
-    }
-    if (document.activeElement === q && e.key === "Enter") {
-      const it = visible[Math.max(0, cursor)];
-      if (it) { q.blur(); select(it.name); }
-    }
-  });
-
-  document.querySelectorAll(".seg button").forEach((b) => {
-    b.addEventListener("click", () => {
-      document.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("here", x === b));
-      set = b.dataset.set;
+  document.querySelectorAll(".seg button").forEach((button) => {
+    button.classList.toggle("here", button.dataset.set === set);
+    button.addEventListener("click", () => {
+      set = button.dataset.set;
+      document.querySelectorAll(".seg button").forEach((candidate) => candidate.classList.toggle("here", candidate === button));
       cursor = -1;
+      current = null;
+      history.replaceState(null, "", set === "libs" ? "?set=homes" : location.pathname);
+      IdolShell.crumbs([{ label: "registry" }, { label: set === "worlds" ? "published worlds" : "source homes" }]);
       load();
     });
   });
-  document.querySelectorAll(".sort button").forEach((b) => {
-    b.addEventListener("click", () => {
-      document.querySelectorAll(".sort button").forEach((x) => x.classList.toggle("here", x === b));
-      sort = b.dataset.sort;
-      render();
-    });
-  });
+  document.querySelectorAll(".sort button").forEach((button) => button.addEventListener("click", () => {
+    sort = button.dataset.sort;
+    document.querySelectorAll(".sort button").forEach((candidate) => candidate.classList.toggle("here", candidate === button));
+    render();
+  }));
 
+  document.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); q.focus(); q.select(); }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") { event.preventDefault(); openInExplorerCurrent(); }
+    if (document.activeElement !== q || !["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Enter") {
+      const selected = visible[Math.max(0, cursor)];
+      if (selected) { q.blur(); select(selected.name); }
+      return;
+    }
+    cursor = Math.max(0, Math.min(visible.length - 1, cursor + (event.key === "ArrowDown" ? 1 : -1)));
+    paintCursor();
+    document.getElementById("list").children[cursor]?.scrollIntoView({ block: "nearest" });
+  });
   q.addEventListener("input", () => { cursor = -1; render(); });
 
-  /* fuzzy subsequence score: name prefix > name subseq > summary/relations */
-  function score(it, needle) {
+  function score(item, needle) {
     if (!needle) return 1;
-    const name = it.name.toLowerCase();
-    if (name.startsWith(needle)) return 100 - name.length * 0.1;
-    if (name.includes(needle)) return 70 - name.length * 0.1;
-    let i = 0;
-    for (const ch of name) { if (ch === needle[i]) i++; if (i === needle.length) break; }
-    if (i === needle.length) return 40 - name.length * 0.1;
-    const hay = ((it.summary || "") + " " + (it.relations || []).join(" ")).toLowerCase();
-    if (hay.includes(needle)) return 10;
-    let j = 0;
-    for (const ch of hay) { if (ch === needle[j]) j++; if (j === needle.length) return 5; }
-    return 0;
+    const name = item.name.toLowerCase();
+    if (name.startsWith(needle)) return 100 - name.length * .1;
+    if (name.includes(needle)) return 70 - name.length * .1;
+    let matched = 0;
+    for (const character of name) { if (character === needle[matched]) matched++; if (matched === needle.length) return 40 - name.length * .1; }
+    const facts = `${item.summary || ""} ${(item.relations || []).join(" ")}`.toLowerCase();
+    return facts.includes(needle) ? 10 : 0;
   }
 
   async function load() {
     try {
-      const r = set === "libs" ? await Idol.api.get("/api/libs") : await Idol.api.get("/api/worlds");
-      items = r.libs || r.worlds || [];
-      const strip = document.getElementById("strip");
-      const lines = items.reduce((a, x) => a + (x.lines || (x.stats && x.stats.lines) || 0), 0);
-      strip.textContent = `${items.length} ${set === "libs" ? "homes" : "worlds"} · ${lines.toLocaleString()} lines`;
+      const document = set === "worlds" ? await Idol.api.get("/api/worlds") : await Idol.api.get("/api/libs");
+      items = document.worlds || document.libs || [];
+      const lines = items.reduce((sum, item) => sum + Number(item.lines || item.stats?.lines || 0), 0);
+      document.getElementById("strip").textContent = `${items.length} ${set === "worlds" ? "worlds" : "homes"} · ${lines.toLocaleString()} lines`;
       render();
-    } catch (e) { Idol.toast(e.message, true); }
+      const initial = decodeURIComponent(location.hash.slice(1));
+      if (initial && initial !== current) select(initial, false);
+    } catch (error) { Idol.toast(error.message, true); }
   }
 
   function render() {
     const needle = q.value.trim().toLowerCase();
     const list = document.getElementById("list");
-    list.innerHTML = "";
-    visible = items.map((it) => ({ it, s: score(it, needle) })).filter((x) => x.s > 0);
-    if (sort === "name") visible.sort((a, b) => a.it.name.localeCompare(b.it.name));
-    else if (sort === "lines") visible.sort((a, b) =>
-      (b.it.lines || (b.it.stats && b.it.stats.lines) || 0) - (a.it.lines || (a.it.stats && a.it.stats.lines) || 0));
-    else visible.sort((a, b) => b.s - a.s);
-    visible = visible.map((x) => x.it);
-    if (!visible.length) {
-      list.innerHTML = `<div class="empty"><div class="glyph">∅</div><div>nothing matches</div></div>`;
-      return;
-    }
-    for (const it of visible) {
-      const isWorld = set === "worlds";
-      const sub = isWorld
-        ? `v${it.version || "?"} · ${it.summary || ""}`
-        : (it.summary || (it.relations && it.relations.slice(0, 5).join(" ")) || "");
-      const metric = isWorld ? `${(it.stats && it.stats.lines) || "?"} ln` : `${it.lines || "?"} ln`;
-      const row = Idol.el("div", { class: "row" + (current === it.name ? " here" : "") },
-        Idol.el("div", { class: "grow" },
-          Idol.el("div", { class: "title" }, it.name),
-          Idol.el("div", { class: "sub" }, sub)),
-        isWorld && it.mirror === "r2" ? Idol.el("span", { class: "vbadge" }, "◈ r2") : null,
-        Idol.el("span", { class: "metric" }, metric));
-      row.addEventListener("click", () => select(it.name));
+    list.replaceChildren();
+    visible = items.map((item) => ({ item, score: score(item, needle) })).filter((entry) => entry.score > 0);
+    if (sort === "name") visible.sort((a, b) => a.item.name.localeCompare(b.item.name));
+    else if (sort === "lines") visible.sort((a, b) => Number(b.item.lines || b.item.stats?.lines || 0) - Number(a.item.lines || a.item.stats?.lines || 0));
+    else visible.sort((a, b) => b.score - a.score);
+    visible = visible.map((entry) => entry.item);
+    if (!visible.length) { list.appendChild(Idol.el("div", { class: "empty" }, Idol.el("div", { class: "glyph" }, "∅"), Idol.el("div", null, "nothing matches"))); return; }
+    for (const item of visible) {
+      const world = set === "worlds";
+      const row = Idol.el("div", { class: `row${current === item.name ? " here" : ""}` },
+        Idol.el("div", { class: "grow" }, Idol.el("div", { class: "title" }, item.name), Idol.el("div", { class: "sub" }, world ? `v${item.version || "?"} · ${item.summary || ""}` : item.summary || (item.relations || []).slice(0, 5).join(" "))),
+        world && item.mirror === "r2" ? Idol.el("span", { class: "vbadge" }, "◈ r2") : null,
+        Idol.el("span", { class: "metric" }, `${item.lines || item.stats?.lines || "?"} ln`));
+      row.addEventListener("click", () => select(item.name));
       list.appendChild(row);
     }
   }
 
   function paintCursor() {
-    document.querySelectorAll("#list .row").forEach((r, i) =>
-      r.classList.toggle("here", visible[i] && visible[i].name === (visible[cursor] || {}).name));
+    document.querySelectorAll("#list .row").forEach((row, index) => row.classList.toggle("here", visible[index]?.name === visible[cursor]?.name));
   }
 
-  /* ---------------- detail ---------------- */
-
-  let detCache = null; // last loaded detail for actions
-
-  async function select(name, push) {
+  async function select(name, push = true) {
     current = name;
-    if (push !== false) location.hash = "#" + encodeURIComponent(name);
-    document.querySelectorAll("#list .row").forEach((r) =>
-      r.classList.toggle("here", r.querySelector(".title").textContent === name));
-    IdolShell.crumbs([{ label: "registry" }, { label: name }]);
-    const d = document.getElementById("detail");
-    d.innerHTML = `<div style="padding:20px"><span class="spin"></span></div>`;
+    if (push) location.hash = `#${encodeURIComponent(name)}`;
+    render();
+    IdolShell.crumbs([{ label: "registry" }, { label: set === "worlds" ? "world" : "home" }, { label: name }]);
+    const detail = document.getElementById("detail");
+    detail.replaceChildren(Idol.el("div", { style: "padding:20px" }, Idol.el("span", { class: "spin" })));
     try {
-      const det = await Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/detail");
-      detCache = { name, det };
-      renderDetail(name, det);
-    } catch (e) {
-      d.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${e.message}</div></div>`;
+      const record = await Idol.api.get(`/api/lib/${encodeURIComponent(name)}/detail`);
+      detCache = { name, record };
+      renderDetail(name, record);
+    } catch (error) {
+      detail.replaceChildren(Idol.el("div", { class: "empty" }, Idol.el("div", { class: "glyph" }, "×"), Idol.el("div", null, error.message)));
     }
   }
 
-  function renderDetail(name, det) {
-    const d = document.getElementById("detail");
-    const g = det.graph || {};
-    const st = det.stats || {};
-    const reg = set === "worlds";
-    d.innerHTML = "";
-
-    const ents = (det.explain && det.explain.knowledge_snapshot && det.explain.knowledge_snapshot.entities) || [];
-    const observed = ents.filter((x) => x.knowledge === "observed").length;
+  function renderDetail(name, record) {
+    const detail = document.getElementById("detail");
+    const graph = record.graph || {};
+    const stats = record.stats || {};
+    const world = set === "worlds";
+    detail.replaceChildren();
 
     const head = Idol.el("div", { class: "pkg-head" },
       Idol.el("h1", null, name),
-      Idol.el("div", { class: "sub" }, det.summary || st.summary || (reg ? "published world" : "layout-projected home")),
+      Idol.el("div", { class: "sub" }, record.summary || stats.summary || (world ? "published world projection" : "source home reach projection")),
       Idol.el("div", { class: "meta" },
-        Idol.el("span", { class: reg ? "badge sig" : "badge" }, reg ? "world" : "home"),
-        reg ? Idol.el("span", { class: "badge" }, "v" + (det.version || "?")) : null,
-        g.version !== undefined ? Idol.el("span", { class: "badge" }, "sim-v0 · v" + g.version) : null,
-        det.check && det.check.ok ? Idol.el("span", { class: "badge ok" }, "law ✓") : Idol.el("span", { class: "badge bad" }, "errors"),
-        st.source_hash ? Idol.el("span", { class: "badge" }, "hash " + st.source_hash) : null,
-        det.mirror ? Idol.el("span", { class: "badge" }, "◈ " + det.mirror) : null));
-    d.appendChild(head);
+        Idol.el("span", { class: world ? "badge sig" : "badge" }, world ? "published world" : "source home"),
+        world ? Idol.el("span", { class: "badge" }, `v${record.version || "?"}`) : null,
+        record.check?.ok ? Idol.el("span", { class: "badge ok" }, "law ✓") : Idol.el("span", { class: "badge bad" }, "unverified"),
+        stats.source_hash ? Idol.el("span", { class: "badge" }, `hash ${stats.source_hash}`) : null,
+        record.mirror ? Idol.el("span", { class: "badge" }, `◈ ${record.mirror}`) : null));
+    detail.appendChild(head);
 
-    const acts = Idol.el("div", { class: "actions" },
-      Idol.el("button", { class: "primary", onclick: openInExplorer }, "open in explorer"),
-      Idol.el("button", { onclick: copyUse }, reg ? "copy use" : "copy path"),
-      Idol.el("button", { class: "ghost", onclick: () => Idol.api.text("/api/lib/" + encodeURIComponent(name) + "/source").then((s) => { navigator.clipboard.writeText(s); Idol.toast("source copied"); }) }, "copy source"),
-      !reg && set === "libs" ? Idol.el("button", { class: "signal", onclick: () => publishDialog(name, det.source) }, "publish →") : null);
-    d.appendChild(acts);
+    detail.appendChild(Idol.el("div", { class: "actions" },
+      Idol.el("button", { class: "primary", onclick: openInExplorerCurrent }, "open in explorer"),
+      Idol.el("button", { onclick: () => copyCoordinate(name, record, world) }, world ? "copy registry URL" : "copy home coordinate"),
+      Idol.el("button", { class: "ghost", onclick: () => navigator.clipboard.writeText(record.source || "").then(() => Idol.toast("source copied")) }, "copy source"),
+      !world ? Idol.el("button", { class: "signal", onclick: () => publishDialog(name, record.source || "") }, "publish world") : null));
 
-    const stats = Idol.el("div", { class: "statgrid" });
-    const cells = [
-      [st.lines || (det.source.match(/\n/g) || []).length + 1, "lines"],
-      [(g.nodes || []).length, "graph nodes"],
-      [(g.edges || []).length, "relations"],
-      [(g.applications || []).length, "applications"],
-      [(g.worlds || []).length, "worlds"],
-      [(g.callable_linkages || []).length, "linkages"],
-      [ents.length || null, "entities"],
-      [ents.length ? `${observed}/${ents.length}` : null, "observed"],
-    ];
-    for (const [n, l] of cells) stats.appendChild(Idol.el("div", { class: "stat" },
-      Idol.el("div", { class: "n" }, String(n)), Idol.el("div", { class: "l" }, l)));
-    d.appendChild(stats);
+    const statgrid = Idol.el("div", { class: "statgrid" });
+    for (const [value, label] of [
+      [stats.lines || (record.source?.match(/\n/g) || []).length + 1, "lines"],
+      [(graph.nodes || []).length, "graph nodes"],
+      [(graph.edges || []).length, "structural edges"],
+      [(graph.applications || []).length, "applications"],
+      [(graph.worlds || []).length, "world facts"],
+    ]) statgrid.appendChild(Idol.el("div", { class: "stat" }, Idol.el("div", { class: "n" }, String(value)), Idol.el("div", { class: "l" }, label)));
+    detail.appendChild(statgrid);
 
-    const tabs = Idol.el("div", { class: "tabs" },
-      Idol.el("button", { class: "tab here", "data-t": "read" }, "read"),
-      Idol.el("button", { class: "tab", "data-t": "source" }, "source"),
-      Idol.el("button", { class: "tab", "data-t": "graph" }, "graph"),
-      Idol.el("button", { class: "tab", "data-t": "deps" }, "deps"),
-      reg ? Idol.el("button", { class: "tab", "data-t": "versions" }, "versions") : null);
-    d.appendChild(tabs);
-
+    const tabs = Idol.el("div", { class: "tabs" });
     const bodies = {};
-    for (const t of ["read", "source", "graph", "deps", "versions"]) {
-      const b = Idol.el("div", { style: "flex:1;display:none;flex-direction:column;min-height:0;" });
-      bodies[t] = b; d.appendChild(b);
-    }
-    tabs.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
-      tabs.querySelectorAll(".tab").forEach((x) => x.classList.toggle("here", x === t));
-      for (const k in bodies) bodies[k].style.display = k === t.dataset.t ? "flex" : "none";
-      if (t.dataset.t === "graph") gview && gview.fitIfFirst();
-    }));
-
-    // read — relations + uses + law note
-    bodies.read.style.overflow = "auto";
-    const rels = [...new Set(((g.nodes || []).filter((n) => n.name && n.kind !== "module").map((n) => n.name)))];
-    const relSec = Idol.el("div", { class: "read-section" },
-      Idol.el("h3", null, "relations · " + rels.length),
-      Idol.el("div", { class: "rel-chips" },
-        rels.slice(0, 48).map((r) => Idol.el("span", {
-          class: "chip",
-          title: "ask why",
-          onclick: async () => {
-            try {
-              const w = await Idol.api.get("/api/whys?subject=" + encodeURIComponent(r));
-              Idol.toast(w.facts.length ? w.facts[0].cause : "no facts yet", false);
-            } catch (e) { Idol.toast(e.message, true); }
-          },
-        }, r))));
-    const usesSec = Idol.el("div", { class: "read-section" }, Idol.el("h3", null, "uses"), Idol.el("div", { class: "rel-chips", id: "uses-chips" }, Idol.el("span", { class: "dim" }, "…")));
-    const lawSec = Idol.el("div", { class: "read-section" },
-      Idol.el("h3", null, "what this is"),
-      Idol.el("p", null, reg
-        ? "A published world. Source, graph facts, and provenance travel together; versions are sealed source snapshots. The manifest is mirrored to R2 — the canonical registry store."
-        : "A layout-projected home. Names, paths, and spellings are provenance — meaning resolves in the graph. Open source: every token answers hover."));
-    bodies.read.appendChild(relSec);
-    bodies.read.appendChild(usesSec);
-    bodies.read.appendChild(lawSec);
-    Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/uses").then((r) => {
-      const mount = document.getElementById("uses-chips");
-      if (!mount) return;
-      mount.innerHTML = "";
-      if (!r.uses.length) { mount.appendChild(Idol.el("span", { class: "dim" }, "no references to other worlds")); return; }
-      for (const u of r.uses) mount.appendChild(Idol.el("span", { class: "chip", onclick: () => select(u) }, u));
-    }).catch(() => { const m = document.getElementById("uses-chips"); if (m) m.innerHTML = ""; });
-
-    // source — token explorer, read-only, hoverable
-    const edMount = Idol.el("div", { style: "flex:1;display:flex;min-height:0;" });
-    bodies.source.appendChild(edMount);
-    const ed = Idol.editor(edMount, { source: det.source || "" });
-    ed.ta.readOnly = true;
-    ed.ta.style.caretColor = "transparent";
-    const ex = Idol.explore(ed, {
-      graph: det.graph, explain: det.explain,
-      onReveal: () => { tabs.querySelector('[data-t="graph"]').click(); setTimeout(() => gview && gview.fit(), 50); },
-      onLib: (v) => { select(v); },
-    });
-    ex.rebind();
-
-    // graph
-    const gvMount = Idol.el("div", { style: "flex:1;min-height:0;" });
-    bodies.graph.appendChild(gvMount);
-    const gview = new GraphView(gvMount, {});
-    gview.setGraph(det.graph);
-
-    // deps — uses ∪ dependents
-    bodies.deps.style.overflow = "auto";
-    const cols = Idol.el("div", { class: "deps-cols" },
-      Idol.el("div", null, Idol.el("h3", null, "uses"), Idol.el("div", { class: "list", id: "uses-list" })),
-      Idol.el("div", null, Idol.el("h3", null, "used by"), Idol.el("div", { class: "list", id: "deps-list" })));
-    bodies.deps.appendChild(cols);
-    Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/uses").then((r) => {
-      const m2 = document.getElementById("uses-list"); if (!m2) return;
-      fillDepList(m2, r.uses, "uses nothing");
-    }).catch(() => {});
-    Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/dependents").then((r) => {
-      const m2 = document.getElementById("deps-list"); if (!m2) return;
-      fillDepList(m2, r.dependents, "no dependents yet");
-    }).catch(() => {});
-
-    // versions — sealed snapshots (published worlds)
-    if (reg) {
-      bodies.versions.style.overflow = "auto";
-      const vlist = Idol.el("div", { class: "list" }, Idol.el("div", { style: "padding:12px 16px" }, Idol.el("span", { class: "spin" })));
-      bodies.versions.appendChild(vlist);
-      Idol.api.get("/api/lib/" + encodeURIComponent(name) + "/versions").then((r) => {
-        vlist.innerHTML = "";
-        if (!r.versions.length) { vlist.appendChild(Idol.el("div", { class: "empty" }, Idol.el("div", { class: "glyph" }, "◌"), Idol.el("div", null, "no versions"))); return; }
-        for (const v of [...r.versions].reverse()) {
-          const here = v === det.version;
-          const row = Idol.el("div", { class: "vrow" },
-            Idol.el("span", { class: "v" + (here ? "" : ""), style: here ? "color:var(--signal)" : "" }, "v" + v),
-            here ? Idol.el("span", { class: "badge sig" }, "current") : null,
-            Idol.el("span", { style: "flex:1" }),
-            Idol.el("button", { onclick: () => viewVersion(name, v) }, "view"),
-            Idol.el("button", { class: "ghost", onclick: () => copyVersion(name, v) }, "copy"));
-          vlist.appendChild(row);
-        }
-      }).catch(() => { vlist.innerHTML = ""; });
-    }
-
-    function fillDepList(mount, names, emptyText) {
-      mount.innerHTML = "";
-      if (!names.length) {
-        mount.appendChild(Idol.el("div", { class: "empty" }, Idol.el("div", { class: "glyph" }, "◌"), Idol.el("div", null, emptyText)));
-        return;
-      }
-      for (const dep of names) {
-        mount.appendChild(Idol.el("div", { class: "row", onclick: () => select(dep) },
-          Idol.el("div", { class: "grow" }, Idol.el("div", { class: "title" }, dep))));
-      }
-    }
-
-    function viewVersion(name, v) {
-      Idol.api.text("/api/lib/" + encodeURIComponent(name) + "/version/" + encodeURIComponent(v)).then((s) => {
-        ed.setSource && ed.setSource(s);
-        if (!ed.setSource) { ed.ta.value = s; ed.ta.dispatchEvent(new Event("input")); }
-        tabs.querySelector('[data-t="source"]').click();
-        Idol.toast("viewing v" + v);
-      }).catch((e) => Idol.toast(e.message, true));
-    }
-    function copyVersion(name, v) {
-      Idol.api.text("/api/lib/" + encodeURIComponent(name) + "/version/" + encodeURIComponent(v)).then((s) => {
-        navigator.clipboard.writeText(s); Idol.toast("v" + v + " copied");
+    const names = ["read", "source", "graph", "deps", ...(world ? ["versions"] : [])];
+    for (const [index, name] of names.entries()) {
+      const tab = Idol.el("button", { class: `tab${index === 0 ? " here" : ""}`, "data-tab": name }, name);
+      tabs.appendChild(tab);
+      const body = Idol.el("section", { style: `flex:1;display:${index === 0 ? "flex" : "none"};flex-direction:column;min-height:0;overflow:auto` });
+      bodies[name] = body;
+      tab.addEventListener("click", () => {
+        tabs.querySelectorAll(".tab").forEach((candidate) => candidate.classList.toggle("here", candidate === tab));
+        for (const [key, value] of Object.entries(bodies)) value.style.display = key === name ? "flex" : "none";
+        if (name === "graph") graphView.fitIfFirst();
       });
     }
+    detail.appendChild(tabs);
+    for (const name of names) detail.appendChild(bodies[name]);
 
-    function openInExplorer() {
-      const src = det.source || "";
-      const b = btoa(unescape(encodeURIComponent(src)));
-      window.open("https://graph.idol.id/#" + b, "_blank");
+    const relationNames = [...new Set((graph.nodes || []).filter((node) => node.name && node.kind !== "module").map((node) => node.name))];
+    bodies.read.appendChild(Idol.el("div", { class: "read-section" }, Idol.el("h3", null, `relations · ${relationNames.length}`), Idol.el("div", { class: "rel-chips" }, relationNames.slice(0, 48).map((relation) => Idol.el("span", { class: "chip" }, relation)))));
+    bodies.read.appendChild(Idol.el("div", { class: "read-section" }, Idol.el("h3", null, "identity boundary"), Idol.el("p", null, world
+      ? "This registry record projects published source, graph facts, version, artifacts, and provenance. The package coordinate is not the semantic identity; exact world identity must be published by the registry or compiler projection."
+      : "This is a source home reach projection. Home is reach and provenance, not a world, subject, place, or authority grant.")));
+
+    const editorMount = Idol.el("div", { style: "flex:1;display:flex;min-height:320px" });
+    bodies.source.appendChild(editorMount);
+    const editor = Idol.editor(editorMount, { source: record.source || "" });
+    editor.ta.readOnly = true;
+    editor.ta.style.caretColor = "transparent";
+    const explorer = Idol.explore(editor, { graph: record.graph, explain: record.explain, onReveal: () => tabs.querySelector('[data-tab="graph"]').click(), onLib: (value) => select(value) });
+    explorer.rebind();
+
+    const graphMount = Idol.el("div", { style: "flex:1;min-height:360px" });
+    bodies.graph.appendChild(graphMount);
+    const graphView = new GraphView(graphMount, {});
+    graphView.setGraph(record.graph);
+
+    const columns = Idol.el("div", { class: "deps-cols" },
+      Idol.el("div", null, Idol.el("h3", null, "uses"), Idol.el("div", { class: "list", id: "uses-list" })),
+      Idol.el("div", null, Idol.el("h3", null, "used by"), Idol.el("div", { class: "list", id: "dependents-list" })));
+    bodies.deps.appendChild(columns);
+    Promise.all([
+      Idol.api.get(`/api/lib/${encodeURIComponent(name)}/uses`).catch(() => ({ uses: [] })),
+      Idol.api.get(`/api/lib/${encodeURIComponent(name)}/dependents`).catch(() => ({ dependents: [] })),
+    ]).then(([uses, dependents]) => {
+      fillNames(document.getElementById("uses-list"), uses.uses || [], "uses nothing");
+      fillNames(document.getElementById("dependents-list"), dependents.dependents || [], "no dependents yet");
+    });
+
+    if (world) {
+      const list = Idol.el("div", { class: "list" });
+      bodies.versions.appendChild(list);
+      Idol.api.get(`/api/lib/${encodeURIComponent(name)}/versions`).then((result) => {
+        list.replaceChildren();
+        for (const version of [...(result.versions || [])].reverse()) list.appendChild(Idol.el("div", { class: "vrow" },
+          Idol.el("span", { class: "v", style: version === record.version ? "color:var(--signal)" : "" }, `v${version}`),
+          version === record.version ? Idol.el("span", { class: "badge sig" }, "current") : null,
+          Idol.el("span", { style: "flex:1" }),
+          Idol.el("button", { onclick: () => viewVersion(name, version, editor, tabs) }, "view"),
+          Idol.el("button", { class: "ghost", onclick: () => copyVersion(name, version) }, "copy")));
+      }).catch(() => {});
     }
-    function copyUse() {
-      navigator.clipboard.writeText(reg ? `@{ world = "${name}" }` : `~/lib/${name}.id`);
-      Idol.toast("copied");
-    }
+  }
+
+  function fillNames(mount, names, emptyText) {
+    mount.replaceChildren();
+    if (!names.length) { mount.appendChild(Idol.el("div", { class: "empty" }, Idol.el("div", { class: "glyph" }, "◌"), Idol.el("div", null, emptyText))); return; }
+    for (const name of names) mount.appendChild(Idol.el("div", { class: "row", onclick: () => select(name) }, Idol.el("div", { class: "grow" }, Idol.el("div", { class: "title" }, name))));
   }
 
   function openInExplorerCurrent() {
     if (!detCache) return;
-    const b = btoa(unescape(encodeURIComponent(detCache.det.source || "")));
-    window.open("https://graph.idol.id/#" + b, "_blank");
+    const encoded = btoa(unescape(encodeURIComponent(detCache.record.source || "")));
+    window.open(`https://graph.idol.id/#${encoded}`, "_blank", "noopener");
   }
 
-  /* ---------------- publish ---------------- */
+  function copyCoordinate(name, record, world) {
+    const coordinate = world ? `https://lib.idol.id/world/${encodeURIComponent(name)}@${encodeURIComponent(record.version || "latest")}` : `home:${name}`;
+    navigator.clipboard.writeText(coordinate).then(() => Idol.toast("coordinate copied"));
+  }
+
+  function viewVersion(name, version, editor, tabs) {
+    Idol.api.text(`/api/lib/${encodeURIComponent(name)}/version/${encodeURIComponent(version)}`).then((source) => {
+      if (editor.setSource) editor.setSource(source);
+      else { editor.ta.value = source; editor.ta.dispatchEvent(new Event("input")); }
+      tabs.querySelector('[data-tab="source"]').click();
+      Idol.toast(`viewing v${version}`);
+    }).catch((error) => Idol.toast(error.message, true));
+  }
+
+  function copyVersion(name, version) {
+    Idol.api.text(`/api/lib/${encodeURIComponent(name)}/version/${encodeURIComponent(version)}`).then((source) => navigator.clipboard.writeText(source).then(() => Idol.toast(`v${version} copied`)));
+  }
 
   function publishDialog(name, source) {
-    const dl = document.createElement("dialog");
-    document.body.appendChild(dl);
-    dl.innerHTML = `
-      <form method="dialog">
-        <h2>publish ${name} → world</h2>
-        <label>version <input name="version" value="0.1.0" required></label>
-        <label>summary <input name="summary" placeholder="one line" value=""></label>
-        <label>tags <input name="tags" placeholder="core, test"></label>
-        <label>write token <input name="token" type="password" placeholder="Bearer write token" required></label>
-        <div class="row-btns">
-          <button value="cancel" class="ghost">cancel</button>
-          <button value="ok" class="primary">publish</button>
-        </div>
-      </form>`;
-    dl.showModal();
-    dl.addEventListener("close", () => {
-      const f = dl.querySelector("form");
-      if (dl.returnValue !== "ok") { dl.remove(); return; }
-      const fd = new FormData(f);
-      fetch("/api/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + fd.get("token") },
-        body: JSON.stringify({
-          name, version: fd.get("version"), source,
-          summary: fd.get("summary"),
-          meta: { publisher: "lib.idol.id", tags: String(fd.get("tags") || "").split(",").map((s) => s.trim()).filter(Boolean) },
-        }),
-      }).then((r) => r.json()).then((j) => {
-        if (j.error) throw new Error(j.error);
-        Idol.toast(`published ${name} v${j.version} · ${j.mirror}`);
-        dl.remove();
-        document.querySelector('.seg button[data-set="worlds"]').click();
-      }).catch((e) => { Idol.toast(e.message, true); dl.remove(); });
+    const dialog = document.createElement("dialog");
+    document.body.appendChild(dialog);
+    dialog.innerHTML = `<form method="dialog"><h2>publish ${name} as a world</h2><label>version <input name="version" value="0.1.0" required></label><label>summary <input name="summary" placeholder="one line"></label><label>tags <input name="tags" placeholder="core, test"></label><label>write token <input name="token" type="password" placeholder="Bearer write token" required></label><div class="row-btns"><button value="cancel" class="ghost">cancel</button><button value="ok" class="primary">publish</button></div></form>`;
+    dialog.showModal();
+    dialog.addEventListener("close", () => {
+      if (dialog.returnValue !== "ok") { dialog.remove(); return; }
+      const fields = new FormData(dialog.querySelector("form"));
+      fetch("/api/publish", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${fields.get("token")}` }, body: JSON.stringify({ name, version: fields.get("version"), source, summary: fields.get("summary"), meta: { publisher: "lib.idol.id", tags: String(fields.get("tags") || "").split(",").map((value) => value.trim()).filter(Boolean) } }) })
+        .then((response) => response.json()).then((result) => { if (result.error) throw new Error(result.error); Idol.toast(`published ${name} v${result.version}`); set = "worlds"; load(); })
+        .catch((error) => Idol.toast(error.message, true)).finally(() => dialog.remove());
     });
   }
 
-  /* deep links + history */
   window.addEventListener("hashchange", () => {
-    const h = decodeURIComponent(location.hash.slice(1));
-    if (h && h !== current) select(h, false);
+    const name = decodeURIComponent(location.hash.slice(1));
+    if (name && name !== current) select(name, false);
   });
-  const initial = decodeURIComponent(location.hash.slice(1));
-  if (initial) select(initial, false);
-
   load();
 })();
 </script>
