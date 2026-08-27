@@ -29,18 +29,40 @@ function envWithAssets() {
   };
 }
 
-test("Lib and Worlds remain distinct projections over one semantic universe", async () => {
-  assert.deepEqual(resolveHost("lib.idol.id"), { app: "lib", surface: "lib", origin: true });
-  assert.deepEqual(resolveHost("worlds.idol.id"), { app: "worlds", surface: "worlds", origin: false });
+const STRUCTURAL_ROLES = [
+  "binding",
+  "capture",
+  "demand",
+  "descriptor",
+  "member",
+  "operand",
+  "origin",
+  "projection",
+  "provenance",
+  "relation",
+  "result",
+  "subject",
+  "target",
+  "witness",
+];
 
-  const worlds = await edgeHandle(new Request("https://worlds.idol.id/world/std?lens=facts", {
+test("worlds.idol.id is a compatibility alias for the Lib-owned world registry", async () => {
+  assert.deepEqual(resolveHost("lib.idol.id"), { app: "lib", surface: "lib", origin: true });
+  assert.deepEqual(resolveHost("worlds.idol.id"), {
+    app: "lib",
+    surface: "lib",
+    origin: false,
+    redirect: "https://lib.idol.id",
+  });
+
+  const response = await edgeHandle(new Request("https://worlds.idol.id/world/std?lens=facts", {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
-  assert.equal(worlds.status, 200);
-  assert.equal(await worlds.text(), "<html>atlas</html>");
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get("location"), "https://lib.idol.id/world/std?lens=facts");
 });
 
-test("Lib exposes Atlas and public Universe lenses without replacing their canonical hosts", async () => {
+test("Lib owns the Atlas and public Universe lenses", async () => {
   let response = await edgeHandle(new Request("https://lib.idol.id/atlas", {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
@@ -60,7 +82,7 @@ test("Lib exposes Atlas and public Universe lenses without replacing their canon
   assert.equal(await response.text(), "<html>universe</html>");
 });
 
-test("the product model distinguishes package provenance, worlds, homes, and Universe views", async () => {
+test("the deployed product model obeys one universe and canonical structural edge roles", async () => {
   await rm("dist", { recursive: true, force: true });
   const run = spawnSync(process.execPath, ["scripts/build.mjs"], {
     encoding: "utf8",
@@ -79,55 +101,63 @@ test("the product model distinguishes package provenance, worlds, homes, and Uni
     source_law: authority.language.source_law.sha256,
   });
 
-  assert.equal(model.surfaces.lib.kind, "package-and-world-registry-projection");
+  assert.equal(model.surfaces.lib.kind, "world-registry-projection");
   assert.equal(model.surfaces.lib.canonical, "https://lib.idol.id");
-  assert.equal(model.surfaces.lib.package_record_is_semantic_identity, false);
-  assert.equal(model.surfaces.worlds.kind, "world-atlas-projection");
-  assert.equal(model.surfaces.worlds.canonical, "https://worlds.idol.id");
+  assert.equal(model.surfaces.lib.published_library_is_world, true);
+  assert.deepEqual(model.surfaces.lib.lenses, ["worlds", "atlas", "homes", "universe"]);
+  assert.equal(model.surfaces.worlds.kind, "compatibility-alias");
+  assert.equal(model.surfaces.worlds.canonical, "https://lib.idol.id");
   assert.equal(model.surfaces.universe.kind, "operational-projection");
+  assert.equal(model.surfaces.universe.public, "https://lib.idol.id/universe");
   assert.equal(model.surfaces.universe.mints_semantic_universe, false);
 
+  assert.equal(model.entities.library.kind, "published-world");
+  assert.equal(model.entities.library.is_world, true);
   assert.equal(model.entities.home.kind, "reach-and-provenance");
   assert.equal(model.entities.home.is_world, false);
   assert.equal(model.entities.path.is_identity, false);
   assert.equal(model.entities.package_provenance.is_authority, false);
 
-  assert.equal(model.graph.structural_roles_source, "compiler-projection-only");
-  assert.deepEqual(model.graph.web_declared_roles, []);
+  assert.equal(model.graph.structural_roles_source, "clpi/idol-compact-law-projection");
+  assert.deepEqual(model.graph.structural_roles, STRUCTURAL_ROLES);
   assert.equal(model.graph.operations_are_relation_identities, true);
   assert.equal(model.graph.reverse_traversal, "derived-index");
 });
 
-test("global chrome retains Lib and Worlds while Universe becomes a contextual lens", async () => {
+test("global chrome has one Lib product and an accessible compact mobile menu", async () => {
   const shell = await readFile("shared/shell.js", "utf8");
   const surface = await readFile("shared/surface.css", "utf8");
 
   assert.match(shell, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
-  assert.match(shell, /id:\s*"worlds"[\s\S]*?href:\s*"https:\/\/worlds\.idol\.id\/"/);
+  assert.doesNotMatch(shell, /id:\s*"worlds"/);
   assert.doesNotMatch(shell, /id:\s*"universe"/);
+  assert.match(shell, /https:\/\/lib\.idol\.id\/atlas/);
+  assert.match(shell, /https:\/\/lib\.idol\.id\/universe/);
   assert.match(shell, /class="nav-toggle"/);
   assert.match(shell, /aria-expanded="false"/);
   assert.match(shell, /panel\.className\s*=\s*"nav-panel"/);
-  assert.match(shell, /public universe views/);
-  assert.match(shell, /manage universe views/);
   assert.match(shell, /Escape/);
   assert.match(surface, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.nav-toggle/);
   assert.match(surface, /\.nav-panel\.open/);
+  assert.match(surface, /\.topbar \.nav-desktop\s*\{\s*display:\s*none/);
+  assert.doesNotMatch(surface, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.topbar \.nav[^\{]*\{[^}]*overflow-x:\s*auto/);
 });
 
-test("homepage removes pseudo-graph decoration and explains the distinct projections", async () => {
+test("homepage presents one Library worlds product without pseudo-graph decoration", async () => {
   const site = await readFile("apps/site/index.html", "utf8");
 
   assert.doesNotMatch(site, /<canvas\b/i);
-  assert.match(site, /Package and world registry/);
-  assert.match(site, /World Atlas/);
-  assert.match(site, /package provenance is not world identity/i);
+  assert.match(site, /Library worlds/);
+  assert.match(site, /A published Idol library is a world/i);
+  assert.match(site, /home is reach and provenance/i);
   assert.match(site, /https:\/\/lib\.idol\.id\//);
-  assert.match(site, /https:\/\/worlds\.idol\.id\//);
+  assert.match(site, /https:\/\/lib\.idol\.id\/atlas/);
+  assert.doesNotMatch(site, /https:\/\/worlds\.idol\.id\//);
+  assert.doesNotMatch(site, />World Atlas</);
   assert.match(site, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.cell-a[\s\S]*?min-height:\s*0/);
 });
 
-test("Lib defaults to published worlds and keeps source homes as a reach lens", async () => {
+test("Lib defaults to worlds, exposes contextual lenses, and uses a mobile list-detail state", async () => {
   const lib = await readFile("apps/lib/index.html", "utf8");
 
   assert.match(lib, /let set = "worlds"/);
@@ -135,10 +165,14 @@ test("Lib defaults to published worlds and keeps source homes as a reach lens", 
   assert.match(lib, /data-set="libs"/);
   assert.match(lib, />worlds</);
   assert.match(lib, />homes</);
-  assert.match(lib, /package provenance is not semantic identity/i);
+  assert.match(lib, /A published Idol library is a world/i);
   assert.match(lib, /home is reach and provenance, not a world/i);
   assert.match(lib, /href="\/atlas"/);
   assert.match(lib, /href="\/universe"/);
-  assert.match(lib, /@media\s*\(max-width:\s*699px\)/);
+  assert.match(lib, /data-mobile="list"/);
   assert.match(lib, /class="lib-mobile-nav"/);
+  assert.match(lib, /data-mobile-view="list"/);
+  assert.match(lib, /data-mobile-view="detail"/);
+  assert.match(lib, /setMobileView/);
+  assert.match(lib, /@media\s*\(max-width:\s*699px\)/);
 });
