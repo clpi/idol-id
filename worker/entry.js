@@ -1,5 +1,6 @@
 import { handle as baseHandle, resolveHost } from "./index.js";
 import { handleRepositoryTransport } from "./repository.js";
+import { handleUniverseTransport } from "./universe.js";
 
 const LOCAL = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -28,11 +29,24 @@ function localRepositoryPath(pathname) {
     || pathname === "/v1/repository/status";
 }
 
+function localUniversePath(pathname) {
+  return pathname === "/universe"
+    || pathname === "/universe/"
+    || /^\/universe\/uv_[A-Za-z0-9_-]{12,}\/?$/.test(pathname)
+    || pathname.startsWith("/v1/universe/");
+}
+
 function infoFor(url) {
   const known = resolveHost(url.hostname);
   if (known) return known;
   if (LOCAL.has(url.hostname) && (url.searchParams.get("surface") === "repository" || localRepositoryPath(url.pathname))) {
     return { app: "repository", surface: "platform", origin: false, local_repository: true };
+  }
+  if (LOCAL.has(url.hostname) && (url.searchParams.get("surface") === "universe" || localUniversePath(url.pathname))) {
+    const publicMode = url.searchParams.get("mode") === "public";
+    return publicMode
+      ? { app: "worlds", surface: "worlds", origin: false, local_universe: true }
+      : { app: "platform", surface: "platform", origin: false, local_universe: true };
   }
   return null;
 }
@@ -49,9 +63,14 @@ async function asset(env, request, path, options = {}) {
   return (response.ok || response.status === 304) ? secure(response, options) : response;
 }
 
-function navigation(request, path) {
+function repositoryNavigation(request, path) {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
   return path === "/repo" || path === "/repo/" || /^\/repo\/(?:observation|scaffold)\/[^/]+\/?$/.test(path);
+}
+
+function universeNavigation(request, path) {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  return path === "/universe" || path === "/universe/" || /^\/universe\/uv_[A-Za-z0-9_-]{12,}\/?$/.test(path);
 }
 
 export async function handle(request, env, dependencies = {}) {
@@ -64,10 +83,17 @@ export async function handle(request, env, dependencies = {}) {
     return asset(env, request, "/content/install.ps1", { immutable: false });
   }
   if (info) {
-    const response = await handleRepositoryTransport(request, env, url.pathname, info, dependencies);
-    if (response) return secure(response);
-    if (info.surface === "platform" && navigation(request, url.pathname)) {
+    const universeResponse = await handleUniverseTransport(request, env, url.pathname, info, dependencies);
+    if (universeResponse) return secure(universeResponse);
+
+    const repositoryResponse = await handleRepositoryTransport(request, env, url.pathname, info, dependencies);
+    if (repositoryResponse) return secure(repositoryResponse);
+
+    if (info.surface === "platform" && repositoryNavigation(request, url.pathname)) {
       return asset(env, request, "/apps/repository/index.html", { html: true });
+    }
+    if ((info.surface === "platform" || info.surface === "worlds") && universeNavigation(request, url.pathname)) {
+      return asset(env, request, "/apps/universe/index.html", { html: true });
     }
   }
   return baseHandle(request, env, dependencies);
