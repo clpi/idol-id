@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,6 +21,19 @@ function gitBlobSha(text) {
 
 function idolFences(markdown) {
   return [...markdown.matchAll(/```(?:id|idol)\s*\n([\s\S]*?)```/g)].map((match) => match[1]);
+}
+
+async function markdownFiles(directory) {
+  const paths = [];
+  async function visit(path) {
+    for (const entry of await readdir(path, { withFileTypes: true })) {
+      const child = join(path, entry.name);
+      if (entry.isDirectory()) await visit(child);
+      else if (entry.isFile() && entry.name.endsWith(".md")) paths.push(relative(root, child));
+    }
+  }
+  await visit(resolve(root, directory));
+  return paths.sort();
 }
 
 const NONCANONICAL_NATIVE = [
@@ -45,26 +58,43 @@ function assertCanonicalNative(source, label) {
   for (const [pattern, description] of NONCANONICAL_NATIVE) {
     assert.doesNotMatch(source, pattern, `${label} contains ${description}`);
   }
+  assert.doesNotMatch(source, /^\s*\.\.\.\s*$/m, `${label} contains an invented placeholder body`);
 }
 
-test("homepage source is an exact current-law projection rather than invented runnable code", async () => {
+test("homepage and Observatory obtain examples from one authority-pinned manifest", async () => {
   const site = await read("apps/site/index.html");
-  assertCanonicalNative(site, "homepage");
-  assert.doesNotMatch(site, /\bio\.print\b/, "homepage invents an io home");
-  assert.doesNotMatch(site, /\bstr\.from\b/, "homepage invents a static conversion namespace");
-  assert.doesNotMatch(site, /\bmain\s*=/, "homepage invents main ceremony");
-  assert.match(site, /content\/source-examples\.json/, "homepage must load the authority-pinned example manifest");
+  const graph = await read("apps/graph/index.html");
+  const manifest = JSON.parse(await read("content/source-examples.json"));
+
+  for (const surface of [site, graph]) {
+    assert.match(surface, /content\/source-examples\.json/);
+    assert.doesNotMatch(surface, /\bio\.print\b/);
+    assert.doesNotMatch(surface, /\bstr\.from\b/);
+    assert.doesNotMatch(surface, /\bmain\s*=/);
+    assert.doesNotMatch(surface, /body:weight\(80,\s*9\.8\)/);
+  }
+  assert.doesNotMatch(graph, /const\s+SAMPLES\s*=/);
+
+  assert.equal(manifest.schema, "idol.web.source-examples.v1");
+  assert.equal(manifest.authority.commit, CURRENT_LANGUAGE_COMMIT);
+  assert.equal(manifest.authority.source_law, CURRENT_SOURCE_LAW);
+  assert.ok(manifest.examples.length >= 4);
+  for (const example of manifest.examples) {
+    assert.match(example.status, /^(?:current-law|lawful-source-implementation-not-claimed)$/);
+    assertCanonicalNative(example.source, `content/source-examples.json#${example.id}`);
+  }
 });
 
-test("all authored native examples reject compatibility syntax and placeholder bodies", async () => {
-  for (const path of ["content/docs/faces.md", "apps/graph/index.html"]) {
-    const source = await read(path);
-    const examples = path.endsWith(".md") ? idolFences(source) : [source];
+test("every public native markdown fence is canonical or moved to a non-native text fence", async () => {
+  let count = 0;
+  for (const path of await markdownFiles("content/docs")) {
+    const examples = idolFences(await read(path));
     for (const [index, example] of examples.entries()) {
-      assertCanonicalNative(example, `${path} example ${index + 1}`);
-      assert.doesNotMatch(example, /^\s*\.\.\.\s*$/m, `${path} example ${index + 1} contains an invented placeholder body`);
+      count += 1;
+      assertCanonicalNative(example, `${path} native fence ${index + 1}`);
     }
   }
+  assert.ok(count > 0, "expected public native examples to be scanned");
 });
 
 test("browser preview segments source without owning a shadow grammar or inferring semantic identity", async () => {
@@ -83,6 +113,7 @@ test("browser preview segments source without owning a shadow grammar or inferri
   ]) assert.doesNotMatch(source, pattern);
   assert.match(source, /semantic identity not published/i);
   assert.match(source, /exact source span/i);
+  assert.match(source, /There is no spelling,[\s\S]*fallback/i);
 });
 
 test("web authority and source-law projections pin current Idol authority exactly", async () => {
@@ -95,6 +126,8 @@ test("web authority and source-law projections pin current Idol authority exactl
   assert.equal(web.language.compact_law_blob, CURRENT_COMPACT_LAW_BLOB);
   assert.equal(web.language.source_law.schema, "idol.source.law.v1");
   assert.equal(web.language.source_law.sha256, CURRENT_SOURCE_LAW);
+  assert.equal(web.web_projection.semantic_authority, false);
+  assert.equal(web.web_projection.grammar_authority, false);
   assert.equal(gitBlobSha(compactLaw), CURRENT_COMPACT_LAW_BLOB);
 
   assert.equal(projection.schema, "idol.web.source-law-projection.v1");
@@ -121,11 +154,13 @@ test("Specification blueprint and Idol Live are public but cannot impersonate la
   assert.match(spec, /compact law wins/i);
   assert.match(spec, /projection algebra/i);
   assert.match(spec, /foreign source law/i);
+  assert.match(spec, /semantic law and implementation support are deliberately separate/i);
 
   assert.match(live, /separate flagship product/i);
   assert.match(live, /collaboration truth/i);
   assert.match(live, /Git.*compatibility projection/i);
   assert.match(live, /implementation is not claimed/i);
+  assert.match(live, /History H[\s\S]*Frontier F[\s\S]*State S/);
 
   assert.match(docs, /id:\s*"spec"/);
   assert.match(docs, /id:\s*"live"/);
