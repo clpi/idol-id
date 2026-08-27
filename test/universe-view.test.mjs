@@ -127,7 +127,7 @@ test("policy violations are explicit refusals rather than compatibility or autho
       deny_unverified_projection: true,
     },
   }), catalogs, options());
-  assert.equal(view.analysis.violation_count >= 2, true);
+  assert.ok(view.analysis.violation_count >= 2, "expected unpublished-identity and unverified-projection refusals");
   assert.deepEqual(
     view.analysis.violations.map((entry) => entry.code).sort(),
     ["UNPUBLISHED_IDENTITY_REFUSED", "UNVERIFIED_PROJECTION_REFUSED"],
