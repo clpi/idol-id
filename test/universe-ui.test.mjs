@@ -18,10 +18,12 @@ test("Universe workspace is packaged for authenticated Platform and public World
   assert.match(html, /id="universe-analysis"/);
   assert.match(html, /id="universe-boundary"/);
   assert.match(app, /\/v1\/universe\/browser\/views/);
-  assert.match(app, /\/v1\/universe\/public\//);
+  assert.match(app, /const PUBLIC_VIEWS = "\/v1\/universe\/public"/);
+  assert.match(app, /\$\{PUBLIC_VIEWS\}\/\$\{encodeURIComponent\(id\)\}/);
   assert.match(worker, /info\.surface === "platform" \|\| info\.surface === "worlds"/);
   assert.match(worker, /\/apps\/universe\/index\.html/);
   assert.match(build, /"universe"/);
+  assert.match(build, /platform-universe-entry\.js/);
   assert.match(shell, /id:"universe"/);
 });
 
@@ -47,12 +49,13 @@ test("Universe presentation names exact non-semantic boundaries", async () => {
     read("shared/platform-universe-entry.js"),
   ]);
   for (const source of [html, app, platformEntry]) {
-    assert.match(source, /one semantic universe|operational (?:view|projection)/i);
+    assert.match(source, /one semantic universe|operational[- ](?:view|projection)/i);
   }
   assert.match(html, /does not prove composition/i);
   assert.match(html, /does not grant authority/i);
   assert.match(manifestBuild, /universe/);
   assert.match(manifestBuild, /operational-projection/);
+  assert.match(manifestBuild, /dispatcher_access:false/);
   assert.doesNotMatch(app, /semantic_id\s*:\s*["'][^"']+["']/);
 });
 
