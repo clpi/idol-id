@@ -51,7 +51,7 @@ const provisioned = Object.freeze({
   databaseId: "database",
   teamDomain: "idol-clpi.cloudflareaccess.com",
   accessAudience: "audience",
-  bootstrapEmail: "chris@pecunies.com",
+  bootstrapEmail: "admin@example.com",
 });
 
 test("one authority projection owns installers, Worker identity, Cloudflare config, and emitted manifests", async () => {
