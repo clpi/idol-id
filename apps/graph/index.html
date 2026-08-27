@@ -3,387 +3,268 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Explorer — idol.id</title>
+<title>Semantic Observatory — idol.id</title>
 <link rel="stylesheet" href="/shared/theme.css">
 <script src="/config.js"></script>
 <style>
-  .pane-editor { flex: 1.1; }
-  .pane-panel { flex: 1; border-left: 1px solid var(--rule); }
+  .notice { min-height: 34px; display: flex; align-items: center; gap: 9px; padding: 6px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-3); font-family: var(--sans); font-size: 10.5px; line-height: 1.5; }
+  .notice strong { color: var(--signal); font-weight: 520; }
+  .pane-editor { flex: 1.05; }
+  .pane-panel { flex: .95; border-left: 1px solid var(--rule); }
   .editor-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
   .samples { display: flex; gap: 6px; }
-  .samples select {
-    background: var(--bg-raise); color: var(--ink-2); border: 1px solid var(--rule-2);
-    border-radius: var(--radius); font-family: var(--mono); font-size: 10px; padding: 3px 6px;
+  .samples select { background: var(--bg-raise); color: var(--ink-2); border: 1px solid var(--rule-2); border-radius: var(--radius); font-family: var(--mono); font-size: 10px; padding: 4px 7px; max-width: 230px; }
+  .busy { position: absolute; top: 45px; right: 12px; z-index: 6; display: none; }
+  .panel { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  .panel.here { display: flex; }
+  .facts { padding: 13px 14px 80px; overflow: auto; }
+  .fact-group { padding: 0 0 14px; margin-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .fact-group h3 { margin-bottom: 7px; color: var(--ink-4); font-size: 9px; letter-spacing: .13em; text-transform: uppercase; }
+  .kv { display: grid; grid-template-columns: minmax(115px,.45fr) minmax(0,1fr); gap: 12px; padding: 2px 0; font-size: 11px; }
+  .kv .k { color: var(--ink-4); }
+  .kv .v { color: var(--ink-2); overflow-wrap: anywhere; }
+  .empty-state { margin: auto; max-width: 480px; padding: 30px; text-align: center; color: var(--ink-3); font-family: var(--sans); line-height: 1.65; }
+  .controls { display: flex; align-items: center; gap: 7px; padding: 10px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+  .controls input { min-width: 170px; flex: 1; }
+  .controls .state { margin-left: auto; color: var(--ink-4); font-size: 10px; }
+  .output { flex: 1; min-height: 0; overflow: auto; padding: 13px 14px 80px; white-space: pre-wrap; color: var(--ink-2); }
+  .output .ok { color: var(--ok); }
+  .output .err { color: var(--danger); }
+  .inspector { display: none; padding: 10px 13px; border-bottom: 1px solid var(--rule); max-height: 34%; overflow: auto; }
+  .inspector .title { color: var(--ink); margin-bottom: 6px; }
+  @media (max-width: 800px) {
+    .stage { display: block; overflow: auto; }
+    .pane-editor, .pane-panel { min-height: 58vh; border-left: 0; }
+    .pane-panel { border-top: 1px solid var(--rule); }
+    .split-v { display: none; }
+    .pane-head { min-height: 46px; height: auto; padding: 7px 10px; flex-wrap: wrap; }
   }
-  .out { padding: 12px 14px; white-space: pre-wrap; color: var(--ink-2); font-size: 12px; }
-  .out .err { color: var(--danger); }
-  .out .ok { color: var(--ok); }
-  .code-out { padding: 12px 14px; overflow: auto; }
-  .code-out pre { color: var(--ink-2); }
-  .lower-ctl { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
-  .lower-ctl select { font-size: 11px; padding: 4px 8px; }
-  .facts-sec { padding: 12px 14px; border-bottom: 1px solid var(--rule); }
-  .facts-sec h4 { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px; }
-  .facts-sec .kv { display: flex; gap: 10px; font-size: 11px; padding: 1px 0; }
-  .facts-sec .kv .k { color: var(--ink-4); min-width: 110px; }
-  .facts-sec .kv .v { color: var(--ink-2); }
-  .run-ctl { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
-  .run-ctl input { flex: 1; }
-  .inspector { padding: 12px 14px; border-bottom: 1px solid var(--rule); display: none; }
-  .inspector .t { color: var(--ink); font-size: 13px; margin-bottom: 6px; }
-  .busy { position: absolute; top: 8px; right: 12px; z-index: 6; display: none; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar"></div>
+  <div class="notice"><strong id="source-status">lexical preview</strong><span id="source-boundary">Spelling and adjacency carry no semantic identity. Analyze to request exact compiler-published graph facts and source spans.</span></div>
   <div class="stage">
-    <div class="pane pane-editor">
+    <section class="pane pane-editor">
       <div class="pane-head">
-        <span>source</span>
-        <span class="spacer"></span>
-        <span class="samples">
-          <select id="sample" title="load an example"></select>
-        </span>
-        <button class="ghost" id="fmt" title="format (⌘⇧F)">fmt</button>
-        <button id="analyze" title="analyze (⌘↵)">analyze</button>
-        <button id="runb" class="primary" title="run (⌘R)">run</button>
+        <span>source</span><span class="spacer"></span>
+        <span class="samples"><select id="sample" title="Load an authority-pinned source example"></select></span>
+        <button class="ghost" id="fmt">format</button>
+        <button id="analyze">analyze</button>
+        <button id="run" class="primary">run</button>
       </div>
       <div class="busy" id="busy"><span class="spin"></span></div>
-      <div id="editor" style="flex:1;display:flex;min-height:0;"></div>
-    </div>
+      <div id="editor" style="flex:1;display:flex;min-height:0"></div>
+    </section>
     <div class="split-v" id="split"></div>
-    <div class="pane pane-panel">
+    <section class="pane pane-panel">
       <div class="tabs" id="tabs">
-        <button class="tab here" data-tab="graph">graph</button>
-        <button class="tab" data-tab="lowering">lowering</button>
-        <button class="tab" data-tab="run">run</button>
-        <button class="tab" data-tab="facts">facts</button>
+        <button class="tab here" data-panel="graph">graph</button>
+        <button class="tab" data-panel="facts">facts</button>
+        <button class="tab" data-panel="lower">realize</button>
+        <button class="tab" data-panel="run">run evidence</button>
       </div>
-      <div class="pane-body" id="panel" style="display:flex;flex-direction:column;">
-        <div id="tab-graph" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-          <div class="inspector" id="inspector"></div>
-          <div id="graph" style="flex:1;min-height:0;"></div>
-        </div>
-        <div id="tab-lowering" style="flex:1;display:none;flex-direction:column;min-height:0;">
-          <div class="lower-ctl">
-            <select id="ltarget">
-              <option value="native">native</option>
-              <option value="aarch64-linux">aarch64-linux</option>
-              <option value="aarch64-macos">aarch64-macos</option>
-              <option value="wasm32-wasi">wasm32-wasi</option>
-            </select>
-            <select id="lemit">
-              <option value="asm">asm</option>
-              <option value="c">c</option>
-              <option value="wasm">wasm</option>
-            </select>
-            <select id="lopt"><option>3</option><option>2</option><option>1</option><option>0</option><option>s</option></select>
-            <button id="lower">lower</button>
-            <span class="mono-note" id="lstat"></span>
+      <div class="pane-body" style="display:flex;flex-direction:column;min-height:0">
+        <div id="panel-graph" class="panel here"><div class="inspector" id="inspector"></div><div id="graph" style="flex:1;min-height:0"></div></div>
+        <div id="panel-facts" class="panel"><div class="facts" id="facts"><div class="empty-state">No compiler projection has been requested. Lexical tokens remain exact source spans with <code>semantic_id: null</code>.</div></div></div>
+        <div id="panel-lower" class="panel">
+          <div class="controls">
+            <select id="target"><option value="native">native</option><option value="aarch64-linux">aarch64-linux</option><option value="aarch64-macos">aarch64-macos</option><option value="wasm32-wasi">wasm32-wasi</option></select>
+            <select id="emit"><option value="asm">assembly</option><option value="c">C bootstrap projection</option><option value="wasm">Wasm</option></select>
+            <select id="opt"><option value="3">O3</option><option value="2">O2</option><option value="1">O1</option><option value="0">O0</option><option value="s">Os</option></select>
+            <button id="lower">request realization</button><span class="state" id="lower-state"></span>
           </div>
-          <div class="code-out pane-body" id="lout"><div class="empty"><div class="glyph">⌄</div><div>choose a target and lower</div><div class="mono-note">the same graph semantics realize per target — only physics differs</div></div></div>
+          <pre class="output" id="lower-output">No realization requested. A machine listing is physical evidence, never semantic authority.</pre>
         </div>
-        <div id="tab-run" style="flex:1;display:none;flex-direction:column;min-height:0;">
-          <div class="run-ctl">
-            <input type="text" id="rargs" placeholder="argv (space separated)" spellcheck="false">
-            <button id="rrun">run</button>
-          </div>
-          <div class="out pane-body" id="rout"><span class="mono-note">⌘R runs the source natively.</span></div>
+        <div id="panel-run" class="panel">
+          <div class="controls"><input id="args" type="text" placeholder="argument vector" spellcheck="false"><button id="run-again">request run</button></div>
+          <pre class="output" id="run-output">No run evidence requested.</pre>
         </div>
-        <div id="tab-facts" style="flex:1;display:none;overflow:auto;" class="pane-body"><div id="facts"><div class="empty"><div class="glyph">◇</div><div>analyze to publish facts</div></div></div></div>
       </div>
-    </div>
+    </section>
   </div>
   <div class="statusbar"></div>
 </div>
-
 <script src="/shared/idol.js"></script>
 <script src="/shared/graph.js"></script>
 <script src="/shared/shell.js"></script>
 <script>
-(function () {
-  Shell.boot("graph", {
-    title: "Explorer",
-    keys: [["⌘1-4", "panels"], ["⌘↵", "analyze"], ["⌘R", "run"], ["⌘⇧F", "format"], ["hover", "any token"]],
-  });
-  IdolShell.crumbs([{ label: "explorer" }, { label: "editor" }]);
+(() => {
+  Shell.boot("graph", { title: "Semantic Observatory", keys: [["⌘1-4", "lenses"], ["⌘↵", "analyze"], ["⌘R", "run"], ["hover", "exact source span"]] });
+  IdolShell.crumbs([{ label: "observatory" }, { label: "source" }]);
 
-  const SAMPLES = {
-    "subject relation": `-- subject-first relation faces
-add = (a, b) a + b
-x: i64 = add(20, 22)
-stdout:write(x)`,
-    "one static projection": `-- . is exactly one statically known projection
-pack = { name = "idol", born = 2024 }
-n = pack.name
-stdout:write(n)`,
-    "computed projection": `-- [] is computed or indexed projection
-arr = { 10, 20, 30 }
-second = arr[2]
-stdout:write(second)`,
-    "world access": `-- @ is the current world
-magic = @(40 + 2)
-stdout:write(magic)`,
-    "control": `sum = 0
-for i = 1, 10 do
-  sum = sum + i
-end
-stdout:write(sum)`,
-    "descriptors": `clamp = (v: f64, lo: f64, hi: f64)
-  if v < lo then lo
-  elseif v > hi then hi
-  else v
+  const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const state = { graph: null, explain: null, status: null };
+  const editor = Idol.editor("#editor", { source: "", oninput: () => scheduleAnalysis() });
+  const explorer = Idol.explore(editor, state);
+  const graphView = new GraphView("#graph", { onSelect: (node) => inspect(node) });
+  let exampleManifest = null;
+  let analyzeTimer = null;
 
-stdout:write(clamp(1.5, 0.0, 1.0))`,
+  const setPanel = (name) => {
+    document.querySelectorAll("#tabs .tab").forEach((tab) => tab.classList.toggle("here", tab.dataset.panel === name));
+    document.querySelectorAll(".panel").forEach((panel) => panel.classList.toggle("here", panel.id === `panel-${name}`));
+    if (name === "graph") graphView.fitIfFirst();
   };
+  document.querySelectorAll("#tabs .tab").forEach((tab) => tab.addEventListener("click", () => setPanel(tab.dataset.panel)));
 
-  const data = {
-    graph: null, explain: null, sim: null,
-    onReveal: (nd) => { if (nd) { setTab("graph"); gv.select(nd.id, true); } },
-  };
-  const ed = Idol.editor("#editor", {
-    source: decodeShare() || SAMPLES["subject relation"],
-    oninput: () => { schedule(); },
-  });
-  const ex = Idol.explore(ed, data);
-
-  const gv = new GraphView("#graph", {
-    onSelect: (nd) => showInspector(nd),
-    onOpen: (nd) => { /* future: cross-world navigation */ },
-  });
-
-  /* share: source in the URL hash */
-  function decodeShare() {
-    try {
-      const h = location.hash.slice(1);
-      if (h.length > 2) return decodeURIComponent(escape(atob(h)));
-    } catch (e) {}
-    return null;
-  }
-  function encodeShare() {
-    try { history.replaceState(null, "", "#" + btoa(unescape(encodeURIComponent(ed.source)))); } catch (e) {}
-  }
-
-  /* tabs */
-  const tabs = document.querySelectorAll("#tabs .tab");
-  function setTab(name) {
-    tabs.forEach((t) => t.classList.toggle("here", t.dataset.tab === name));
-    for (const id of ["graph", "lowering", "run", "facts"]) {
-      const el = document.getElementById("tab-" + id);
-      el.style.display = id === name ? (id === "graph" || id === "lowering" || id === "run" ? "flex" : "block") : "none";
+  const populateExamples = async () => {
+    const response = await fetch("/content/source-examples.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`example authority ${response.status}`);
+    exampleManifest = await response.json();
+    const select = document.getElementById("sample");
+    const examples = document.createElement("optgroup");
+    examples.label = "authority-pinned source examples";
+    for (const example of exampleManifest.examples) {
+      const option = document.createElement("option");
+      option.value = example.id;
+      option.textContent = `${example.title} · ${example.status.replaceAll("-", " ")}`;
+      examples.appendChild(option);
     }
-    if (name === "graph") gv.fitIfFirst();
-  }
-  tabs.forEach((t) => t.addEventListener("click", () => setTab(t.dataset.tab)));
+    select.appendChild(examples);
+    const first = exampleManifest.examples[0];
+    if (first) {
+      select.value = first.id;
+      editor.setSource(first.source);
+      reportExample(first);
+    }
 
-  /* split drag */
-  (function () {
-    const split = document.getElementById("split");
-    const stage = document.querySelector(".stage");
-    let dragging = false;
-    split.addEventListener("mousedown", () => { dragging = true; });
-    window.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const r = stage.getBoundingClientRect();
-      const f = Math.min(0.8, Math.max(0.2, (e.clientX - r.left) / r.width));
-      document.querySelector(".pane-editor").style.flex = f;
-      document.querySelector(".pane-panel").style.flex = 1 - f;
-    });
-    window.addEventListener("mouseup", () => dragging = false);
-  })();
+    Idol.api.get("/api/libs").then((document) => {
+      const group = window.document.createElement("optgroup");
+      group.label = "registry source projections";
+      for (const library of document.libs || []) {
+        const option = window.document.createElement("option");
+        option.value = `registry:${library.name}`;
+        option.textContent = library.name;
+        group.appendChild(option);
+      }
+      select.appendChild(group);
+    }).catch(() => {});
+  };
 
-  /* samples — plus every home and published world from the registry */
-  const sel = document.getElementById("sample");
-  const optg = document.createElement("optgroup");
-  optg.label = "samples";
-  for (const k of Object.keys(SAMPLES)) {
-    const o = document.createElement("option");
-    o.value = k; o.textContent = k; optg.appendChild(o);
-  }
-  sel.appendChild(optg);
-  sel.addEventListener("change", () => {
-    if (sel.selectedOptions[0] && sel.selectedOptions[0].dataset.lib) {
-      loadFromRegistry(sel.value);
+  const reportExample = (example) => {
+    document.getElementById("source-status").textContent = example.status.replaceAll("-", " ");
+    document.getElementById("source-boundary").textContent = example.status.includes("implementation-not-claimed")
+      ? "This face is projected from current semantic law; parser, lowering, and execution support are not claimed."
+      : "This source is a bounded projection of current compact law; semantic identity still requires compiler facts.";
+  };
+
+  document.getElementById("sample").addEventListener("change", async (event) => {
+    const value = event.target.value;
+    if (value.startsWith("registry:")) {
+      const name = value.slice("registry:".length);
+      try {
+        editor.setSource(await Idol.api.text(`/api/lib/${encodeURIComponent(name)}/source`));
+        document.getElementById("source-status").textContent = "foreign registry source projection";
+        document.getElementById("source-boundary").textContent = "Registry source retains its declared source law and provenance; this browser does not infer native Idol meaning.";
+      } catch (error) { Idol.toast(error.message, true); }
       return;
     }
-    ed.setSource(SAMPLES[sel.value]); analyze(true);
+    const example = exampleManifest?.examples.find((candidate) => candidate.id === value);
+    if (example) { editor.setSource(example.source); reportExample(example); }
   });
-  function loadFromRegistry(name) {
-    Idol.api.text("/api/lib/" + encodeURIComponent(name) + "/source").then((s) => {
-      ed.setSource(s);
-      analyze(true);
-      IdolShell.crumbs([{ label: "explorer" }, { label: name }]);
-    }).catch((e) => Idol.toast(e.message, true));
-  }
-  Idol.api.get("/api/libs").then((r) => {
-    const g1 = document.createElement("optgroup");
-    g1.label = "registry homes";
-    for (const l of r.libs || []) {
-      const o = document.createElement("option");
-      o.value = l.name; o.textContent = l.name; o.dataset.lib = "1"; g1.appendChild(o);
-    }
-    sel.appendChild(g1);
-    return Idol.api.get("/api/worlds");
-  }).then((r) => {
-    if (!r) return;
-    const g2 = document.createElement("optgroup");
-    g2.label = "published worlds";
-    for (const w of r.worlds || []) {
-      const o = document.createElement("option");
-      o.value = w.name; o.textContent = w.name + " v" + (w.version || "?"); o.dataset.lib = "1"; g2.appendChild(o);
-    }
-    sel.appendChild(g2);
-  }).catch(() => {});
 
-  /* analysis */
-  let timer = null;
-  function schedule() {
-    clearTimeout(timer);
-    timer = setTimeout(() => analyze(false), 550);
-  }
-  async function analyze(explicit) {
+  const scheduleAnalysis = () => {
+    clearTimeout(analyzeTimer);
+    analyzeTimer = setTimeout(() => analyze(false), 700);
+  };
+
+  const analyze = async (explicit) => {
     document.getElementById("busy").style.display = "block";
-    encodeShare();
     try {
-      const r = await Idol.api.post("/api/analyze", { source: ed.source });
-      data.graph = r.graph; data.explain = r.explain;
-      ex.rebind();
-      gv.setGraph(r.graph);
-      renderFacts(r);
-      if (explicit) Idol.toast("graph published — " + (r.graph ? r.graph.nodes.length + " nodes" : "no graph"));
-    } catch (e) {
-      Idol.toast("analyze: " + e.message, true);
+      const result = await Idol.api.post("/api/analyze", { source: editor.source });
+      state.graph = result.graph || null;
+      state.explain = result.explain || null;
+      state.status = result.check || null;
+      explorer.rebind();
+      graphView.setGraph(state.graph || { nodes: [], edges: [] });
+      renderFacts(result);
+      document.getElementById("source-status").textContent = state.graph ? "compiler projection received" : "analysis returned no graph";
+      document.getElementById("source-boundary").textContent = state.graph
+        ? "Only exact compiler-published identities and spans are shown as semantic facts. Unbound source remains lexical provenance."
+        : "No exact semantic graph was published; lexical preview remains non-semantic.";
+      if (explicit) Idol.toast(state.graph ? `compiler graph · ${(state.graph.nodes || []).length} nodes` : "compiler returned no graph");
+    } catch (error) {
+      state.graph = null;
+      explorer.rebind();
+      graphView.setGraph({ nodes: [], edges: [] });
+      document.getElementById("source-status").textContent = "analysis refused";
+      document.getElementById("source-boundary").textContent = error.message;
+      if (explicit) Idol.toast(error.message, true);
     } finally {
       document.getElementById("busy").style.display = "none";
     }
-  }
+  };
+
+  const valueRow = (key, value) => `<div class="kv"><span class="k">${escapeHtml(key)}</span><span class="v">${escapeHtml(value)}</span></div>`;
+  const renderFacts = (result) => {
+    const graph = result.graph || {};
+    const check = result.check || {};
+    const groups = [];
+    groups.push(`<section class="fact-group"><h3>source and check</h3>${valueRow("source law", graph.root_source_law ? `${graph.root_source_law.family || ""} · ${graph.root_source_law.schema || ""}` : "not published")}${valueRow("check", check.ok === true ? "pass" : check.ok === false ? "refused" : "not reported")}${check.output ? valueRow("diagnostic", check.output) : ""}</section>`);
+    groups.push(`<section class="fact-group"><h3>semantic graph</h3>${valueRow("schema", graph.schema || "not published")}${valueRow("nodes", String((graph.nodes || []).length))}${valueRow("edges", String((graph.edges || []).length))}${valueRow("applications", String((graph.applications || []).length))}${valueRow("exact token projections", String((graph.tokens || graph.token_projections || []).length))}</section>`);
+    if (Array.isArray(graph.worlds) && graph.worlds.length) groups.push(`<section class="fact-group"><h3>world projections</h3>${graph.worlds.map((world, index) => valueRow(`world ${index + 1}`, JSON.stringify(world))).join("")}</section>`);
+    document.getElementById("facts").innerHTML = groups.join("");
+  };
+
+  const inspect = (node) => {
+    const panel = document.getElementById("inspector");
+    if (!node) { panel.style.display = "none"; return; }
+    const rows = Object.entries(node).slice(0, 18).map(([key, value]) => valueRow(key, typeof value === "object" ? JSON.stringify(value) : String(value))).join("");
+    panel.innerHTML = `<div class="title">exact published node</div>${rows}`;
+    panel.style.display = "block";
+  };
+
+  const requestLowering = async () => {
+    const output = document.getElementById("lower-output");
+    const status = document.getElementById("lower-state");
+    status.textContent = "requesting";
+    output.textContent = "";
+    try {
+      const result = await Idol.api.post("/api/lower", {
+        source: editor.source,
+        target: document.getElementById("target").value,
+        emit: document.getElementById("emit").value,
+        opt: document.getElementById("opt").value,
+      });
+      output.textContent = result.output || result.code || JSON.stringify(result, null, 2);
+      status.textContent = result.ok === false ? "refused" : "physical projection received";
+    } catch (error) { output.textContent = error.message; status.textContent = "refused"; }
+  };
+
+  const requestRun = async () => {
+    setPanel("run");
+    const output = document.getElementById("run-output");
+    output.textContent = "requesting run evidence";
+    try {
+      const raw = document.getElementById("args").value.trim();
+      const result = await Idol.api.post("/api/run", { source: editor.source, args: raw ? raw.split(/\s+/) : [] });
+      output.innerHTML = `<span class="${result.rc === 0 ? "ok" : "err"}">exit ${escapeHtml(String(result.rc))}</span>\n${escapeHtml(result.stdout || "")}${result.stderr ? `\n${escapeHtml(result.stderr)}` : ""}`;
+    } catch (error) { output.innerHTML = `<span class="err">${escapeHtml(error.message)}</span>`; }
+  };
+
   document.getElementById("analyze").addEventListener("click", () => analyze(true));
-
-  function renderFacts(r) {
-    const f = document.getElementById("facts");
-    const g = r.graph || {};
-    const rows = [];
-    const kv = (k, v) => `<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
-    const chk = r.check || {};
-    rows.push(`<div class="facts-sec"><h4>check</h4>` +
-      (chk.ok ? `<div class="kv"><span class="k">law</span><span class="v ok" style="color:var(--ok)">✓ no errors</span></div>`
-              : `<div class="kv"><span class="k">law</span><span class="v" style="color:var(--danger)">${Idol === undefined ? "" : ""}${escapeHtml((chk.output || "").split("\n").slice(-6).join("\n"))}</span></div>`) +
-      `</div>`);
-    rows.push(`<div class="facts-sec"><h4>graph</h4>` +
-      kv("schema", g.schema || "—") +
-      kv("version", g.version !== undefined ? g.version : "—") +
-      kv("nodes", (g.nodes || []).length) +
-      kv("edges", (g.edges || []).length) +
-      kv("applications", (g.applications || []).length) +
-      kv("source law", g.root_source_law ? g.root_source_law.family + " · " + g.root_source_law.schema : "—") +
-      `</div>`);
-    if (g.worlds && g.worlds.length) {
-      rows.push(`<div class="facts-sec"><h4>worlds</h4>` +
-        g.worlds.map((w) => kv(w.home !== undefined ? ("home " + w.home) : "world",
-          `reach ${w.reach || "—"} · members ${(w.members || []).length}`)).join("") + `</div>`);
-    }
-    const ks = r.explain && r.explain.knowledge_snapshot;
-    if (ks && ks.entities && ks.entities.length) {
-      rows.push(`<div class="facts-sec"><h4>knowledge</h4>` +
-        ks.entities.slice(0, 12).map((x) => kv(x.name, `${x.kind} · ${x.phase} · ${x.knowledge}`)).join("") + `</div>`);
-    }
-    const to = r.explain && r.explain.transform_provenance;
-    if (to && to.entries && to.entries.length) {
-      rows.push(`<div class="facts-sec"><h4>transform lineage</h4>` +
-        to.entries.slice(0, 12).map((x) => kv(x.transform, `${x.site} · ${x.evidence}`)).join("") + `</div>`);
-    }
-    f.innerHTML = rows.join("");
-  }
-  function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
-
-  /* lowering */
-  document.getElementById("lower").addEventListener("click", async () => {
-    const out = document.getElementById("lout");
-    const st = document.getElementById("lstat");
-    st.textContent = "lowering…";
-    out.innerHTML = `<div style="padding:14px"><span class="spin"></span></div>`;
-    try {
-      const r = await Idol.api.post("/api/lower", {
-        source: ed.source,
-        target: document.getElementById("ltarget").value,
-        emit: document.getElementById("lemit").value,
-        opt: document.getElementById("lopt").value,
-      });
-      if (r.ok) {
-        out.innerHTML = "";
-        const pre = document.createElement("pre");
-        pre.textContent = r.text || "(empty emit)";
-        out.appendChild(pre);
-        st.textContent = `${(r.text || "").split("\n").length} lines`;
-      } else {
-        out.innerHTML = `<div class="out"><span class="err">${escapeHtml(r.stderr || r.stdout || "lowering refused")}</span></div>`;
-        st.textContent = "refused";
-      }
-    } catch (e) {
-      st.textContent = "";
-      out.innerHTML = `<div class="out"><span class="err">${e.message}</span></div>`;
-    }
-  });
-
-  /* run */
-  async function run() {
-    const out = document.getElementById("rout");
-    out.innerHTML = `<span class="spin"></span>`;
-    try {
-      const args = document.getElementById("rargs").value.trim();
-      const r = await Idol.api.post("/api/run", {
-        source: ed.source, args: args ? args.split(/\s+/) : [],
-      });
-      out.innerHTML =
-        `<span class="${r.rc === 0 ? "ok" : "err"}">exit ${r.rc}</span>\n` +
-        escapeHtml(r.stdout || "") +
-        (r.stderr ? `\n<span class="err">${escapeHtml(r.stderr)}</span>` : "");
-    } catch (e) {
-      out.innerHTML = `<span class="err">${e.message}</span>`;
-    }
-  }
-  document.getElementById("rrun").addEventListener("click", run);
-  document.getElementById("runb").addEventListener("click", () => { setTab("run"); run(); });
-
-  /* fmt */
+  document.getElementById("lower").addEventListener("click", requestLowering);
+  document.getElementById("run").addEventListener("click", requestRun);
+  document.getElementById("run-again").addEventListener("click", requestRun);
   document.getElementById("fmt").addEventListener("click", async () => {
     try {
-      const r = await Idol.api.post("/api/fmt", { source: ed.source });
-      if (r.ok) { ed.setSource(r.source); Idol.toast("formatted"); }
-      else Idol.toast(r.output || "formatter refused", true);
-    } catch (e) { Idol.toast(e.message, true); }
+      const result = await Idol.api.post("/api/fmt", { source: editor.source });
+      if (result.ok && typeof result.source === "string") editor.setSource(result.source);
+      else throw new Error(result.output || "formatter refused");
+    } catch (error) { Idol.toast(error.message, true); }
+  });
+  addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); analyze(true); }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "r") { event.preventDefault(); requestRun(); }
+    if ((event.metaKey || event.ctrlKey) && /^[1-4]$/.test(event.key)) { event.preventDefault(); setPanel(["graph", "facts", "lower", "run"][Number(event.key) - 1]); }
   });
 
-  /* keys */
-  document.addEventListener("keydown", (e) => {
-    const mod = e.metaKey || e.ctrlKey;
-    if (!mod) return;
-    if (e.key === "Enter") { e.preventDefault(); analyze(true); }
-    else if (e.key.toLowerCase() === "r") { e.preventDefault(); setTab("run"); run(); }
-    else if (e.key.toLowerCase() === "g") { e.preventDefault(); setTab("graph"); }
-    else if (e.shiftKey && e.key.toLowerCase() === "f") { e.preventDefault(); document.getElementById("fmt").click(); }
-    else if (["1", "2", "3", "4"].includes(e.key)) {
-      e.preventDefault();
-      setTab(["graph", "lowering", "run", "facts"][+e.key - 1]);
-    }
+  populateExamples().catch((error) => {
+    document.getElementById("source-status").textContent = "authority unavailable";
+    document.getElementById("source-boundary").textContent = error.message;
   });
-
-  /* inspector */
-  function showInspector(nd) {
-    const box = document.getElementById("inspector");
-    if (!nd) { box.style.display = "none"; return; }
-    const g = data.graph || {};
-    const outs = (g.edges || []).filter((x) => x.from === nd.id);
-    const ins = (g.edges || []).filter((x) => x.to === nd.id);
-    box.style.display = "block";
-    box.innerHTML = `<div class="t">${nd.name} <span style="color:var(--ink-4);font-size:10px">#${nd.id} · ${nd.kind}${nd.line ? " · line " + nd.line : ""}</span></div>` +
-      (outs.length ? `<div class="kv" style="font-size:11px"><span style="color:var(--ink-4);min-width:90px">relations out</span><span style="color:var(--ink-2)">${outs.map((x) => x.relation).join(", ")}</span></div>` : "") +
-      (ins.length ? `<div class="kv" style="font-size:11px"><span style="color:var(--ink-4);min-width:90px">relations in</span><span style="color:var(--ink-2)">${ins.map((x) => x.relation).join(", ")}</span></div>` : "");
-  }
-
-  analyze(true);
-  setTab("graph");
 })();
 </script>
 </body>
