@@ -1,555 +1,339 @@
-/* ============================================================================
-   idol.js — Idol language surface for the web
-   Lexer (closed lexical grammar) · highlighter · editor · token explorer ·
-   graph binding · API client. Vanilla, no dependencies.
-
-   Law anchors follow the supreme law (docs/spec/law.md upstream):
-   () application · [] computed projection · {} structure · . one static
-   projection · : subject relation · @ current world.
-   ========================================================================== */
+/*
+ * idol.js — non-authoritative browser presentation for Idol source.
+ *
+ * This file owns no grammar, keyword table, descriptor table, operator table,
+ * declaration analysis, subject inference, semantic identity, or graph
+ * resolution. It performs only lossless lexical segmentation for presentation.
+ * Exact semantic identities may enter only through compiler-published source
+ * spans. Until then every token says: semantic identity not published.
+ */
 (function (global) {
 "use strict";
 
-/* ------------------------------------------------------------------ lexicon */
+const PERMANENT_DELIMITERS = new Set(["(", ")", "[", "]", "{", "}", ".", ":", "@"]);
+const TOKEN_CLASSES = Object.freeze({
+  name: "tk-name",
+  number: "tk-num",
+  text: "tk-str",
+  bytes: "tk-str",
+  comment: "tk-com",
+  delimiter: "tk-delim",
+  symbol: "tk-op",
+});
 
-const KW = new Set([
-  // Lua foundation
-  "and","break","continue","do","else","elseif","end","false","for","function",
-  "fun","global","goto","if","in","local","nil","not","or","repeat","return",
-  "then","true","until","while",
-  // descriptors
-  "const","enum","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
-  "bool","void","str",
-]);
-const CTX = new Set([ // contextual — may still bind as a name
-  "match","try","catch","defer","async","await","concept","alias","private",
-  "extends","macro","comptime","by","let",
-]);
-const TYPES = new Set(["i8","i16","i32","i64","u8","u16","u32","u64","f32",
-  "f64","bool","void","str","enum","const"]);
-
-const LAW = {
-  "(":   ["application", "() ordinary relation application · grouping · operand/result boundaries"],
-  ")":   ["application", "closes an application or group"],
-  "[":   ["projection", "[] computed or indexed projection"],
-  "]":   ["projection", "closes a computed projection"],
-  "{":   ["structure", "{} structured pack · table · descriptor structure"],
-  "}":   ["structure", "closes a structure"],
-  ".":   ["projection", ". exactly one static projection — never dynamic search · x.r is projection, not subject"],
-  ":":   ["relation", ": subject-oriented relation · declaration-side specialization (x:r = …, x:r(kg) = …)"],
-  "@":   ["world", "@ current world · access · injection · qualification"],
-  "=":   ["binding", "introduces or replaces a binding"],
-  "==":  ["law", "identity comparison"],
-  ",":   ["pack", "operand/pack separator — exact role correspondence"],
-};
-
-/* law faces for identifiers — the highlighter teaches the delimiter law */
-const FACE_NOTE = {
-  call:    "name applied — relation application face",
-  subject: "subject face — the semantic role after : (not argument zero)",
-  member:  "static projection member — x.name, no subject implied",
-  decl:    "binding introduced here — spelling is provenance, identity is the graph",
-  param:   "callable operand — ordinary runtime data, not a specialization axis",
-  type:    "descriptor — one descriptor system, no parallel type kingdom",
-};
-
-function lawNote(tok) {
-  if (LAW[tok.v]) return { face: LAW[tok.v][0], note: LAW[tok.v][1] };
-  if (tok.f && FACE_NOTE[tok.f]) return { face: tok.f, note: FACE_NOTE[tok.f] };
-  if (tok.t === "kw") return { face: "grammar", note: "grammar keyword of the one source law" };
-  if (tok.t === "type") return { face: "descriptor", note: FACE_NOTE.type };
-  if (tok.t === "ctx") return { face: "grammar", note: "contextual keyword — lawful as a binding name too" };
-  if (tok.t === "str") return { face: "value", note: "text value; exact bytes are provenance" };
-  if (tok.t === "num") return { face: "value", note: "number value; range facts qualify the graph id" };
-  if (tok.t === "com") return { face: "provenance", note: "comment — source bytes, never semantics" };
-  if (tok.t === "name") return { face: "provenance", note: "spelling is provenance; identity is the graph id" };
-  return { face: "grammar", note: "operator" };
+function esc(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-/* ------------------------------------------------------------------- lexer */
-
-// Token: {t, v, s, e, l, c}  type value start end line col (1-based)
-function lex(src) {
-  const T = [];
-  const n = src.length;
-  let i = 0, l = 1, c = 1;
-  const push = (t, s, e) => T.push({ t, v: src.slice(s, e), s, e, l: lineOf(src, s), c: colOf(src, s) });
-  // incremental line/col cache
-  let lastIdx = 0, lastLine = 1, lastCol = 1;
-  function lineOf(s, x) { return s; }
-  function colOf(s, x) { return s; }
-  // We'll compute line/col after, cheaply, in one pass.
-  function tok(t, s, e) { T.push({ t, v: src.slice(s, e), s, e }); }
-
-  const isIdStart = (ch) => /[A-Za-z_]/.test(ch);
-  const isId = (ch) => /[A-Za-z0-9_]/.test(ch);
-  const isD = (ch) => ch >= "0" && ch <= "9";
-
-  while (i < n) {
-    const ch = src[i];
-    // whitespace
-    if (ch === "\n") { i++; tok("nl", i - 1, i); continue; }
-    if (ch === " " || ch === "\t" || ch === "\r") { i++; continue; }
-    // long comment --[[ ... ]] (with = levels)
-    if (ch === "-" && src[i + 1] === "-") {
-      if (src[i + 2] === "[") {
-        const m = /^--\[(=*)\[/.exec(src.slice(i, i + 100));
-        if (m) {
-          const close = "]" + m[1] + "]";
-          let j = i + m[0].length, depth = 1;
-          const end = src.indexOf(close, j);
-          j = end === -1 ? n : end + close.length;
-          tok("com", i, j); i = j; continue;
-        }
-      }
-      let j = i + 2;
-      while (j < n && src[j] !== "\n") j++;
-      tok("com", i, j); i = j; continue;
-    }
-    // long string [[ ]]
-    if (ch === "[") {
-      const m = /^\[(=*)\[/.exec(src.slice(i, i + 100));
-      if (m) {
-        const close = "]" + m[1] + "]";
-        const end = src.indexOf(close, i + m[0].length);
-        const j = end === -1 ? n : end + close.length;
-        tok("str", i, j); i = j; continue;
-      }
-    }
-    // quoted strings
-    if (ch === '"' || ch === "'") {
-      let j = i + 1;
-      while (j < n) {
-        if (src[j] === "\\") { j += 2; continue; }
-        if (src[j] === ch || src[j] === "\n") { j++; break; }
-        j++;
-      }
-      tok("str", i, Math.min(j, n)); i = Math.min(j, n); continue;
-    }
-    // numbers
-    if (isD(ch) || (ch === "." && isD(src[i + 1]))) {
-      let j = i;
-      if (ch === "0" && (src[i + 1] === "x" || src[i + 1] === "X")) {
-        j = i + 2;
-        while (j < n && /[0-9a-fA-F_]/.test(src[j])) j++;
-      } else {
-        while (j < n && (isD(src[j]) || src[j] === "_")) j++;
-        if (src[j] === ".") { j++; while (j < n && (isD(src[j]) || src[j] === "_")) j++; }
-        if (src[j] === "e" || src[j] === "E") {
-          let k = j + 1;
-          if (src[k] === "+" || src[k] === "-") k++;
-          if (isD(src[k])) { j = k; while (j < n && isD(src[j])) j++; }
-        }
-      }
-      tok("num", i, j); i = j; continue;
-    }
-    // names / keywords / world directives
-    if (isIdStart(ch)) {
-      let j = i;
-      while (j < n && isId(src[j])) j++;
-      const v = src.slice(i, j);
-      if (KW.has(v)) tok(v === "true" || v === "false" || v === "nil" ? "lit" : "kw", i, j);
-      else if (TYPES.has(v)) tok("type", i, j);
-      else if (CTX.has(v)) tok("ctx", i, j);
-      else tok("name", i, j);
-      i = j; continue;
-    }
-    // world sigil / directive: @name
-    if (ch === "@") {
-      let j = i + 1;
-      while (j < n && isId(src[j])) j++;
-      tok(j > i + 1 ? "direct" : "world", i, j); i = j; continue;
-    }
-    // multi-char operators
-    const three = src.substr(i, 3);
-    const two = src.substr(i, 2);
-    if (three === "...") { tok("op", i, i + 3); i += 3; continue; }
-    if (["==","~=","<=",">=","..","::","->","+=","-=","*=","/=","%="].includes(two)) {
-      tok(two === ".." ? "op" : (two === "::" ? "delim" : "op"), i, i + 2); i += 2; continue;
-    }
-    if ("+-*/%^#<>=~".includes(ch)) { tok("op", i, i + 1); i++; continue; }
-    if ("()[]{}.:,;".includes(ch)) { tok("delim", i, i + 1); i++; continue; }
-    // anything else — single char
-    tok("op", i, i + 1); i++;
-  }
-
-  // annotate line/col (1-based) in one pass
-  let line = 1, col = 1;
-  for (const t of T) {
-    t.l = line; t.c = col;
-    for (let k = t.s; k < t.e; k++) {
-      if (src[k] === "\n") { line++; col = 1; } else col++;
-    }
-  }
-  // drop newline markers (kept above only to advance line/col)
-  const out = [];
-  for (const t of T) {
-    if (t.t === "nl") continue;
-    t.cls = t.t; out.push(t);
-  }
-  return out;
+function isNameStart(character) {
+  return typeof character === "string" && /[A-Za-z_]/.test(character);
 }
 
-/* -------------------------------------------------------------- faces */
+function isNameContinue(character) {
+  return typeof character === "string" && /[A-Za-z0-9_]/.test(character);
+}
+
+function isDigit(character) {
+  return typeof character === "string" && character >= "0" && character <= "9";
+}
+
+function locate(source, offset) {
+  let line = 1;
+  let column = 1;
+  for (let index = 0; index < offset; index += 1) {
+    if (source[index] === "\n") {
+      line += 1;
+      column = 1;
+    } else {
+      column += 1;
+    }
+  }
+  return { line, column };
+}
+
+function token(source, type, start, end) {
+  const position = locate(source, start);
+  return Object.freeze({
+    t: type,
+    cls: type,
+    v: source.slice(start, end),
+    s: start,
+    e: end,
+    l: position.line,
+    c: position.column,
+    source_span: Object.freeze({ start, end }),
+    semantic_id: null,
+    binding_status: "not-published",
+  });
+}
+
+function quotedEnd(source, start, quote) {
+  let index = start + 1;
+  while (index < source.length) {
+    if (source[index] === "\\") {
+      index = Math.min(source.length, index + 2);
+      continue;
+    }
+    if (source[index] === quote) return index + 1;
+    if (source[index] === "\n") return index;
+    index += 1;
+  }
+  return source.length;
+}
+
+function numberEnd(source, start) {
+  let index = start;
+  if (source[index] === "0" && /[xX]/.test(source[index + 1] || "")) {
+    index += 2;
+    while (/[0-9A-Fa-f_]/.test(source[index] || "")) index += 1;
+    return index;
+  }
+  while (/[0-9_]/.test(source[index] || "")) index += 1;
+  if (source[index] === "." && isDigit(source[index + 1])) {
+    index += 1;
+    while (/[0-9_]/.test(source[index] || "")) index += 1;
+  }
+  if (/[eE]/.test(source[index] || "")) {
+    let exponent = index + 1;
+    if (/[+-]/.test(source[exponent] || "")) exponent += 1;
+    if (isDigit(source[exponent])) {
+      index = exponent + 1;
+      while (/[0-9_]/.test(source[index] || "")) index += 1;
+    }
+  }
+  return index;
+}
 
 /**
- * Contextual face pass — the highlighter teaches the source law.
- * Faces: call · subject · member · decl · param. Purely derived from
- * token neighborhoods; conservative, never a second parser.
+ * Losslessly segment visible source without deciding what any spelling means.
+ * This is deliberately not a parser and not a closed lexical grammar.
  */
-function faces(tokens) {
-  const d = new Set(); // decl indices (kept for compatibility)
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    const pv = tokens[i - 1], nx = tokens[i + 1];
-    if (t.t === "name" || t.t === "ctx") {
-      // declaration: name = / name(…)(…) = / name: r = subject-specialized decl
-      if (nx && nx.v === "=" && (nx.t === "op" || nx.t === "delim")) { t.f = "decl"; d.add(i); }
-      // subject face in declaration or call: `name:` before a relation name
-      else if (nx && nx.v === ":" && nx.t === "delim") {
-        const after = tokens[i + 2];
-        // `x:r` — x is the subject (call face or declaration face)
-        if (after && (after.t === "name" || after.t === "ctx" || after.t === "kw")) {
-          t.f = "subject"; d.add(i);
-        }
-      }
-      // member: after `.`
-      else if (pv && pv.v === "." && pv.t === "delim") t.f = "member";
-      // call: name directly before `(`
-      else if (nx && nx.v === "(" && nx.t === "delim") {
-        t.f = "call";
-        // `x:r(…)` — r after `:` is the relation being applied
-        if (pv && pv.v === ":" && pv.t === "delim") t.f = "call";
-      }
+function lex(input) {
+  const source = String(input || "");
+  const tokens = [];
+  let index = 0;
+
+  while (index < source.length) {
+    const character = source[index];
+
+    if (/\s/.test(character)) {
+      index += 1;
+      continue;
     }
-  }
-  // params: names inside the `(` group of a callable decl or fn keyword
-  for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i].v !== "(" || tokens[i].t !== "delim") continue;
-    const prev = tokens[i - 1];
-    const opens =
-      (prev && ((prev.f === "decl") || (prev.f === "call" && prev.f !== undefined && tokens[i - 2] && tokens[i - 2].v === "="))) ||
-      (prev && prev.t === "kw" && (prev.v === "fun" || prev.v === "function")) ||
-      (prev && prev.v === "=" );
-    if (!opens) continue;
-    let depth = 0, j = i;
-    for (; j < tokens.length; j++) {
-      const tk = tokens[j];
-      if (tk.v === "(" && tk.t === "delim") depth++;
-      else if (tk.v === ")" && tk.t === "delim") { depth--; if (!depth) break; }
-      else if ((tk.t === "name" || tk.t === "ctx") && !tk.f) {
-        const nx2 = tokens[j + 1];
-        if (nx2 && (nx2.v === "," || nx2.v === ")" || (nx2.v === ":" && nx2.t === "delim"))) {
-          tk.f = "param"; d.add(j);
-        }
-      }
+
+    if (character === "#") {
+      let end = index + 1;
+      while (end < source.length && source[end] !== "\n") end += 1;
+      tokens.push(token(source, "comment", index, end));
+      index = end;
+      continue;
     }
+
+    if (character === '"') {
+      const end = quotedEnd(source, index, character);
+      tokens.push(token(source, "text", index, end));
+      index = end;
+      continue;
+    }
+
+    if (character === "'") {
+      const end = quotedEnd(source, index, character);
+      tokens.push(token(source, "bytes", index, end));
+      index = end;
+      continue;
+    }
+
+    if (isNameStart(character)) {
+      let end = index + 1;
+      while (isNameContinue(source[end])) end += 1;
+      tokens.push(token(source, "name", index, end));
+      index = end;
+      continue;
+    }
+
+    if (isDigit(character) || (character === "." && isDigit(source[index + 1]))) {
+      const end = numberEnd(source, index);
+      tokens.push(token(source, "number", index, end));
+      index = end;
+      continue;
+    }
+
+    if (PERMANENT_DELIMITERS.has(character)) {
+      tokens.push(token(source, "delimiter", index, index + 1));
+      index += 1;
+      continue;
+    }
+
+    let end = index + 1;
+    while (
+      end < source.length
+      && !/\s/.test(source[end])
+      && source[end] !== "#"
+      && source[end] !== '"'
+      && source[end] !== "'"
+      && !isNameStart(source[end])
+      && !isDigit(source[end])
+      && !PERMANENT_DELIMITERS.has(source[end])
+    ) end += 1;
+    tokens.push(token(source, "symbol", index, end));
+    index = end;
   }
-  return d;
+
+  return Object.freeze(tokens);
 }
 
-const CLS = {
-  kw: "tk-kw", lit: "tk-kw", type: "tk-type", ctx: "tk-ctx", str: "tk-str",
-  num: "tk-num", com: "tk-com", op: "tk-op", delim: "tk-delim",
-  world: "tk-world", direct: "tk-direct", name: "tk-name",
-  call: "tk-fn", subject: "tk-subject", member: "tk-member",
-  decl: "tk-decl", param: "tk-param",
-};
-
-function esc(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** Compatibility API: presentation never assigns semantic faces. */
+function faces() {
+  return new Set();
 }
-
-/** class of a token: face overrides base when present */
-function tcls(t) {
-  if (t.f && CLS[t.f]) return CLS[t.f];
-  return CLS[t.t] || "tk";
-}
-
-/** Render tokens to HTML with per-token data-i hooks. */
-function render(tokens, src, opts) {
-  opts = opts || {};
-  let html = "";
-  let pos = 0;
-  tokens.forEach((t, i) => {
-    if (t.s > pos) html += esc(src.slice(pos, t.s));
-    // delimiter law coloring: : and @ are the semantic orientation faces
-    let cls = tcls(t);
-    if (t.t === "delim" && t.v === ":") cls = "tk-colon";
-    html += `<span class="tk ${cls}" data-i="${i}">${esc(t.v)}</span>`;
-    pos = t.e;
-  });
-  html += esc(src.slice(pos));
-  return html;
-}
-
-/* compatibility: decls() is now faces() */
 const decls = faces;
 
-/* ----------------------------------------------------- static code views */
-
-/**
- * Read-only hoverable code block: highlight + token popover, no editor.
- * mount: element to fill. opts: {source, graph, explain, maxH}
- */
-function doccode(mount, opts) {
-  opts = opts || {};
-  const root = typeof mount === "string" ? document.querySelector(mount) : mount;
-  root.classList.add("doccode");
-  const src = opts.source || "";
-  const tokens = lex(src);
-  faces(tokens);
-  const pre = document.createElement("pre");
-  pre.innerHTML = render(tokens, src);
-  if (opts.maxH) pre.style.maxHeight = opts.maxH;
-  root.innerHTML = "";
-  root.appendChild(pre);
-
-  const ctx = {
-    graph: opts.graph, explain: opts.explain, tokens,
-    onReveal: opts.onReveal, onLib: opts.onLib,
-  };
-  const pop = new Popover();
-  const bindCache = bindGraph(tokens, opts.graph);
-
-  root.addEventListener("mouseover", (e) => {
-    const el = e.target;
-    if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
-    if (pop.pinned) return;
-    const tok = tokens[+el.dataset.i];
-    if (!tok) return;
-    pop.show(popoverBody(tok, bindCache.get(+el.dataset.i) || null, ctx), e.clientX, e.clientY, false);
-  });
-  root.addEventListener("mouseleave", () => { if (!pop.pinned) pop.hide(); });
-  root.addEventListener("click", (e) => {
-    const el = e.target;
-    if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
-    if (e.target.closest("button")) return;
-    const tok = tokens[+el.dataset.i];
-    if (!tok) return;
-    pop.show(popoverBody(tok, bindCache.get(+el.dataset.i) || null, ctx), e.clientX, e.clientY, true);
-    fetchWhysInto(pop, tok.v);
-  });
-  pop.el.addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    if (btn.dataset.act === "law") global.open("https://docs.idol.id/law", "_blank");
-    if (btn.dataset.act === "lib" && opts.onLib) {
-      const lex = pop.el.querySelector(".lex");
-      if (lex) opts.onLib(lex.textContent);
-      pop.pinned = false; pop.hide();
-    }
-  });
-  return { root, tokens, popover: pop };
+function tokenClass(value) {
+  if (value.t === "delimiter" && value.v === ":") return "tk-colon";
+  if (value.t === "delimiter" && value.v === "@") return "tk-world";
+  return TOKEN_CLASSES[value.t] || "tk";
 }
 
-/* --------------------------------------------------------------- editor */
+function render(tokens, source) {
+  let output = "";
+  let position = 0;
+  tokens.forEach((value, index) => {
+    if (value.s > position) output += esc(source.slice(position, value.s));
+    output += `<span class="tk ${tokenClass(value)}" data-i="${index}">${esc(value.v)}</span>`;
+    position = value.e;
+  });
+  output += esc(source.slice(position));
+  return output;
+}
 
-/**
- * Dual-layer editor: textarea for input, <pre> behind for faces.
- * Emits: oninput(source), onTokenHover(tok, el, ev), onTokenClick(tok, el, ev).
- */
-function editor(mount, opts) {
-  opts = opts || {};
-  const root = typeof mount === "string" ? document.querySelector(mount) : mount;
-  root.classList.add("editor-wrap");
-  root.innerHTML = "";
+function lexicalNote(value) {
+  if (value.t === "comment") return "comment bytes under the selected source law";
+  if (value.t === "text") return "double-quoted text bytes";
+  if (value.t === "bytes") return "single-quoted byte sequence";
+  if (value.t === "number") return "number spelling; range and descriptor facts are not inferred here";
+  if (value.t === "name") return "name spelling is provenance, never semantic identity";
+  if (value.t === "delimiter") return "delimiter spelling; consult the pinned source-law projection for meaning";
+  return "unclassified source symbol; no operator identity is inferred";
+}
 
-  const box = document.createElement("div");
-  box.style.cssText = "position:relative;flex:1;display:flex;min-height:0;";
-
-  const pre = document.createElement("pre");
-  pre.className = "codelayer-pre";
-  pre.style.cssText = [
-    "position:absolute;inset:0;margin:0;padding:14px 18px 60vh 58px",
-    "overflow:auto;white-space:pre;z-index:1;user-select:none;-webkit-user-select:none",
-    "font:var(--fs-code)/var(--lh-code) var(--mono);pointer-events:auto;cursor:text",
-  ].join(";");
-  const preIn = document.createElement("code");
-
-  const ta = document.createElement("textarea");
-  ta.className = "editor-input";
-  ta.style.cssText = [
-    "position:absolute;setSelectionColor:none;padding:14px 18px 60vh 58px",
-    "background:transparent;color:transparent;caret-color:#fff;border:0;outline:0;resize:none",
-    "white-space:pre;overflow:auto;z-index:2;pointer-events:none",
-    "font:var(--fs-code)/var(--lh-code) var(--mono)",
-  ].join(";").replace("setSelectionColor:none;", "");
-  ta.spellcheck = false;
-  ta.setAttribute("autocapitalize", "off");
-  ta.setAttribute("autocomplete", "off");
-
-  const selStyle = document.createElement("style");
-  selStyle.textContent = ".editor-input::selection{background:rgba(255,255,255,0.14)}";
-  root.appendChild(selStyle);
-
-  const gut = document.createElement("div");
-  gut.className = "gutter";
-
-  box.appendChild(pre); box.appendChild(ta); box.appendChild(gut);
-  root.appendChild(box);
-
-  let tokens = [], src = opts.source || "";
-  let hoverTok = null;
-
-  function paint() {
-    tokens = lex(src);
-    faces(tokens);                 // sets t.f — render() picks faces up
-    preIn.innerHTML = render(tokens, src);
-    pre.appendChild(preIn);
-    const lines = src.split("\n").length;
-    gut.innerHTML = Array.from({ length: lines }, (_, k) => k + 1).join("<br>");
-    gut.style.paddingTop = "14px";
+function lawNote(value, binding) {
+  if (binding) {
+    return {
+      face: "compiler projection",
+      note: "exact compiler-published source span and semantic facts",
+    };
   }
-
-  function sync() { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; gut.scrollTop = ta.scrollTop; }
-  ta.addEventListener("scroll", sync);
-
-  ta.addEventListener("input", () => {
-    src = ta.value;
-    paint(); sync();
-    opts.oninput && opts.oninput(src);
-  });
-
-  ta.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const s = ta.selectionStart, epos = ta.selectionEnd;
-      ta.setRangeText("  ", s, epos, "end");
-      ta.dispatchEvent(new Event("input"));
-    }
-    opts.onkeydown && opts.onkeydown(e);
-  });
-
-  /* Hit-testing lands on the pre (pointer-events:auto); the textarea above
-     is pointer-events:none. Map a point to a source character index, then
-     drive the invisible textarea's caret/selection programmatically. */
-  function charAtPoint(x, y) {
-    let rng = null;
-    if (document.caretRangeFromPoint) rng = document.caretRangeFromPoint(x, y);
-    else if (document.caretPositionFromPoint) {
-      const p = document.caretPositionFromPoint(x, y);
-      if (p) { rng = document.createRange(); rng.setStart(p.offsetNode, p.offset); }
-    }
-    if (!rng) return 0;
-    // absolute offset within <code> text
-    function off(node, n) {
-      let t = 0;
-      const walk = (nd) => {
-        if (nd === node) { t += n; return true; }
-        if (nd.nodeType === 3) t += nd.length;
-        else for (const c of nd.childNodes) if (walk(c)) return true;
-        return false;
-      };
-      walk(preIn);
-      return t;
-    }
-    return Math.min(src.length, off(rng.startContainer, rng.startOffset));
-  }
-
-  let anchor = null;
-  pre.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const i = charAtPoint(e.clientX, e.clientY);
-    anchor = i;
-    ta.focus({ preventScroll: true });
-    ta.setSelectionRange(i, i);
-  });
-  pre.addEventListener("dblclick", (e) => {
-    e.preventDefault();
-    const i = charAtPoint(e.clientX, e.clientY);
-    let a = i, b = i;
-    while (a > 0 && /[\w.:@]/.test(src[a - 1] || "")) a--;
-    while (b < src.length && /[\w.:@]/.test(src[b] || "")) b++;
-    ta.setSelectionRange(a, b);
-  });
-  window.addEventListener("mousemove", (e) => {
-    if (anchor === null || e.buttons !== 1) return;
-    if (!pre.contains(e.target) && e.target !== document.body) return;
-    const i = charAtPoint(e.clientX, e.clientY);
-    ta.setSelectionRange(Math.min(anchor, i), Math.max(anchor, i));
-  });
-  box.addEventListener("mouseleave", () => {
-    hoverTok = null;
-    opts.onTokenHover && opts.onTokenHover(null, null, null);
-  });
-  box.addEventListener("click", (e) => {
-    const h = hit(e);
-    if (h && opts.onTokenClick) opts.onTokenClick(h.tok, h.el, e);
-  });
-
-  function setSource(s) {
-    src = s; ta.value = s; paint();
-  }
-  setSource(src);
-
   return {
-    el: root, ta, pre,
-    get source() { return src; },
-    setSource,
-    tokens: () => tokens,
-    repaint: paint,
-    elementFor: (i) => preIn.querySelector(`[data-i="${i}"]`),
+    face: "lexical preview",
+    note: `${lexicalNote(value)}; semantic identity not published`,
   };
 }
 
-/* ------------------------------------------------------ graph binding */
+function spanOf(candidate) {
+  const span = candidate && (candidate.source_span || candidate.span || candidate.provenance?.source_span);
+  const start = Number(candidate?.start ?? span?.start);
+  const end = Number(candidate?.end ?? span?.end);
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) return null;
+  return { start, end };
+}
+
+function exactTokenCandidates(graph) {
+  const collections = [
+    graph?.tokens,
+    graph?.token_projections,
+    graph?.source_tokens,
+    graph?.exact_tokens,
+  ];
+  return collections.find(Array.isArray) || [];
+}
 
 /**
- * Bind tokens to graph nodes. sim-v0 (v6..v14) nodes carry line/col for
- * func/local/param/value/call. Strategy:
- *   1. exact (line, col) match
- *   2. same line + name match
- *   3. name + kind match anywhere (scope-free fallback)
+ * Bind only exact compiler-published source spans. There is no spelling,
+ * line-number, name, kind, nearest-node, or first-match fallback.
  */
 function bindGraph(tokens, graph) {
-  if (!graph || !graph.nodes) return new Map();
-  // compiler positions are 0-based; the lexer emits 1-based — probe both
-  const byPos = new Map();
-  for (const nd of graph.nodes) {
-    if (nd.line === undefined || nd.line === null) continue;
-    byPos.set(nd.line + ":" + nd.col, nd);
-    byPos.set((nd.line + 1) + ":" + nd.col, nd);
-    byPos.set(nd.line + ":" + (nd.col + 1), nd);
-    byPos.set((nd.line + 1) + ":" + (nd.col + 1), nd);
+  const candidates = exactTokenCandidates(graph);
+  if (!candidates.length) return new Map();
+
+  const bySpan = new Map();
+  for (const candidate of candidates) {
+    const span = spanOf(candidate);
+    if (!span) continue;
+    const key = `${span.start}:${span.end}`;
+    if (!bySpan.has(key)) bySpan.set(key, []);
+    bySpan.get(key).push(candidate);
   }
-  const byLineName = new Map();
-  for (const nd of graph.nodes) {
-    if (!nd.name || nd.line === undefined) continue;
-    const k = nd.line + "|" + nd.name;
-    if (!byLineName.has(k)) byLineName.set(k, nd);
-  }
-  const byNameKind = new Map();
-  for (const nd of graph.nodes) {
-    if (!nd.name) continue;
-    const k = nd.name + "/" + nd.kind;
-    if (!byNameKind.has(k)) byNameKind.set(k, []);
-    byNameKind.get(k).push(nd);
-  }
-  const out = new Map();
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.t !== "name" && t.t !== "ctx") continue;
-    let nd = byPos.get(t.l + ":" + t.c);
-    if (!nd) nd = byLineName.get((t.l - 1) + "|" + t.v);
-    if (!nd && byNameKind.has(t.v + "/func")) nd = byNameKind.get(t.v + "/func")[0];
-    if (!nd && byNameKind.has(t.v + "/local")) nd = byNameKind.get(t.v + "/local")[0];
-    if (nd) out.set(i, nd);
-  }
-  return out;
+
+  const bindings = new Map();
+  tokens.forEach((value, index) => {
+    const candidatesForSpan = bySpan.get(`${value.s}:${value.e}`) || [];
+    if (candidatesForSpan.length === 1) bindings.set(index, candidatesForSpan[0]);
+  });
+  return bindings;
 }
 
-/** name occurrences across the file — reference faces for a token */
-function refsOf(tokens, tok) {
-  const out = [];
-  if (!tok || (tok.t !== "name" && tok.t !== "ctx")) return out;
-  for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i].v === tok.v && (tokens[i].t === "name" || tokens[i].t === "ctx")) out.push(i);
-  }
-  return out;
+function exactIdentity(value) {
+  const candidate = value?.semantic_id ?? value?.identity ?? value?.graph_id ?? value?.id;
+  if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  if (Number.isSafeInteger(candidate)) return String(candidate);
+  return null;
 }
 
-/* ------------------------------------------------------------- popover */
+/** Same-spelling lexical occurrences, not semantic references. */
+function refsOf(tokens, selected) {
+  if (!selected || selected.t !== "name") return [];
+  const occurrences = [];
+  tokens.forEach((value, index) => {
+    if (value.t === "name" && value.v === selected.v) occurrences.push(index);
+  });
+  return occurrences;
+}
+
+function graphCollections(graph) {
+  const values = [];
+  for (const [name, collection] of Object.entries(graph || {})) {
+    if (Array.isArray(collection)) values.push([name, collection]);
+  }
+  return values;
+}
+
+function nodeFacts(binding, graph) {
+  const rows = [];
+  const identity = exactIdentity(binding);
+  if (identity) rows.push(["semantic identity", identity]);
+
+  const span = spanOf(binding);
+  if (span) rows.push(["source span", `${span.start}:${span.end}`]);
+
+  for (const key of ["relation", "subject", "operand", "result", "projection", "descriptor", "world", "witness", "demand", "target", "origin", "provenance", "kind", "status"]) {
+    const value = binding?.[key];
+    if (value !== undefined && value !== null && typeof value !== "object") rows.push([key, String(value)]);
+  }
+
+  if (identity) {
+    for (const [collectionName, collection] of graphCollections(graph)) {
+      const matches = collection.filter((record) => {
+        if (!record || typeof record !== "object") return false;
+        return Object.values(record).some((value) => String(value) === identity);
+      }).length;
+      if (matches) rows.push([collectionName, `${matches} exact record${matches === 1 ? "" : "s"}`]);
+    }
+  }
+
+  return rows;
+}
+
+function knowledgeFor(identity, explain) {
+  if (!identity || !Array.isArray(explain?.knowledge_snapshot?.entities)) return [];
+  return explain.knowledge_snapshot.entities
+    .filter((entity) => exactIdentity(entity) === identity)
+    .slice(0, 4)
+    .map((entity) => ["knowledge", String(entity.knowledge ?? entity.status ?? "published")]);
+}
 
 class Popover {
   constructor() {
@@ -558,286 +342,366 @@ class Popover {
     this.el.style.display = "none";
     document.body.appendChild(this.el);
     this.pinned = false;
-    const close = (e) => {
-      if (!this.pinned && !this.el.contains(e.target)) this.hide();
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { this.pinned = false; this.hide(); }
+    document.addEventListener("mousedown", (event) => {
+      if (!this.pinned && !this.el.contains(event.target)) this.hide();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        this.pinned = false;
+        this.hide();
+      }
     });
   }
+
   show(html, x, y, pin) {
     this.el.innerHTML = html;
     this.el.style.display = "block";
-    this.pinned = !!pin;
-    const r = this.el.getBoundingClientRect();
-    let nx = x + 14, ny = y + 16;
-    if (nx + r.width > innerWidth - 12) nx = x - r.width - 14;
-    if (ny + r.height > innerHeight - 12) ny = Math.max(8, y - r.height - 12);
-    this.el.style.left = Math.max(8, nx) + "px";
-    this.el.style.top = Math.max(8, ny) + "px";
+    this.pinned = Boolean(pin);
+    const bounds = this.el.getBoundingClientRect();
+    let left = x + 14;
+    let top = y + 16;
+    if (left + bounds.width > innerWidth - 12) left = x - bounds.width - 14;
+    if (top + bounds.height > innerHeight - 12) top = Math.max(8, y - bounds.height - 12);
+    this.el.style.left = `${Math.max(8, left)}px`;
+    this.el.style.top = `${Math.max(8, top)}px`;
   }
-  hide() { this.el.style.display = "none"; }
-  get open() { return this.el.style.display !== "none"; }
+
+  hide() {
+    this.el.style.display = "none";
+  }
+
+  get open() {
+    return this.el.style.display !== "none";
+  }
 }
 
-function refName(graph, id) {
-  const nd = (graph.nodes || []).find((x) => x.id === id);
-  if (nd && nd.kind === "module") return "module";
-  return nd ? (nd.name ? nd.name : nd.kind) : "#" + id;
+function popoverBody(value, binding, context = {}) {
+  const identity = exactIdentity(binding);
+  const note = lawNote(value, binding);
+  let html = `<div class="p-title"><span class="lex">${esc(value.v)}</span>`
+    + `<span class="kind">${binding ? "compiler projection" : "lexical preview"}</span></div>`;
+  html += `<div class="p-law"><span class="face-tag">${esc(note.face)}</span>`
+    + `<span class="mono-note">${esc(note.note)}</span></div>`;
+  html += `<div class="p-sec"><div class="lbl">provenance</div>`
+    + `<div class="kv"><span class="k">exact source span</span><span class="v">${value.s}:${value.e}</span></div>`
+    + `<div class="kv"><span class="k">line / column</span><span class="v">${value.l}:${value.c}</span></div>`
+    + `</div>`;
+
+  if (binding && context.graph) {
+    const rows = [...nodeFacts(binding, context.graph), ...knowledgeFor(identity, context.explain)];
+    html += `<div class="p-sec"><div class="lbl">compiler-published facts</div>`
+      + rows.map(([key, fact]) => `<div class="kv"><span class="k">${esc(key)}</span><span class="v">${esc(fact)}</span></div>`).join("")
+      + `</div>`;
+  } else {
+    html += `<div class="p-sec"><div class="lbl">semantic boundary</div>`
+      + `<div class="fact dim">semantic identity not published; spelling, adjacency, path, and token kind cannot supply it</div></div>`;
+  }
+
+  const spelling = refsOf(context.tokens || [], value);
+  if (spelling.length > 1) {
+    html += `<div class="p-sec"><div class="lbl">same spelling · ${spelling.length}</div>`
+      + `<div class="fact dim">presentation occurrences only; not a reference or identity claim</div></div>`;
+  }
+
+  html += `<div class="p-actions">`
+    + (binding && context.onReveal ? `<button data-act="reveal">reveal exact graph fact</button>` : "")
+    + (spelling.length > 1 ? `<button data-act="spelling">flash same spelling</button>` : "")
+    + (identity && context.onLib ? `<button data-act="lib">open exact identity</button>` : "")
+    + `<button data-act="law">source law</button></div>`;
+  return html;
 }
 
-function relationFace(e) {
-  return `${e.relation}→${"#" + e.to}`;
-}
+function wirePopover(root, tokens, graph, options = {}) {
+  const popover = new Popover();
+  let bindings = bindGraph(tokens, graph);
+  let pinnedIndex = null;
 
-function nodeFacts(nd, graph) {
-  const rows = [];
-  const edges = (graph.edges || []);
-  const outs = edges.filter((e) => e.from === nd.id);
-  const ins = edges.filter((e) => e.to === nd.id);
-  rows.push(["kind", nd.kind]);
-  if (nd.name) rows.push(["name", nd.name]);
-  if (nd.scope !== undefined) rows.push(["scope", refName(graph, nd.scope)]);
-  rows.push(["graph id", "#" + nd.id + " · line " + (nd.line || "?")]);
-  if (outs.length) rows.push(["relations out", outs.map(relationFace).join("  ")]);
-  if (ins.length) rows.push(["relations in", ins.map(relationFace).join("  ")]);
-  const apps = (graph.applications || []).filter((a) =>
-    a.application === nd.id || a.subject === nd.id || (a.arguments || []).includes(nd.id) || (a.results || []).includes(nd.id));
-  for (const a of apps.slice(0, 4)) {
-    rows.push(["application", `relation ${refName(graph, a.relation)} · subject ${refName(graph, a.subject)} · demand ${a.demand || "—"}`]);
-  }
-  for (const w of graph.worlds || []) {
-    if (w.world === nd.id || (w.members || []).includes(nd.id)) {
-      rows.push(["world", `home ${refName(graph, w.home)} · reach ${w.reach || "—"}`]);
-    }
-  }
-  for (const dr of graph.draws || []) {
-    if (dr.world && dr.world.id === nd.id) {
-      rows.push(["world draw", `application ${dr.application} · effect ${(dr.effect && dr.effect.card) === "one" ? "world-bound" : "none"}`]);
-    }
-  }
-  for (const lk of graph.callable_linkages || []) {
-    if (lk.callable === nd.id) {
-      rows.push(["lowering", `${lk.origin} · ${lk.exposure} · \`${lk.symbol}\``]);
-    }
-  }
-  const cs = (graph.call_shapes || []).find((s) => s.node === nd.id);
-  if (cs) rows.push(["call shape", `${cs.callee_kind} · ${cs.arg_count} operand${cs.arg_count === 1 ? "" : "s"}${cs.specializable ? " · specializable" : ""}`]);
-  return rows;
-}
-
-function knowledgeFor(name, explain) {
-  if (!explain || !explain.knowledge_snapshot) return [];
-  return (explain.knowledge_snapshot.entities || [])
-    .filter((x) => x.name === name)
-    .slice(0, 3)
-    .map((x) => `${x.kind} · ${x.phase} · knowledge ${x.knowledge} · ${x.representation}`);
-}
-/* --------------------------------------------- shared popover body */
-
-const whysCache = new Map();
-
-/** cross-world references for a subject, rendered into an open popover */
-function fetchWhysInto(pop, subject) {
-  if (!subject || subject.length < 2) return;
-  const key = subject;
-  const mount = pop.el.querySelector(".whys-mount");
-  if (!mount) return;
-  if (whysCache.has(key)) return renderWhys(mount, whysCache.get(key));
-  mount.innerHTML = `<div class="fact dim">asking the worlds…</div>`;
-  api.get("/api/whys?subject=" + encodeURIComponent(subject)).then((r) => {
-    whysCache.set(key, r);
-    if (pop.open && pop.el.querySelector(".whys-mount") === mount) renderWhys(mount, r);
-  }).catch(() => { mount.innerHTML = ""; });
-}
-
-function renderWhys(mount, r) {
-  const facts = (r && r.facts) || [];
-  if (!facts.length) { mount.innerHTML = `<div class="fact dim">no world declares this spelling</div>`; return; }
-  mount.innerHTML = facts.slice(0, 5).map((f) =>
-    `<div class="fact">${esc(f.cause)}${f.detail ? ` <span class="dim">· ${esc(f.detail)}</span>` : ""}</div>`).join("");
-}
-
-function popoverBody(tok, nd, ctx) {
-  ctx = ctx || {};
-  const law = lawNote(tok);
-  const tokens = ctx.tokens || [];
-  let h = `<div class="p-title"><span class="lex">${esc(tok.v)}</span>` +
-    `<span class="kind">${tok.t}${tok.f ? " · " + tok.f : ""}${nd ? " · " + nd.kind : ""}</span></div>`;
-  h += `<div class="p-law"><span class="face-tag face-${esc(law.face)}">${esc(law.face)}</span>` +
-    `<span class="mono-note">${esc(law.note)}</span></div>`;
-  if (nd && ctx.graph) {
-    const rows = nodeFacts(nd, ctx.graph);
-    h += `<div class="p-sec"><div class="lbl">graph</div>` +
-      rows.map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${esc(String(v))}</span></div>`).join("") +
-      `</div>`;
-  }
-  const kn = knowledgeFor(tok.v, ctx.explain);
-  if (kn.length) {
-    h += `<div class="p-sec"><div class="lbl">knowledge</div><div class="facts">` +
-      kn.map((x) => `<div class="fact">${esc(x)}</div>`).join("") + `</div></div>`;
-  }
-  const rr = refsOf(tokens, tok);
-  if (rr.length > 1) {
-    h += `<div class="p-sec"><div class="lbl">references · ${rr.length}</div><div class="facts">` +
-      rr.slice(0, 6).map((i) => `<div class="fact">line ${tokens[i].l} col ${tokens[i].c}</div>`).join("") +
-      (rr.length > 6 ? `<div class="fact dim">+${rr.length - 6} more</div>` : "") + `</div></div>`;
-  }
-  if ((tok.t === "name" || tok.t === "ctx") && !ctx.noWhys) {
-    h += `<div class="p-sec"><div class="lbl">elsewhere</div><div class="facts whys-mount"></div></div>`;
-  }
-  h += `<div class="p-actions">` +
-    (nd && ctx.onReveal ? `<button data-act="reveal">reveal in graph</button>` : ``) +
-    (rr.length > 1 ? `<button data-act="refs">flash references</button>` : ``) +
-    (ctx.onLib && (tok.t === "name" || tok.t === "ctx") ? `<button data-act="lib">find in lib</button>` : ``) +
-    `<button data-act="law">law</button></div>`;
-  return h;
-}
-
-
-/**
- * Wires hover/click popovers over an editor or static code view.
- * data: {graph, explain, sim, onReveal(nodeId)}
- */
-function explore(ed, data) {
-  const pop = new Popover();
-  let pinnedTok = null;
-
-  function popoverHTML(tok, nd) {
-    return popoverBody(tok, nd, {
-      graph: data.graph, explain: data.explain,
-      tokens: ed.tokens(), onReveal: data.onReveal, onLib: data.onLib,
-    });
+  function show(event, pin) {
+    const element = event.target.closest?.(".tk");
+    if (!element || !root.contains(element)) return;
+    const index = Number(element.dataset.i);
+    const value = tokens[index];
+    if (!value) return;
+    pinnedIndex = pin ? index : pinnedIndex;
+    popover.show(popoverBody(value, bindings.get(index) || null, {
+      graph,
+      explain: options.explain,
+      tokens,
+      onReveal: options.onReveal,
+      onLib: options.onLib,
+    }), event.clientX, event.clientY, pin);
   }
 
-  function flashRefs(tok) {
-    const rr = refsOf(ed.tokens(), tok);
-    ed.pre.querySelectorAll(".tk.ref-flash").forEach((e) => e.classList.remove("ref-flash"));
-    for (const i of rr) {
-      const el = ed.elementFor(i);
-      if (el) el.classList.add("ref-flash");
-    }
-    setTimeout(() => {
-      ed.pre.querySelectorAll(".tk.ref-flash").forEach((e) => e.classList.remove("ref-flash"));
-    }, 900);
-  }
-
-  ed.el.addEventListener("mouseover", (e) => {
-    const el = e.target;
-    if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
-    if (pop.pinned) return;
-    const i = +el.dataset.i;
-    const tok = ed.tokens()[i];
-    if (!tok) return;
-    pop.show(popoverHTML(tok, bindCache.get(i) || null), e.clientX, e.clientY, false);
+  root.addEventListener("mouseover", (event) => {
+    if (!popover.pinned) show(event, false);
   });
-  ed.el.addEventListener("mouseleave", () => { if (!pop.pinned) pop.hide(); });
-
-  ed.el.addEventListener("click", (e) => {
-    const el = e.target;
-    if (!(el instanceof HTMLElement) || !el.classList.contains("tk")) return;
-    if (e.target.closest("button")) return;
-    const i = +el.dataset.i;
-    const tok = ed.tokens()[i];
-    if (!tok) return;
-    pinnedTok = tok;
-    ed.pre.querySelectorAll(".tk.selected").forEach((x) => x.classList.remove("selected"));
-    el.classList.add("selected");
-    pop.show(popoverHTML(tok, bindCache.get(i) || null), e.clientX, e.clientY, true);
-    fetchWhysInto(pop, tok.v);
+  root.addEventListener("mouseleave", () => {
+    if (!popover.pinned) popover.hide();
+  });
+  root.addEventListener("click", (event) => {
+    if (event.target.closest?.("button")) return;
+    const selected = event.target.closest?.(".tk");
+    if (!selected || !root.contains(selected)) return;
+    root.querySelectorAll(".tk.selected").forEach((element) => element.classList.remove("selected"));
+    selected.classList.add("selected");
+    show(event, true);
   });
 
-  pop.el.addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    const act = btn.dataset.act;
-    const lexFind = pop.el.querySelector(".lex");
-    const v = lexFind ? lexFind.textContent : "";
-    const toks = ed.tokens();
-    const tok = toks.find((t) => t.v === v) || pinnedTok;
-    if (act === "reveal" && tok && data.onReveal) {
-      const i = toks.indexOf(tok);
-      data.onReveal(bindCache.get(i));
-      pop.pinned = false; pop.hide();
-    } else if (act === "refs" && tok) {
-      flashRefs(tok);
-    } else if (act === "lib" && tok && data.onLib) {
-      data.onLib(tok.v);
-      pop.pinned = false; pop.hide();
-    } else if (act === "law") {
-      global.open("https://docs.idol.id/law", "_blank");
+  popover.el.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    const value = tokens[pinnedIndex];
+    const binding = bindings.get(pinnedIndex);
+    if (button.dataset.act === "law") global.open("https://docs.idol.id/law", "_blank");
+    if (button.dataset.act === "reveal" && binding && options.onReveal) options.onReveal(binding);
+    if (button.dataset.act === "lib" && binding && options.onLib) options.onLib(exactIdentity(binding));
+    if (button.dataset.act === "spelling" && value) {
+      root.querySelectorAll(".tk.ref-flash").forEach((element) => element.classList.remove("ref-flash"));
+      for (const index of refsOf(tokens, value)) root.querySelector(`[data-i="${index}"]`)?.classList.add("ref-flash");
+      setTimeout(() => root.querySelectorAll(".tk.ref-flash").forEach((element) => element.classList.remove("ref-flash")), 900);
     }
   });
 
-  let bindCache = new Map();
-  function rebind() { bindCache = bindGraph(ed.tokens(), data.graph); }
-  rebind();
-  return { rebind, popover: pop };
+  return {
+    popover,
+    rebind(nextGraph = graph) {
+      graph = nextGraph;
+      bindings = bindGraph(tokens, graph);
+      return bindings;
+    },
+  };
 }
 
-/* ------------------------------------------------------------- api client */
+function doccode(mount, options = {}) {
+  const root = typeof mount === "string" ? document.querySelector(mount) : mount;
+  if (!root) throw new TypeError("doccode mount is required");
+  root.classList.add("doccode");
+  const source = String(options.source || "");
+  const tokens = lex(source);
+  const pre = document.createElement("pre");
+  pre.innerHTML = render(tokens, source);
+  if (options.maxH) pre.style.maxHeight = options.maxH;
+  root.replaceChildren(pre);
+  const wired = wirePopover(root, tokens, options.graph, options);
+  return { root, tokens, popover: wired.popover, rebind: wired.rebind };
+}
 
-const api = {
+function editor(mount, options = {}) {
+  const root = typeof mount === "string" ? document.querySelector(mount) : mount;
+  if (!root) throw new TypeError("editor mount is required");
+  root.classList.add("editor-wrap");
+  root.replaceChildren();
+
+  const box = document.createElement("div");
+  box.style.cssText = "position:relative;flex:1;display:flex;min-height:0;";
+  const pre = document.createElement("pre");
+  pre.className = "codelayer-pre";
+  pre.style.cssText = "position:absolute;inset:0;margin:0;padding:14px 18px 60vh 58px;overflow:auto;white-space:pre;z-index:1;user-select:none;font:var(--fs-code)/var(--lh-code) var(--mono);";
+  const code = document.createElement("code");
+  pre.appendChild(code);
+  const input = document.createElement("textarea");
+  input.className = "editor-input";
+  input.style.cssText = "position:absolute;inset:0;padding:14px 18px 60vh 58px;background:transparent;color:transparent;caret-color:#fff;border:0;outline:0;resize:none;white-space:pre;overflow:auto;z-index:2;font:var(--fs-code)/var(--lh-code) var(--mono);";
+  input.spellcheck = false;
+  input.setAttribute("autocapitalize", "off");
+  input.setAttribute("autocomplete", "off");
+  const gutter = document.createElement("div");
+  gutter.className = "gutter";
+  box.append(pre, input, gutter);
+  root.appendChild(box);
+
+  let source = String(options.source || "");
+  let tokens = [];
+
+  function paint() {
+    tokens = lex(source);
+    code.innerHTML = render(tokens, source);
+    gutter.innerHTML = Array.from({ length: source.split("\n").length }, (_, index) => index + 1).join("<br>");
+    gutter.style.paddingTop = "14px";
+  }
+
+  function sync() {
+    pre.scrollTop = input.scrollTop;
+    pre.scrollLeft = input.scrollLeft;
+    gutter.scrollTop = input.scrollTop;
+  }
+
+  input.addEventListener("scroll", sync);
+  input.addEventListener("input", () => {
+    source = input.value;
+    paint();
+    sync();
+    options.oninput?.(source);
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const start = input.selectionStart;
+      input.setRangeText("  ", start, input.selectionEnd, "end");
+      input.dispatchEvent(new Event("input"));
+    }
+    options.onkeydown?.(event);
+  });
+
+  function setSource(next) {
+    source = String(next || "");
+    input.value = source;
+    paint();
+  }
+
+  setSource(source);
+  return {
+    el: root,
+    ta: input,
+    pre,
+    get source() { return source; },
+    setSource,
+    tokens: () => tokens,
+    repaint: paint,
+    elementFor: (index) => code.querySelector(`[data-i="${index}"]`),
+  };
+}
+
+function explore(editorView, data = {}) {
+  const popover = new Popover();
+  let bindings = bindGraph(editorView.tokens(), data.graph);
+  let pinnedIndex = null;
+
+  function selected(event) {
+    const element = event.target.closest?.(".tk");
+    if (!element || !editorView.pre.contains(element)) return null;
+    const index = Number(element.dataset.i);
+    return { element, index, value: editorView.tokens()[index] };
+  }
+
+  editorView.pre.addEventListener("mouseover", (event) => {
+    if (popover.pinned) return;
+    const hit = selected(event);
+    if (!hit?.value) return;
+    popover.show(popoverBody(hit.value, bindings.get(hit.index) || null, {
+      graph: data.graph,
+      explain: data.explain,
+      tokens: editorView.tokens(),
+      onReveal: data.onReveal,
+      onLib: data.onLib,
+    }), event.clientX, event.clientY, false);
+  });
+  editorView.pre.addEventListener("mouseleave", () => {
+    if (!popover.pinned) popover.hide();
+  });
+  editorView.pre.addEventListener("click", (event) => {
+    const hit = selected(event);
+    if (!hit?.value) return;
+    pinnedIndex = hit.index;
+    editorView.pre.querySelectorAll(".tk.selected").forEach((element) => element.classList.remove("selected"));
+    hit.element.classList.add("selected");
+    popover.show(popoverBody(hit.value, bindings.get(hit.index) || null, {
+      graph: data.graph,
+      explain: data.explain,
+      tokens: editorView.tokens(),
+      onReveal: data.onReveal,
+      onLib: data.onLib,
+    }), event.clientX, event.clientY, true);
+  });
+  popover.el.addEventListener("click", (event) => {
+    const action = event.target.closest("button")?.dataset.act;
+    const value = editorView.tokens()[pinnedIndex];
+    const binding = bindings.get(pinnedIndex);
+    if (action === "law") global.open("https://docs.idol.id/law", "_blank");
+    if (action === "reveal" && binding && data.onReveal) data.onReveal(binding);
+    if (action === "lib" && binding && data.onLib) data.onLib(exactIdentity(binding));
+    if (action === "spelling" && value) {
+      for (const index of refsOf(editorView.tokens(), value)) editorView.elementFor(index)?.classList.add("ref-flash");
+      setTimeout(() => editorView.pre.querySelectorAll(".tk.ref-flash").forEach((element) => element.classList.remove("ref-flash")), 900);
+    }
+  });
+
+  return {
+    popover,
+    rebind() {
+      bindings = bindGraph(editorView.tokens(), data.graph);
+      return bindings;
+    },
+  };
+}
+
+const api = Object.freeze({
   async get(path) {
-    const r = await fetch(path);
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
-    return r.json();
+    const response = await fetch(path);
+    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || String(response.status));
+    return response.json();
   },
   async text(path) {
-    const r = await fetch(path);
-    if (!r.ok) throw new Error(String(r.status));
-    return r.text();
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(String(response.status));
+    return response.text();
   },
   async post(path, body) {
-    const r = await fetch(path, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(body || {}),
     });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || r.status);
-    return j;
+    const document = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(document.error || String(response.status));
+    return document;
   },
-};
+});
 
-/* ------------------------------------------------------------------ utils */
-
-function toast(msg, err) {
-  let w = document.querySelector(".toast-wrap");
-  if (!w) { w = document.createElement("div"); w.className = "toast-wrap"; document.body.appendChild(w); }
-  const t = document.createElement("div");
-  t.className = "toast" + (err ? " err" : "");
-  t.textContent = msg;
-  w.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
-}
-
-function el(tag, attrs, ...kids) {
-  const e = document.createElement(tag);
-  if (attrs) for (const [k, v] of Object.entries(attrs)) {
-    if (k === "class") e.className = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else e.setAttribute(k, v);
+function toast(message, error) {
+  let wrapper = document.querySelector(".toast-wrap");
+  if (!wrapper) {
+    wrapper = document.createElement("div");
+    wrapper.className = "toast-wrap";
+    document.body.appendChild(wrapper);
   }
-  const flat = [];
-  for (const k of kids) Array.isArray(k) ? flat.push(...k.flat(Infinity)) : flat.push(k);
-  for (const k of flat) {
-    if (k == null) continue;
-    e.appendChild(typeof k === "string" ? document.createTextNode(k) : k);
+  const item = document.createElement("div");
+  item.className = `toast${error ? " err" : ""}`;
+  item.textContent = String(message);
+  wrapper.appendChild(item);
+  setTimeout(() => item.remove(), 3200);
+}
+
+function el(tag, attributes, ...children) {
+  const element = document.createElement(tag);
+  for (const [key, value] of Object.entries(attributes || {})) {
+    if (key === "class") element.className = value;
+    else if (key.startsWith("on") && typeof value === "function") element.addEventListener(key.slice(2), value);
+    else element.setAttribute(key, value);
   }
-  return e;
+  for (const child of children.flat(Infinity)) {
+    if (child === null || child === undefined) continue;
+    element.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+  }
+  return element;
 }
 
-function fmtBytes(n) {
-  if (n < 1024) return n + " B";
-  if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
-  return (n / 1048576).toFixed(1) + " MB";
+function fmtBytes(value) {
+  const bytes = Number(value || 0);
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-global.Idol = {
-  lex, render, faces, decls, editor, explore, doccode, bindGraph, refsOf,
-  lawNote, popoverBody, nodeFacts, knowledgeFor,
-  Popover, api, toast, el, fmtBytes, KW, CTX, TYPES,
-};
+global.Idol = Object.freeze({
+  lex,
+  render,
+  faces,
+  decls,
+  editor,
+  explore,
+  doccode,
+  bindGraph,
+  refsOf,
+  lawNote,
+  popoverBody,
+  nodeFacts,
+  knowledgeFor,
+  Popover,
+  api,
+  toast,
+  el,
+  fmtBytes,
+});
 
 })(window);
