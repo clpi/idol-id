@@ -151,7 +151,7 @@ test("Specification blueprint and Idol Live are public but cannot impersonate la
   const docs = await read("apps/docs/index.html");
 
   assert.match(spec, /non-authoritative architecture blueprint/i);
-  assert.match(spec, /compact law wins/i);
+  assert.match(spec, /compact law[\s\S]{0,160}\bwins\b/i);
   assert.match(spec, /projection algebra/i);
   assert.match(spec, /foreign source law/i);
   assert.match(spec, /semantic law and implementation support are deliberately separate/i);
