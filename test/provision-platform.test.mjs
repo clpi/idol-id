@@ -6,6 +6,8 @@ const REQUIRED_DESTINATIONS = [
   { type: "public", uri: "platform.idol.id/ide*" },
   { type: "public", uri: "platform.idol.id/v1/ide/*" },
   { type: "public", uri: "platform.idol.id/v1/platform/browser/*" },
+  { type: "public", uri: "platform.idol.id/universe*" },
+  { type: "public", uri: "platform.idol.id/v1/universe/browser/*" },
 ];
 const REQUIRED_APPLICATION = {
   name: "Idol Platform Browser Identity",
