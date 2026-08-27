@@ -101,7 +101,9 @@ test("global chrome retains Lib and Worlds while Universe becomes a contextual l
   assert.doesNotMatch(shell, /id:\s*"universe"/);
   assert.match(shell, /class="nav-toggle"/);
   assert.match(shell, /aria-expanded="false"/);
-  assert.match(shell, /class="nav-panel"/);
+  assert.match(shell, /panel\.className\s*=\s*"nav-panel"/);
+  assert.match(shell, /public universe views/);
+  assert.match(shell, /manage universe views/);
   assert.match(shell, /Escape/);
   assert.match(surface, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.nav-toggle/);
   assert.match(surface, /\.nav-panel\.open/);
