@@ -6,6 +6,8 @@ const DESTINATIONS = Object.freeze([
   Object.freeze({ type: "public", uri: "platform.idol.id/ide*" }),
   Object.freeze({ type: "public", uri: "platform.idol.id/v1/ide/*" }),
   Object.freeze({ type: "public", uri: "platform.idol.id/v1/platform/browser/*" }),
+  Object.freeze({ type: "public", uri: "platform.idol.id/universe*" }),
+  Object.freeze({ type: "public", uri: "platform.idol.id/v1/universe/browser/*" }),
 ]);
 
 function ensureString(value, label) {
