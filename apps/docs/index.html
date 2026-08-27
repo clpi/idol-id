@@ -9,161 +9,189 @@
 <style>
   body { overflow: auto; }
   .doc-shell { display: flex; min-height: 100vh; }
-  .doc-nav { width: 230px; flex: none; border-right: 1px solid var(--rule); padding: 22px 0; position: sticky; top: 0; height: 100vh; overflow: auto; }
-  .doc-nav .item { display: block; padding: 7px 22px; color: var(--ink-3); cursor: pointer; font-size: 12px; transition: color var(--t), background var(--t); }
+  .doc-nav { width: 246px; flex: none; border-right: 1px solid var(--rule); padding: 22px 0 60px; position: sticky; top: 0; height: 100vh; overflow: auto; }
+  .doc-nav .group { padding: 18px 22px 6px; color: var(--ink-5); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+  .doc-nav .item { display: block; padding: 8px 22px; color: var(--ink-3); cursor: pointer; font-size: 12px; transition: color var(--t), background var(--t); min-height: 38px; }
   .doc-nav .item:hover { color: var(--ink); background: var(--bg-hover); }
-  .doc-nav .item.here { color: var(--ink); box-shadow: inset 2px 0 0 var(--ink); }
-  .doc-main { flex: 1; min-width: 0; padding: 40px 52px 140px; max-width: 860px; }
-  .doc-main h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.01em; }
-  .doc-main h2 { font-size: 15px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
-  .doc-main h3 { font-size: 13px; margin: 24px 0 8px; color: var(--ink); }
-  .doc-main p { color: var(--ink-2); font-size: 12.5px; margin: 10px 0; max-width: 72ch; line-height: 1.7; }
-  .doc-main ul, .doc-main ol { margin: 10px 0 10px 22px; color: var(--ink-2); font-size: 12.5px; line-height: 1.7; }
-  .doc-main li { margin: 3px 0; }
-  .doc-main code { background: var(--bg-raise); border: 1px solid var(--rule); padding: 0 5px; border-radius: 2px; font-size: 11.5px; color: var(--ink-2); }
-  .doc-main pre { background: var(--bg-raise); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px 16px; overflow: auto; margin: 12px 0 16px; }
+  .doc-nav .item.here { color: var(--ink); box-shadow: inset 2px 0 0 var(--signal); background: var(--signal-dim); }
+  .doc-nav .item .status { display: block; margin-top: 2px; color: var(--ink-5); font-size: 9px; }
+  .doc-main { flex: 1; min-width: 0; padding: 38px 52px 140px; max-width: 1040px; }
+  .authority-banner { margin-bottom: 28px; padding: 12px 14px; border: 1px solid var(--rule-2); border-left-color: var(--signal); border-radius: 5px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; line-height: 1.65; }
+  .authority-banner strong { color: var(--ink); font-weight: 550; }
+  .doc-main h1 { font-family: var(--sans); font-size: 28px; font-weight: 620; margin-bottom: 8px; letter-spacing: -.025em; }
+  .doc-main h2 { font-family: var(--sans); font-size: 18px; margin: 38px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
+  .doc-main h3 { font-family: var(--sans); font-size: 14px; margin: 26px 0 9px; color: var(--ink); }
+  .doc-main p { color: var(--ink-2); font-family: var(--sans); font-size: 13px; margin: 11px 0; max-width: 82ch; line-height: 1.75; }
+  .doc-main ul, .doc-main ol { margin: 11px 0 11px 23px; color: var(--ink-2); font-family: var(--sans); font-size: 13px; line-height: 1.72; }
+  .doc-main li { margin: 4px 0; }
+  .doc-main code { font-family: var(--mono); background: var(--bg-raise); border: 1px solid var(--rule); padding: 1px 5px; border-radius: 2px; font-size: 11.5px; color: var(--ink-2); }
+  .doc-main pre { background: var(--bg-raise); border: 1px solid var(--rule); border-radius: 5px; padding: 14px 16px; overflow: auto; margin: 13px 0 18px; }
   .doc-main pre code { background: none; border: 0; padding: 0; font-size: 12.5px; }
-  .doc-main table { border-collapse: collapse; margin: 12px 0; font-size: 12px; }
-  .doc-main th, .doc-main td { border: 1px solid var(--rule); padding: 6px 12px; color: var(--ink-2); text-align: left; }
+  .doc-main table { border-collapse: collapse; margin: 14px 0; font-size: 12px; max-width: 100%; display: block; overflow: auto; }
+  .doc-main th, .doc-main td { border: 1px solid var(--rule); padding: 7px 12px; color: var(--ink-2); text-align: left; vertical-align: top; }
   .doc-main th { color: var(--ink); font-weight: 500; }
-  .doc-main blockquote { border-left: 2px solid var(--rule-3); padding-left: 14px; color: var(--ink-3); margin: 10px 0; }
+  .doc-main blockquote { border-left: 2px solid var(--signal); padding: 8px 0 8px 15px; color: var(--ink-3); margin: 13px 0; background: linear-gradient(90deg,var(--signal-dim),transparent); }
+  .doc-main blockquote p { margin: 0; }
   .doc-main .anchor { color: var(--ink-5); text-decoration: none; border: 0; margin-left: 8px; font-size: 11px; }
   .doc-main .anchor:hover { color: var(--ink-3); }
   .doc-main .tk[data-i] { cursor: pointer; }
-  .doc-main .tk[data-i]:hover { background: rgba(255,255,255,0.09); color: var(--ink); }
+  .doc-main .tk[data-i]:hover { background: rgba(255,255,255,.09); color: var(--ink); }
   .statusbar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); }
+  @media (max-width: 760px) {
+    .doc-shell { display: block; }
+    .doc-nav { width: auto; height: auto; position: static; display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 0; }
+    .doc-nav .group { display: none; }
+    .doc-nav .item { flex: none; padding: 11px 14px; }
+    .doc-nav .item.here { box-shadow: inset 0 -2px 0 var(--signal); }
+    .doc-nav .item .status { display: none; }
+    .doc-main { padding: 28px 18px 110px; }
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar"></div>
   <div class="doc-shell">
-    <nav class="doc-nav" id="nav"></nav>
+    <nav class="doc-nav" id="nav" aria-label="Documentation"></nav>
     <main class="doc-main" id="main"></main>
   </div>
   <div class="statusbar"></div>
 </div>
-
 <script src="/shared/idol.js"></script>
 <script src="/shared/shell.js"></script>
 <script>
-(function () {
-  Shell.boot("docs", { title: "Docs", keys: [["hover", "any token"], ["/", "search docs"]] });
+(() => {
+  Shell.boot("docs", { title: "Docs", keys: [["hover", "source span"], ["/", "search docs"]] });
   IdolShell.crumbs([{ label: "docs" }, { label: "…" }]);
 
   const DOCS = [
-    { id: "law",     name: "the law" },
-    { id: "faces",   name: "source faces" },
-    { id: "graph",   name: "the graph" },
-    { id: "worlds",  name: "worlds" },
-    { id: "platform",name: "platform" },
-    { id: "synthesis", name: "research synthesis" },
+    { group: "authority", id: "law", name: "the compact law", status: "exact mirror" },
+    { group: "authority", id: "faces", name: "source faces", status: "bounded projection" },
+    { group: "authority", id: "graph", name: "semantic graph", status: "bounded projection" },
+    { group: "authority", id: "worlds", name: "worlds", status: "bounded projection" },
+    { group: "blueprints", id: "spec", name: "specification blueprint", status: "non-authoritative" },
+    { group: "blueprints", id: "live", name: "Idol Live", status: "product thesis" },
+    { group: "product", id: "platform", name: "platform", status: "operational projection" },
+    { group: "research", id: "synthesis", name: "research synthesis", status: "historical until evidenced" },
   ];
 
   const nav = document.getElementById("nav");
   const main = document.getElementById("main");
-  let here = location.hash.slice(1) || "law";
+  const known = new Set(DOCS.map((document) => document.id));
+  let here = known.has(location.hash.slice(1)) ? location.hash.slice(1) : "law";
+  let group = null;
 
-  for (const d of DOCS) {
-    const it = document.createElement("div");
-    it.className = "item" + (d.id === here ? " here" : "");
-    it.textContent = d.name;
-    it.addEventListener("click", () => { location.hash = d.id; });
-    it.dataset.id = d.id;
-    nav.appendChild(it);
+  for (const document of DOCS) {
+    if (document.group !== group) {
+      group = document.group;
+      const label = document.createElement ? null : window.document.createElement("div");
+      label.className = "group";
+      label.textContent = group;
+      nav.appendChild(label);
+    }
+    const item = window.document.createElement("button");
+    item.type = "button";
+    item.className = `item${document.id === here ? " here" : ""}`;
+    item.innerHTML = `<span>${document.name}</span><span class="status">${document.status}</span>`;
+    item.addEventListener("click", () => { location.hash = document.id; });
+    item.dataset.id = document.id;
+    nav.appendChild(item);
   }
 
-  window.addEventListener("hashchange", () => {
-    here = location.hash.slice(1) || "law";
-    nav.querySelectorAll(".item").forEach((i) => i.classList.toggle("here", i.dataset.id === here));
+  addEventListener("hashchange", () => {
+    const requested = location.hash.slice(1);
+    here = known.has(requested) ? requested : "law";
+    nav.querySelectorAll(".item").forEach((item) => item.classList.toggle("here", item.dataset.id === here));
     load();
   });
 
-  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  // minimal markdown → html (headings, fences, lists, tables, code, emph)
-  function md(src) {
-    const out = [];
-    const lines = src.split("\n");
-    let i = 0;
-    let inCode = false, codeBuf = [], codeLang = "";
-    let listMode = null;
-    const flushList = () => { if (listMode) { out.push(`</${listMode}>`); listMode = null; } };
-    const inline = (s) => esc(s)
+  const markdown = (source) => {
+    const output = [];
+    const lines = source.split("\n");
+    let index = 0;
+    let code = false;
+    let codeBuffer = [];
+    let codeLanguage = "";
+    let list = null;
+    const closeList = () => { if (list) { output.push(`</${list}>`); list = null; } };
+    const inline = (value) => escapeHtml(value)
       .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-    while (i < lines.length) {
-      const L = lines[i];
-      if (L.startsWith("```")) {
-        if (!inCode) { flushList(); inCode = true; codeBuf = []; codeLang = L.slice(3).trim(); }
-        else {
-          inCode = false;
-          out.push(`<pre data-lang="${codeLang}"><code>${esc(codeBuf.join("\n"))}</code></pre>`);
+
+    while (index < lines.length) {
+      const line = lines[index];
+      if (line.startsWith("```")) {
+        if (!code) {
+          closeList();
+          code = true;
+          codeBuffer = [];
+          codeLanguage = line.slice(3).trim();
+        } else {
+          code = false;
+          output.push(`<pre data-lang="${escapeHtml(codeLanguage)}"><code>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
         }
-        i++; continue;
-      }
-      if (inCode) { codeBuf.push(L); i++; continue; }
-      if (/^#{1,4} /.test(L)) {
-        flushList();
-        const lvl = L.match(/^#+/)[0].length;
-        const text = L.slice(lvl + 1).trim();
-        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        out.push(`<h${Math.min(lvl + 1, 4)} id="${id}">${inline(text)}<a class="anchor" href="#${id}">§</a></h${Math.min(lvl + 1, 4)}>`);
-        i++; continue;
-      }
-      if (/^(- |\* |\d+\. )/.test(L)) {
-        const mode = /^\d/.test(L) ? "ol" : "ul";
-        if (listMode !== mode) { flushList(); out.push(`<${mode}>`); listMode = mode; }
-        out.push(`<li>${inline(L.replace(/^(- |\* |\d+\. )/, ""))}</li>`);
-        i++; continue;
-      }
-      if (/^\|/.test(L) && lines[i + 1] && /^\|[-| ]+\|/.test(lines[i + 1])) {
-        flushList();
-        const head = L.split("|").slice(1, -1).map((s) => s.trim());
-        i += 2;
-        const rows = [];
-        while (i < lines.length && lines[i].startsWith("|")) {
-          rows.push(lines[i].split("|").slice(1, -1).map((s) => s.trim()));
-          i++;
-        }
-        out.push("<table><thead><tr>" + head.map((h) => `<th>${inline(h)}</th>`).join("") +
-          "</tr></thead><tbody>" +
-          rows.map((r) => "<tr>" + r.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") +
-          "</tbody></table>");
+        index += 1;
         continue;
       }
-      if (L.trim() === "") { flushList(); i++; continue; }
-      if (/^> /.test(L)) { flushList(); out.push(`<blockquote>${inline(L.slice(2))}</blockquote>`); i++; continue; }
-      flushList();
-      out.push(`<p>${inline(L)}</p>`);
-      i++;
+      if (code) { codeBuffer.push(line); index += 1; continue; }
+      if (/^#{1,4} /.test(line)) {
+        closeList();
+        const level = line.match(/^#+/)[0].length;
+        const text = line.slice(level + 1).trim();
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const tag = Math.min(level + 1, 4);
+        output.push(`<h${tag} id="${id}">${inline(text)}<a class="anchor" href="?doc=${here}#${id}">§</a></h${tag}>`);
+        index += 1;
+        continue;
+      }
+      if (/^(- |\* |\d+\. )/.test(line)) {
+        const mode = /^\d/.test(line) ? "ol" : "ul";
+        if (list !== mode) { closeList(); output.push(`<${mode}>`); list = mode; }
+        output.push(`<li>${inline(line.replace(/^(- |\* |\d+\. )/, ""))}</li>`);
+        index += 1;
+        continue;
+      }
+      if (/^\|/.test(line) && lines[index + 1] && /^\|[-| :]+\|/.test(lines[index + 1])) {
+        closeList();
+        const headings = line.split("|").slice(1, -1).map((value) => value.trim());
+        index += 2;
+        const rows = [];
+        while (index < lines.length && lines[index].startsWith("|")) {
+          rows.push(lines[index].split("|").slice(1, -1).map((value) => value.trim()));
+          index += 1;
+        }
+        output.push(`<table><thead><tr>${headings.map((heading) => `<th>${inline(heading)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+        continue;
+      }
+      if (!line.trim()) { closeList(); index += 1; continue; }
+      if (line.startsWith("> ")) { closeList(); output.push(`<blockquote><p>${inline(line.slice(2))}</p></blockquote>`); index += 1; continue; }
+      closeList();
+      output.push(`<p>${inline(line)}</p>`);
+      index += 1;
     }
-    flushList();
-    return out.join("\n");
-  }
+    closeList();
+    return output.join("\n");
+  };
 
-  async function load() {
-    const d = DOCS.find((x) => x.id === here) || DOCS[0];
-    IdolShell.crumbs([{ label: "docs" }, { label: d.name }]);
+  const load = async () => {
+    const document = DOCS.find((candidate) => candidate.id === here) || DOCS[0];
+    IdolShell.crumbs([{ label: "docs" }, { label: document.name }]);
     main.innerHTML = `<div style="padding:40px 0"><span class="spin"></span></div>`;
     try {
-      const raw = await Idol.api.text("/content/docs/" + d.id + ".md");
-      main.innerHTML = md(raw);
-      main.classList.remove("fade-in"); void main.offsetWidth; main.classList.add("fade-in");
-      // every idol fence becomes a live token explorer — faces + law + whys
+      const raw = await Idol.api.text(`/content/docs/${document.id}.md`);
+      main.innerHTML = `<div class="authority-banner"><strong>${document.status}.</strong> The compact law in <code>clpi/idol</code> remains the sole semantic authority. Browser highlighting is lexical provenance only until exact compiler source spans and identities are published.</div>${markdown(raw)}`;
       main.querySelectorAll("pre[data-lang='id'], pre[data-lang='idol']").forEach((pre) => {
-        const code = pre.querySelector("code");
-        const holder = document.createElement("div");
+        const holder = window.document.createElement("div");
+        const source = pre.querySelector("code").textContent;
         pre.replaceWith(holder);
-        Idol.doccode(holder, {
-          source: code.textContent,
-          onLib: (v) => window.open("https://lib.idol.id/#" + encodeURIComponent(v), "_blank"),
-        });
+        Idol.doccode(holder, { source });
       });
-    } catch (e) {
-      main.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${e.message}</div></div>`;
+    } catch (error) {
+      main.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${escapeHtml(error.message)}</div></div>`;
     }
-  }
+  };
 
   load();
 })();
