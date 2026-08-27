@@ -1,0 +1,67 @@
+{
+  "schema": "idol.web.source-law-projection.v1",
+  "authority": {
+    "repository": "clpi/idol",
+    "branch": "main",
+    "commit": "447c708353bf4b27b0b39bdb7890f713078d769b",
+    "compact_law": {
+      "path": "docs/spec/law.md",
+      "git_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552"
+    },
+    "constitution": {
+      "path": "docs/spec/constitution.md",
+      "role": "structured long-form expansion and stable law-id owner"
+    },
+    "source_projection": {
+      "path": "docs/spec/source.md",
+      "role": "non-owning projection"
+    }
+  },
+  "source_law": {
+    "schema": "idol.source.law.v1",
+    "sha256": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b",
+    "extension": ".id"
+  },
+  "delimiters": {
+    "application": "()",
+    "computed_projection": "[]",
+    "structured_pack": "{}",
+    "static_projection": ".",
+    "subject_relation": ":",
+    "world": "@"
+  },
+  "comments": {
+    "canonical_line": "#"
+  },
+  "text": {
+    "canonical": "double-quoted"
+  },
+  "bytes": {
+    "canonical": "single-quoted"
+  },
+  "declaration_specialization": {
+    "lawful_faces": [
+      "subject:relation = implementation",
+      "relation(levels) = implementation",
+      "subject:relation(levels) = implementation",
+      "subject: { relation(levels) = implementation }"
+    ],
+    "meaning": "one relation identity plus subject constraint plus projection facts plus implementation witness",
+    "runtime_payload_is_not_a_declared_axis": true,
+    "automatic_currying": false
+  },
+  "negative_controls": [
+    "(:)",
+    "|>",
+    "body:move(10) = implementation",
+    "@.member",
+    "@:member",
+    "break()",
+    "continue()"
+  ],
+  "semantic_identity_from_lexical_preview": false,
+  "complete_grammar_claimed": false,
+  "semantic_law_may_precede_parser_implementation": true,
+  "foreign_source_requires_exact_foreign_law_and_origin": true,
+  "rule": "the compact law wins; this file is a bounded web projection and cannot mint syntax or semantics"
+}
