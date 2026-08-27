@@ -28,7 +28,11 @@ const state = {
   selected: [],
   views: [],
   current: null,
-  publicMode: location.hostname === "worlds.idol.id" || window.IDOL_CONFIG?.app === "worlds",
+  publicMode:
+    location.hostname === "worlds.idol.id"
+    || new URLSearchParams(location.search).get("mode") === "public"
+    || window.IDOL?.app === "worlds"
+    || window.IDOL?.surface === "worlds",
 };
 
 function escapeHtml(value) {
