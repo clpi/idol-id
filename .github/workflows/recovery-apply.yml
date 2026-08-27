@@ -1,0 +1,49 @@
+name: apply verified recovery
+
+on:
+  push:
+    branches: [fix/repository-regression-closure-20260827]
+    paths:
+      - scripts/recovery-apply.py
+      - .github/workflows/recovery-apply.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: idol-id-recovery-apply
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/repository-regression-closure-20260827
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Apply one-producer authority and regression recovery
+        run: python3 scripts/recovery-apply.py
+      - name: Verify current upstream authority and focused recovery contract
+        run: |
+          node scripts/check-upstream-authority.mjs
+          node --test test/regression-closure.test.mjs
+      - name: Run complete repository test and immutable build
+        run: npm run check
+      - name: Validate Cloudflare Worker bundle
+        run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
+      - name: Refuse whitespace and patch corruption
+        run: git diff --check
+      - name: Commit only the verified recovery
+        run: |
+          set -euo pipefail
+          rm scripts/recovery-apply.py .github/workflows/recovery-apply.yml
+          git config user.name idol-recovery-bot
+          git config user.email actions@users.noreply.github.com
+          git add -A
+          git commit -m "fix: close authority and deployment regressions"
+          git push origin HEAD:fix/repository-regression-closure-20260827
