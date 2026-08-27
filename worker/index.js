@@ -1,5 +1,6 @@
 import { parseImportRequest, planForeignImport } from "../shared/foreign.js";
 import { handleIdeTransport } from "./ide.js";
+import { handleMcpTransport } from "./mcp.js";
 import { handlePlatformTransport } from "./platform.js";
 
 const HOSTS = Object.freeze({
@@ -11,12 +12,14 @@ const HOSTS = Object.freeze({
   "graph.idol.id": { app: "graph", surface: "graph", origin: true },
   "worlds.idol.id": { app: "worlds", surface: "worlds", origin: false },
   "platform.idol.id": { app: "platform", surface: "platform", origin: false },
+  "live.idol.id": { app: "live", surface: "live", origin: false },
+  "mcp.idol.id": { app: "mcp", surface: "mcp", origin: false },
   "r8a.idol.id": { app: "graph", surface: "r8a", origin: true },
   "r8b.idol.id": { app: "graph", surface: "r8b", origin: true },
   "r16.idol.id": { app: "graph", surface: "r16", origin: true },
 });
 
-const SHARED_PREFIXES = ["/shared/", "/content/", "/runtime/", "/apps/"];
+const SHARED_PREFIXES = ["/shared/", "/content/", "/runtime/", "/apps/", "/native/", "/authority/"];
 const PASSTHROUGH_PREFIXES = ["/api/"];
 const PASSTHROUGH_PATHS = new Set(["/health", "/info", "/origin-health", "/origin-info"]);
 const CACHEABLE_EXT = /\.(?:css|js|mjs|json|md|txt|svg|png|jpe?g|gif|webp|ico|woff2?|wasm|map)$/i;
@@ -140,8 +143,7 @@ function isNavigation(request, pathname) {
 function localSurface(surface) {
   if (["docs", "lib", "api"].includes(surface)) return { app: surface, surface, origin: true };
   if (["graph", "r8a", "r8b", "r16"].includes(surface)) return { app: "graph", surface, origin: true };
-  if (surface === "worlds") return { app: "worlds", surface: "worlds", origin: false };
-  if (surface === "platform") return { app: "platform", surface: "platform", origin: false };
+  if (["worlds", "platform", "live", "mcp"].includes(surface)) return { app: surface, surface, origin: false };
   if (surface === "ide") return { app: "ide", surface: "ide", origin: false };
   return { app: "site", surface: "site", origin: true };
 }
@@ -204,7 +206,7 @@ export async function handle(request, env, dependencies = {}) {
   if (info.redirect) return Response.redirect(`${info.redirect}${url.pathname}${url.search}`, 308);
 
   const commit = env.IDOL_COMMIT || "development";
-  const authority = env.IDOL_AUTHORITY || "f33bb3773484e7d954a2975211e683dfa89edab5";
+  const authority = env.IDOL_AUTHORITY || "unconfigured";
 
   if (url.pathname === "/__idol/version") {
     return json({ service: "idol-id", commit, authority, app: info.app, surface: info.surface });
@@ -222,6 +224,9 @@ export async function handle(request, env, dependencies = {}) {
       }),
     );
   }
+
+  const mcpResponse = await handleMcpTransport(request, env, url.pathname, info, dependencies);
+  if (mcpResponse) return secure(mcpResponse);
 
   const ideResponse = await handleIdeTransport(request, env, url.pathname, info, dependencies);
   if (ideResponse) return secure(ideResponse);
