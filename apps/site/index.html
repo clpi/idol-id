@@ -11,7 +11,7 @@
   body { overflow: auto; }
   .site { min-height: 100vh; display: flex; flex-direction: column; }
   .hero { flex: 1; display: flex; align-items: center; padding: 72px 8vw 58px; position: relative; overflow: hidden; }
-  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .42; pointer-events: none; }
+  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55; background: linear-gradient(90deg, transparent 0 7.9vw, var(--rule) 8vw, transparent calc(8vw + 1px)), linear-gradient(0deg, transparent 0 47%, rgba(230,180,80,.08) 47%, transparent calc(47% + 1px)); }
   .hero .inner { position: relative; width: min(980px, 100%); }
   .eyebrow { display: flex; gap: 9px; align-items: center; margin-bottom: 18px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
   .eyebrow .authority { color: var(--signal); }
@@ -49,15 +49,16 @@
   .boundary li::before { content: "—"; color: var(--signal); margin-right: 8px; }
   footer { padding: 18px 8vw; color: var(--ink-5); font-size: 10px; letter-spacing: .08em; display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--rule); }
   footer a { color: var(--ink-4); border: 0; }
-  @media (max-width: 720px) {
+  @media (max-width: 699px) {
     .hero { padding: 54px 18px 40px; }
+    .hero::before { background: linear-gradient(0deg, transparent 0 46%, rgba(230,180,80,.07) 46%, transparent calc(46% + 1px)); }
     .lawline { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
     .boundary { padding: 24px 18px 28px; grid-template-columns: 1fr; }
     .corpus, footer { padding-left: 18px; padding-right: 18px; }
     .source-head { align-items: flex-start; flex-wrap: wrap; }
     .source-head .status { margin-left: 0; }
+    .cell-a { min-height: 0; padding: 24px 20px 28px; }
   }
-  @media (prefers-reduced-motion: reduce) { canvas { display: none; } }
 </style>
 </head>
 <body>
@@ -65,7 +66,6 @@
   <div class="topbar"></div>
   <main class="site">
     <section class="hero">
-      <canvas id="bg" aria-hidden="true"></canvas>
       <div class="inner">
         <div class="eyebrow"><span class="authority">current law projection</span><span>·</span><span id="law-edition">loading exact authority</span></div>
         <h1>ID<span class="sigil">@</span>L</h1>
@@ -92,15 +92,15 @@
     <div class="corpus" id="corpus"><span>registry projection loading</span></div>
     <nav class="grid" aria-label="Idol product surfaces">
       <a class="cell-a" href="https://graph.idol.id/"><div class="n">Semantic Observatory</div><div class="u">GRAPH.IDOL.ID</div><div class="d">Inspect exact compiler-published source spans, graph identities, facts, demand, transformations, and realization evidence. Lexical preview remains visibly non-semantic.</div><div class="arrow">↗</div></a>
-      <a class="cell-a" href="https://lib.idol.id/"><div class="n">Registry</div><div class="u">LIB.IDOL.ID</div><div class="d">Published semantic facts, worlds, source, artifacts, versions, and provenance without a second package or namespace ontology.</div><div class="arrow">↗</div></a>
-      <a class="cell-a" href="https://worlds.idol.id/"><div class="n">World Atlas</div><div class="u">WORLDS.IDOL.ID</div><div class="d">Explore origin-qualified worlds and foreign candidates while preserving uncertainty, explicit witnesses, and authority boundaries.</div><div class="arrow">↗</div></a>
-      <a class="cell-a" href="https://docs.idol.id/"><div class="n">Law and blueprints</div><div class="u">DOCS.IDOL.ID</div><div class="d">The exact compact-law mirror, bounded source projections, the authoritative specification blueprint, and the separate Idol Live product thesis.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://lib.idol.id/"><div class="n">Package and world registry</div><div class="u">LIB.IDOL.ID</div><div class="d">Search package provenance, releases, published worlds, source, artifacts, versions, and evidence. Package provenance is not world identity or execution authority.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://worlds.idol.id/"><div class="n">World Atlas</div><div class="u">WORLDS.IDOL.ID</div><div class="d">Explore provided, published, and foreign-origin world projections while preserving uncertainty, exact witnesses, and authority boundaries.</div><div class="arrow">↗</div></a>
+      <a class="cell-a" href="https://docs.idol.id/"><div class="n">Law and blueprints</div><div class="u">DOCS.IDOL.ID</div><div class="d">The exact compact-law mirror, bounded source projections, the non-authoritative specification blueprint, and the separate Idol Live product thesis.</div><div class="arrow">↗</div></a>
       <a class="cell-a" href="https://platform.idol.id/"><div class="n">Platform</div><div class="u">PLATFORM.IDOL.ID</div><div class="d">Authenticated operational projections over the same semantic universe. Product records never become language authority.</div><div class="arrow">↗</div></a>
       <a class="cell-a" href="https://api.idol.id/"><div class="n">Semantic API</div><div class="u">API.IDOL.ID</div><div class="d">Transport projections of published facts and explicitly bounded operations. HTTP names are routes, not language identities.</div><div class="arrow">↗</div></a>
     </nav>
     <section class="boundary">
       <div><h2>One authority, many projections</h2><p><code>clpi/idol</code> owns language and semantic law. This web repository owns presentation and transport only. Browser tokenization cannot infer a keyword, relation, subject, descriptor, world, reference, or semantic identity from spelling or adjacency. Exact identities appear only when a compiler projection supplies an exact source span.</p></div>
-      <ul><li>compact law wins over every page and example</li><li>semantic law and implementation support are reported separately</li><li>foreign source retains exact foreign law and origin</li><li>unmeasured and unsupported remain explicit states</li></ul>
+      <ul><li>compact law wins over every page and example</li><li>package provenance, world identity, home/reach, and Universe views remain distinct facts</li><li>foreign source retains exact foreign law and origin</li><li>unmeasured and unsupported remain explicit states</li></ul>
     </section>
     <footer><span>IDOL · .ID</span><a href="https://github.com/clpi/idol">language authority</a><a href="https://github.com/clpi/idol-native">native evidence</a><a href="https://docs.idol.id/law">compact law</a><a href="https://docs.idol.id/spec">specification blueprint</a><a href="https://docs.idol.id/live">Idol Live</a><span style="margin-left:auto" id="auth-edition"></span></footer>
   </main>
@@ -111,42 +111,6 @@
 <script>
 (() => {
   Shell.boot("site", { title: "Idol" });
-
-  const canvas = document.getElementById("bg");
-  const context = canvas.getContext("2d");
-  let width = 0;
-  let height = 0;
-  let nodes = [];
-  let edges = [];
-  const seed = () => {
-    width = canvas.width = canvas.offsetWidth * devicePixelRatio;
-    height = canvas.height = canvas.offsetHeight * devicePixelRatio;
-    const count = Math.min(64, Math.floor(width * height / 30000));
-    nodes = Array.from({ length: count }, () => ({ x: Math.random() * width, y: Math.random() * height, vx: 0, vy: 0, r: 1 + Math.random() * 2, signal: Math.random() < .1 }));
-    edges = Array.from({ length: count }, (_, index) => [nodes[index], nodes[(Math.random() * count) | 0]]).filter(([left, right]) => left !== right);
-  };
-  seed();
-  addEventListener("resize", seed);
-  const draw = () => {
-    context.clearRect(0, 0, width, height);
-    for (const node of nodes) {
-      node.vx = (node.vx + (Math.random() - .5) * .1) * .96;
-      node.vy = (node.vy + (Math.random() - .5) * .1) * .96;
-      node.x = Math.max(0, Math.min(width, node.x + node.vx));
-      node.y = Math.max(0, Math.min(height, node.y + node.vy));
-    }
-    context.lineWidth = devicePixelRatio * .5;
-    for (const [left, right] of edges) {
-      context.strokeStyle = "rgba(255,255,255,.045)";
-      context.beginPath(); context.moveTo(left.x, left.y); context.lineTo(right.x, right.y); context.stroke();
-    }
-    for (const node of nodes) {
-      context.fillStyle = node.signal ? "rgba(230,180,80,.72)" : "rgba(255,255,255,.31)";
-      context.beginPath(); context.arc(node.x, node.y, node.r * devicePixelRatio, 0, Math.PI * 2); context.fill();
-    }
-    requestAnimationFrame(draw);
-  };
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) draw();
 
   Promise.all([
     fetch("/runtime/source-law.json", { cache: "no-store" }).then((response) => {
@@ -177,7 +141,7 @@
     const libraries = libraryDocument.libs || [];
     const worlds = worldDocument.worlds || [];
     const lines = libraries.reduce((sum, value) => sum + Number(value.lines || 0), 0);
-    document.getElementById("corpus").innerHTML = `<span><b>${libraries.length}</b> homes</span><span><b class="sig">${worlds.length}</b> published world projections</span><span><b>${lines.toLocaleString()}</b> source lines</span><span>live registry evidence</span>`;
+    document.getElementById("corpus").innerHTML = `<span><b class="sig">${worlds.length}</b> published world projections</span><span><b>${libraries.length}</b> source homes</span><span><b>${lines.toLocaleString()}</b> source lines</span><span>live registry evidence</span>`;
   });
 })();
 </script>
