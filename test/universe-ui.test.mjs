@@ -8,7 +8,7 @@ test("Universe workspace is packaged for authenticated Platform and public World
   const [html, app, worker, build, shell] = await Promise.all([
     read("apps/universe/index.html"),
     read("shared/universe-app.js"),
-    read("worker/index.js"),
+    read("worker/entry.js"),
     read("scripts/build.mjs"),
     read("shared/shell.js"),
   ]);
@@ -19,8 +19,8 @@ test("Universe workspace is packaged for authenticated Platform and public World
   assert.match(html, /id="universe-boundary"/);
   assert.match(app, /\/v1\/universe\/browser\/views/);
   assert.match(app, /\/v1\/universe\/public\//);
-  assert.match(worker, /platform.*\/universe/s);
-  assert.match(worker, /worlds.*\/universe/s);
+  assert.match(worker, /info\.surface === "platform" \|\| info\.surface === "worlds"/);
+  assert.match(worker, /\/apps\/universe\/index\.html/);
   assert.match(build, /"universe"/);
   assert.match(shell, /id:"universe"/);
 });
