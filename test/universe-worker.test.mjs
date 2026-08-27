@@ -58,7 +58,21 @@ function fakeServices() {
     async updateView(candidate, id, input) {
       const current = views.get(id);
       if (!current || current.subject !== candidate.subject) throw Object.assign(new Error("not found"), { code: "UNIVERSE_VIEW_NOT_FOUND", status: 404 });
-      return service.createView(candidate, { ...current, ...input, title: input.title || current.title, selections: input.selections || current.selections });
+      const selections = input.selections ?? current.selections;
+      const updated = {
+        ...current,
+        ...input,
+        id: current.id,
+        subject: current.subject,
+        title: input.title ?? current.title,
+        visibility: input.visibility ?? current.visibility,
+        lens: input.lens ?? current.lens,
+        selections,
+        analysis: { ...current.analysis, selection_count: selections.length },
+      };
+      views.set(id, updated);
+      const { subject, ...visible } = updated;
+      return visible;
     },
     async getPublicView(id) {
       const view = views.get(id);
