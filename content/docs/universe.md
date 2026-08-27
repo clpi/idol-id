@@ -1,6 +1,6 @@
 # Universe Views
 
-Universe Views are saved **operational projections** over exact world records in Idol’s one semantic universe. They let a user preserve a useful constellation, lens, query intent, visibility choice, and evidence policy without creating another semantic universe or manufacturing language authority.
+Universe Views are saved **operational projections** over exact world records in Idol’s one semantic universe. A Universe View is **not a second semantic universe**. It lets a user preserve a useful constellation, lens, query intent, visibility choice, and evidence policy without manufacturing language authority.
 
 ## Product surfaces
 
@@ -45,15 +45,17 @@ A lens is presentation/query state. It is not a new language relation or semanti
 Every view publishes the same non-negotiable boundary:
 
 ```text
-semantic universes   1
-view kind            operational-projection
-composition          not-proven
-compatibility        not-proven
-equivalence          not-proven
-injection            not-proven
-authority grant      none
+semantic universes    1
+view kind             operational-projection
+composition           not-proven
+reachability          published-facts-only
+compatibility         not-proven
+equivalence           not-proven
+injection             not-proven
+authority grant       none
 source world mutation false
-world publication    false
+world publication     false
+dispatcher access     false
 ```
 
 A zero-refusal view does not prove compatibility or composition. It only means none of the selected **view policies** refused the currently published facts.
