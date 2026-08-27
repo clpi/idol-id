@@ -101,7 +101,7 @@ test("universe status exposes one-universe and no-authority boundary on Platform
   assert.equal(response.status, 404);
 });
 
-test("browser view creation requires Access and same-origin proof", async () => {
+test("browser view creation and update require Access, same-origin proof, and stable identity", async () => {
   const services = fakeServices();
   let response = await handleUniverseTransport(new Request("https://platform.idol.id/v1/universe/browser/views", {
     method: "POST",
@@ -120,6 +120,16 @@ test("browser view creation requires Access and same-origin proof", async () => 
   assert.match(created.id, /^uv_test_identifier_/);
   assert.equal(created.semantic_id, null);
   assert.equal(created.boundary.composition, "not-proven");
+
+  response = await handleUniverseTransport(browserRequest(`/v1/universe/browser/views/${created.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title: "Updated constellation" }),
+  }), env, `/v1/universe/browser/views/${created.id}`, platformInfo, services);
+  assert.equal(response.status, 200);
+  const updated = await response.json();
+  assert.equal(updated.id, created.id);
+  assert.equal(updated.title, "Updated constellation");
+  assert.equal(services.views.size, 1);
 });
 
 test("private views never cross into the public Worlds transport", async () => {
