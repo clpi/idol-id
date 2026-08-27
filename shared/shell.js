@@ -1,7 +1,9 @@
 /* ============================================================================
    shell.js — common chrome for every idol.id face.
-   Product navigation is a presentation projection only: Lib, Worlds, and
-   Platform/Universe expose different views without minting semantic identities.
+
+   The chrome is a presentation projection only. Lib owns the public library-
+   world product. Atlas, homes, and Universe are lenses over that product; they
+   are not peer semantic kingdoms and do not mint identities or authority.
    ========================================================================== */
 (function (global) {
 "use strict";
@@ -9,8 +11,7 @@
 const APPS = Object.freeze([
   { id: "graph", label: "explorer", href: "https://graph.idol.id/", title: "Semantic Observatory" },
   { id: "ide", label: "ide", href: "https://platform.idol.id/ide", title: "Browser IDE" },
-  { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Package and world registry" },
-  { id: "worlds", label: "worlds", href: "https://worlds.idol.id/", title: "World Atlas" },
+  { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Library worlds" },
   { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Docs" },
   { id: "api", label: "api", href: "https://api.idol.id/", title: "API" },
   { id: "repo", label: "repos", href: "https://platform.idol.id/repo", title: "Repository Observatory", repository: true },
@@ -18,10 +19,10 @@ const APPS = Object.freeze([
 ]);
 
 const CONTEXTUAL_VIEWS = Object.freeze([
-  { label: "package and world registry", href: "https://lib.idol.id/" },
+  { label: "published library worlds", href: "https://lib.idol.id/" },
+  { label: "world atlas", href: "https://lib.idol.id/atlas" },
   { label: "source homes", href: "https://lib.idol.id/?set=homes" },
-  { label: "world atlas", href: "https://worlds.idol.id/" },
-  { label: "public universe views", href: "https://worlds.idol.id/universe" },
+  { label: "public universe views", href: "https://lib.idol.id/universe" },
   { label: "manage universe views", href: "https://platform.idol.id/universe" },
 ]);
 
@@ -60,7 +61,9 @@ function sanitiseHash() {
 function isWorldLens(app) {
   const host = global.location.hostname;
   const path = global.location.pathname;
-  return app === "worlds" || host === "worlds.idol.id" || (host === "lib.idol.id" && /^\/(?:atlas|world)(?:\/|$)/.test(path));
+  return app === "worlds"
+    || host === "worlds.idol.id"
+    || (host === "lib.idol.id" && /^\/(?:atlas|world)(?:\/|$)/.test(path));
 }
 
 function prepareWorldRoute(app) {
@@ -82,8 +85,7 @@ function activeApp(candidate, app) {
   if (host === "platform.idol.id" && /^\/ide(?:\/|$)/.test(path)) return candidate.id === "ide";
   if (host === "platform.idol.id" && /^\/repo(?:\/|$)/.test(path)) return candidate.id === "repo";
   if (host === "platform.idol.id" && /^\/universe(?:\/|$)/.test(path)) return candidate.id === "platform";
-  if (host === "worlds.idol.id") return candidate.id === "worlds";
-  if (host === "lib.idol.id") return candidate.id === "lib";
+  if (host === "lib.idol.id" || host === "worlds.idol.id") return candidate.id === "lib";
   return candidate.id === app;
 }
 
@@ -103,7 +105,7 @@ function installMobilePanel(bar, app) {
   panel.innerHTML = `
     <div class="nav-panel-head"><span>idol surfaces</span><button class="nav-close" type="button" aria-label="Close navigation">×</button></div>
     <nav class="nav-panel-primary" aria-label="Idol product surfaces">${APPS.map((entry) => navLink(entry, activeApp(entry, app), "nav-panel-link")).join("")}</nav>
-    <div class="nav-panel-group"><div class="nav-panel-label">registry, worlds, and universe views</div>${CONTEXTUAL_VIEWS.map((entry) => `<a class="nav-panel-link secondary" href="${entry.href}">${entry.label}</a>`).join("")}</div>`;
+    <div class="nav-panel-group"><div class="nav-panel-label">library-world lenses</div>${CONTEXTUAL_VIEWS.map((entry) => `<a class="nav-panel-link secondary" href="${entry.href}">${entry.label}</a>`).join("")}</div>`;
   bar.insertAdjacentElement("afterend", panel);
 
   const toggle = bar.querySelector(".nav-toggle");
@@ -135,7 +137,9 @@ function installMobilePanel(bar, app) {
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
-  global.addEventListener("resize", () => { if (global.innerWidth >= 700 && panel.classList.contains("open")) setOpen(false); });
+  global.addEventListener("resize", () => {
+    if (global.innerWidth >= 700 && panel.classList.contains("open")) setOpen(false);
+  });
 }
 
 function boot(app, opts) {
