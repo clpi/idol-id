@@ -1,7 +1,7 @@
 /* ============================================================================
    shell.js — common chrome for every idol.id face.
-   Product navigation is a presentation projection only. Lib owns world views;
-   Universe is a view over the one semantic universe, not a separate product.
+   Product navigation is a presentation projection only: Lib, Worlds, and
+   Platform/Universe expose different views without minting semantic identities.
    ========================================================================== */
 (function (global) {
 "use strict";
@@ -9,18 +9,20 @@
 const APPS = Object.freeze([
   { id: "graph", label: "explorer", href: "https://graph.idol.id/", title: "Semantic Observatory" },
   { id: "ide", label: "ide", href: "https://platform.idol.id/ide", title: "Browser IDE" },
-  { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Library worlds" },
+  { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Package and world registry" },
+  { id: "worlds", label: "worlds", href: "https://worlds.idol.id/", title: "World Atlas" },
   { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Docs" },
   { id: "api", label: "api", href: "https://api.idol.id/", title: "API" },
   { id: "repo", label: "repos", href: "https://platform.idol.id/repo", title: "Repository Observatory", repository: true },
   { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Platform" },
 ]);
 
-const LIB_LENSES = Object.freeze([
-  { label: "published worlds", href: "https://lib.idol.id/" },
-  { label: "world atlas", href: "https://lib.idol.id/atlas" },
-  { label: "universe views", href: "https://lib.idol.id/universe" },
+const CONTEXTUAL_VIEWS = Object.freeze([
+  { label: "package and world registry", href: "https://lib.idol.id/" },
   { label: "source homes", href: "https://lib.idol.id/?set=homes" },
+  { label: "world atlas", href: "https://worlds.idol.id/" },
+  { label: "public universe views", href: "https://worlds.idol.id/universe" },
+  { label: "manage universe views", href: "https://platform.idol.id/universe" },
 ]);
 
 function ensureSurfaceStyles() {
@@ -56,7 +58,9 @@ function sanitiseHash() {
 }
 
 function isWorldLens(app) {
-  return app === "worlds" || (global.location.hostname === "lib.idol.id" && /^\/(?:atlas|world)(?:\/|$)/.test(global.location.pathname));
+  const host = global.location.hostname;
+  const path = global.location.pathname;
+  return app === "worlds" || host === "worlds.idol.id" || (host === "lib.idol.id" && /^\/(?:atlas|world)(?:\/|$)/.test(path));
 }
 
 function prepareWorldRoute(app) {
@@ -77,7 +81,9 @@ function activeApp(candidate, app) {
   const host = global.location.hostname;
   if (host === "platform.idol.id" && /^\/ide(?:\/|$)/.test(path)) return candidate.id === "ide";
   if (host === "platform.idol.id" && /^\/repo(?:\/|$)/.test(path)) return candidate.id === "repo";
-  if (host === "lib.idol.id" || host === "worlds.idol.id" || app === "worlds" || app === "universe") return candidate.id === "lib";
+  if (host === "platform.idol.id" && /^\/universe(?:\/|$)/.test(path)) return candidate.id === "platform";
+  if (host === "worlds.idol.id") return candidate.id === "worlds";
+  if (host === "lib.idol.id") return candidate.id === "lib";
   return candidate.id === app;
 }
 
@@ -89,21 +95,21 @@ function navLink(app, current, className = "") {
 }
 
 function installMobilePanel(bar, app) {
-  let panel = document.getElementById("idol-nav-panel");
-  if (panel) panel.remove();
-  panel = document.createElement("aside");
+  document.getElementById("idol-nav-panel")?.remove();
+  const panel = document.createElement("aside");
   panel.id = "idol-nav-panel";
   panel.className = "nav-panel";
   panel.setAttribute("aria-hidden", "true");
   panel.innerHTML = `
     <div class="nav-panel-head"><span>idol surfaces</span><button class="nav-close" type="button" aria-label="Close navigation">×</button></div>
     <nav class="nav-panel-primary" aria-label="Idol product surfaces">${APPS.map((entry) => navLink(entry, activeApp(entry, app), "nav-panel-link")).join("")}</nav>
-    <div class="nav-panel-group"><div class="nav-panel-label">lib lenses</div>${LIB_LENSES.map((entry) => `<a class="nav-panel-link secondary" href="${entry.href}">${entry.label}</a>`).join("")}</div>`;
+    <div class="nav-panel-group"><div class="nav-panel-label">registry, worlds, and universe views</div>${CONTEXTUAL_VIEWS.map((entry) => `<a class="nav-panel-link secondary" href="${entry.href}">${entry.label}</a>`).join("")}</div>`;
   bar.insertAdjacentElement("afterend", panel);
 
   const toggle = bar.querySelector(".nav-toggle");
   const close = panel.querySelector(".nav-close");
   let returnFocus = null;
+  const focusables = () => [...panel.querySelectorAll('a[href],button:not([disabled])')];
   const setOpen = (open) => {
     panel.classList.toggle("open", open);
     panel.setAttribute("aria-hidden", String(!open));
@@ -119,7 +125,16 @@ function installMobilePanel(bar, app) {
   toggle.addEventListener("click", () => setOpen(toggle.getAttribute("aria-expanded") !== "true"));
   close.addEventListener("click", () => setOpen(false));
   panel.addEventListener("click", (event) => { if (event.target.closest("a")) setOpen(false); });
-  global.addEventListener("keydown", (event) => { if (event.key === "Escape" && panel.classList.contains("open")) setOpen(false); });
+  global.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && panel.classList.contains("open")) setOpen(false);
+    if (event.key !== "Tab" || !panel.classList.contains("open")) return;
+    const nodes = focusables();
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
   global.addEventListener("resize", () => { if (global.innerWidth >= 700 && panel.classList.contains("open")) setOpen(false); });
 }
 
