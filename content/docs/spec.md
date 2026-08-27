@@ -2,8 +2,9 @@
 
 > **Status: non-authoritative architecture blueprint.** This document projects
 > and organizes the supplied specification research. It does not own language
-> law. The compact law in `clpi/idol/docs/spec/law.md` wins over this document,
-> every website, every example, every implementation, and every research note.
+> law. **The compact law wins.** The compact law in
+> `clpi/idol/docs/spec/law.md` wins over this document, every website, every
+> example, every implementation, and every research note.
 >
 > **Pinned research source:** `Spec.md`, SHA-256
 > `0653bf7a543cf399c73b14948dd3b2b87f784d09442fdabe653fc865a2e2fd63`.
