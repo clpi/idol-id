@@ -138,12 +138,12 @@ export async function handleUniverseTransport(request, env, pathname, info, depe
 
     const publicMatch = PUBLIC_ITEM.exec(pathname);
     if (publicMatch) {
-      if (info.app !== "worlds") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
+      if (info.app !== "lib") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
       const { universe } = await services(request, env, dependencies);
       return json(await universe.getPublicView(publicMatch[1]), 200, { "cache-control": "public, max-age=60" });
     }
     if (pathname === "/v1/universe/public") {
-      if (info.app !== "worlds" || request.method !== "GET") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
+      if (info.app !== "lib" || request.method !== "GET") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
       const { universe } = await services(request, env, dependencies);
       return json({ views: await universe.listPublicViews(50) }, 200, { "cache-control": "public, max-age=30" });
     }
