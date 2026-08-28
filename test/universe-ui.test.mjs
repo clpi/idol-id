@@ -21,7 +21,7 @@ test("Universe workspace is packaged for authenticated Platform and contextual p
   assert.match(worker, /\/apps\/universe\/index\.html/);
   assert.match(build, /"universe"/);
   assert.match(build, /platform-universe-entry\.js/);
-  assert.match(build, /public:"https:\/\/lib\.idol\.id\/universe"/);
+  assert.match(build, /public:\s*"https:\/\/lib\.idol\.id\/universe"/);
   assert.doesNotMatch(shell, /id:\s*"universe"/);
   assert.doesNotMatch(shell, /id:\s*"worlds"/);
   assert.match(shell, /public universe views/i);
