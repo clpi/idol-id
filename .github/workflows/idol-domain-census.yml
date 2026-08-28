@@ -1,0 +1,181 @@
+name: Idol domain census
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-domain-census.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: idol-domain-census
+  cancel-in-progress: true
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  ZONE_NAME: idol.id
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inventory DNS, routes, applications, tunnels, and public behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p /tmp/idol-domain-census
+          OUT=/tmp/idol-domain-census
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          api=https://api.cloudflare.com/client/v4
+
+          cf_get() {
+            local url="$1" dst="$2"
+            curl -fsS --retry 3 --retry-all-errors --max-time 30 "${auth[@]}" "$url" > "$dst"
+            jq -e '.success == true' "$dst" >/dev/null
+          }
+
+          cf_get "$api/zones?name=$ZONE_NAME&status=active&per_page=50" "$OUT/zone.json"
+          ZONE_ID="$(jq -er '.result[0].id' "$OUT/zone.json")"
+          echo "zone=$ZONE_NAME zone_id=$ZONE_ID"
+
+          cf_get "$api/zones/$ZONE_ID/dns_records?per_page=5000" "$OUT/dns.json"
+          cf_get "$api/zones/$ZONE_ID/workers/routes?per_page=5000" "$OUT/worker-routes.json"
+          cf_get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100" "$OUT/pages.json" || printf '{"success":false,"result":[]}' > "$OUT/pages.json"
+          cf_get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps?per_page=500" "$OUT/access-apps.json" || printf '{"success":false,"result":[]}' > "$OUT/access-apps.json"
+          cf_get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel?is_deleted=false&per_page=100" "$OUT/tunnels.json"
+
+          echo '=== DNS RECORDS ==='
+          jq -r '.result | sort_by(.name,.type)[] | [.name,.type,.content,(.proxied|tostring),(.ttl|tostring),(.comment // "")] | @tsv' "$OUT/dns.json"
+
+          echo '=== WORKER ROUTES ==='
+          jq -r '.result | sort_by(.pattern)[] | [.pattern,(.script // "<disabled>")] | @tsv' "$OUT/worker-routes.json"
+
+          echo '=== PAGES PROJECTS AND CUSTOM DOMAINS ==='
+          jq -r '.result[]? as $p | ([($p.name // ""),($p.subdomain // ""),($p.production_branch // ""),($p.latest_deployment.url // "")] | @tsv), (($p.domains // [])[]? | ["domain",.,$p.name] | @tsv)' "$OUT/pages.json"
+
+          echo '=== ACCESS APPLICATIONS ==='
+          jq -r '.result | sort_by(.domain)[]? | [.name,.domain,.type,(.app_launcher_visible|tostring)] | @tsv' "$OUT/access-apps.json"
+
+          echo '=== TUNNELS ==='
+          jq -r '.result | sort_by(.name)[] | [.id,.name,.status,(.created_at // ""),(.connections|length|tostring)] | @tsv' "$OUT/tunnels.json"
+          while IFS=$'\t' read -r tid tname; do
+            [[ -n "$tid" ]] || continue
+            enc="$(printf '%s' "$tname" | tr -cs 'A-Za-z0-9._-' '_')"
+            if cf_get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$tid/configurations" "$OUT/tunnel-$enc.json"; then
+              echo "--- tunnel=$tname id=$tid ---"
+              jq -r '.result.config.ingress[]? | [(.hostname // "<catch-all>"),(.path // ""),(.service // ""),((.originRequest // {})|tojson)] | @tsv' "$OUT/tunnel-$enc.json"
+            fi
+          done < <(jq -r '.result[] | [.id,.name] | @tsv' "$OUT/tunnels.json")
+
+          jq -r '.result[].name' "$OUT/dns.json" \
+            | awk 'NF && $0 !~ /^\*/ && $0 != "hermes.idol.id" && $0 != "claw.idol.id"' \
+            | sort -u > "$OUT/hosts.txt"
+          printf '%s\n' "$ZONE_NAME" >> "$OUT/hosts.txt"
+          sort -u -o "$OUT/hosts.txt" "$OUT/hosts.txt"
+
+          echo '=== PUBLIC HTTP MATRIX (HERMES/CLAW EXCLUDED) ==='
+          printf 'host\tpath\thttp\tfinal\ttype\tredirects\tbytes\ttime\ttitle\tbody_sha256\n'
+          while IFS= read -r host; do
+            [[ -n "$host" ]] || continue
+            for path in / /health /api/health /__idol/health; do
+              body="$OUT/body"
+              hdr="$OUT/headers"
+              rm -f "$body" "$hdr"
+              meta="$(curl -ksS -L --connect-timeout 7 --max-time 25 --retry 1 \
+                -D "$hdr" -o "$body" \
+                -w '%{http_code}\t%{url_effective}\t%{content_type}\t%{num_redirects}\t%{size_download}\t%{time_total}' \
+                "https://$host$path" 2>/dev/null || printf '000\thttps://%s%s\t\t0\t0\t0' "$host" "$path")"
+              title=""
+              sha=""
+              if [[ -f "$body" ]]; then
+                sha="$(sha256sum "$body" | awk '{print $1}')"
+                title="$(python3 - "$body" <<'PY'
+          import html,re,sys
+          from pathlib import Path
+          text=Path(sys.argv[1]).read_text(errors='replace')[:1000000]
+          m=re.search(r'<title[^>]*>(.*?)</title>',text,re.I|re.S)
+          print(re.sub(r'\s+',' ',html.unescape(m.group(1))).strip()[:160] if m else '')
+          PY
+          )"
+              fi
+              printf '%s\t%s\t%s\t%s\t%s\n' "$host" "$path" "$meta" "$title" "$sha"
+            done
+          done < "$OUT/hosts.txt" | tee "$OUT/http.tsv"
+
+          echo '=== TLS CERTIFICATES ==='
+          while IFS= read -r host; do
+            [[ -n "$host" ]] || continue
+            printf '%s\t' "$host"
+            timeout 12 openssl s_client -connect "$host:443" -servername "$host" </dev/null 2>/dev/null \
+              | openssl x509 -noout -subject -issuer -dates -ext subjectAltName 2>/dev/null \
+              | tr '\n' ' ' || true
+            echo
+          done < "$OUT/hosts.txt" | tee "$OUT/tls.tsv"
+
+          echo '=== APEX HTML ASSET PROBE ==='
+          python3 - "$OUT/hosts.txt" "$OUT/assets.tsv" <<'PY'
+          import hashlib,html.parser,ssl,sys,urllib.error,urllib.parse,urllib.request
+          from pathlib import Path
+          hosts=[x.strip() for x in Path(sys.argv[1]).read_text().splitlines() if x.strip()]
+          out=Path(sys.argv[2])
+          ctx=ssl.create_default_context()
+          class Parser(html.parser.HTMLParser):
+              def __init__(self): super().__init__(); self.urls=[]
+              def handle_starttag(self,tag,attrs):
+                  d=dict(attrs)
+                  if tag in ('script','img','source') and d.get('src'): self.urls.append(d['src'])
+                  if tag=='link' and d.get('href'): self.urls.append(d['href'])
+          rows=['host\tasset\tstatus\ttype\tbytes\tsha256\terror']
+          for host in hosts:
+              base=f'https://{host}/'
+              try:
+                  with urllib.request.urlopen(base,context=ctx,timeout=15) as r:
+                      ctype=r.headers.get_content_type(); data=r.read(2_000_000)
+                  if ctype!='text/html': continue
+                  p=Parser(); p.feed(data.decode('utf-8','replace'))
+                  seen=[]
+                  for raw in p.urls:
+                      url=urllib.parse.urljoin(base,raw)
+                      u=urllib.parse.urlparse(url)
+                      if u.hostname!=host or url in seen: continue
+                      seen.append(url)
+                  for url in seen[:40]:
+                      try:
+                          req=urllib.request.Request(url,headers={'User-Agent':'idol-domain-census/1'})
+                          with urllib.request.urlopen(req,context=ctx,timeout=15) as r:
+                              data=r.read(5_000_000); status=r.status; typ=r.headers.get_content_type()
+                          rows.append('\t'.join([host,url,str(status),typ,str(len(data)),hashlib.sha256(data).hexdigest(),'']))
+                      except Exception as e:
+                          status=getattr(e,'code',0)
+                          rows.append('\t'.join([host,url,str(status),'','0','',type(e).__name__]))
+              except Exception as e:
+                  rows.append('\t'.join([host,base,str(getattr(e,'code',0)),'','0','',type(e).__name__]))
+          out.write_text('\n'.join(rows)+'\n')
+          print(out.read_text(),end='')
+          PY
+
+          echo '=== HOSTNAMES REFERENCED BY REPOSITORY ==='
+          grep -RhoE '([A-Za-z0-9*_-]+\.)*idol\.id' . \
+            --exclude-dir=.git --exclude='*.map' --exclude='idol-domain-census.yml' \
+            | sort -u | tee "$OUT/repo-hosts.txt" || true
+
+          echo '=== CENSUS COMPLETE ==='
+          echo 'No DNS, tunnel, route, Access, Pages, Worker, or origin mutation was performed.'
+
+      - name: Upload census evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: idol-domain-census
+          path: /tmp/idol-domain-census
+          if-no-files-found: error
+          retention-days: 14
