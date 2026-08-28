@@ -1,4 +1,4 @@
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,6 +7,7 @@ const here = dirname(file);
 const root = resolve(here, "..");
 const output = resolve(root, "runtime", "worlds.json");
 const defaultSource = "https://api.idol.id/api/worlds";
+const snapshotSchema = "idol.web.worlds.v1";
 
 export function parseRegistryProjection(raw) {
   // The registry currently emits graph ids as JSON numbers. Preserve exact
@@ -37,13 +38,27 @@ function sourceRevision(worlds) {
 export function buildSnapshot(worlds, source = defaultSource) {
   const exactWorlds = validateWorlds(worlds);
   return {
-    schema: "idol.web.worlds.v1",
+    schema: snapshotSchema,
     // This is a revision of the published input facts, not wall-clock build
     // time. Identical registry facts therefore produce byte-identical output.
     captured_at: sourceRevision(exactWorlds),
     source,
     worlds: exactWorlds,
   };
+}
+
+export function validateSnapshot(document, source = defaultSource) {
+  if (!document || typeof document !== "object") throw new Error("retained world snapshot is not an object");
+  if (document.schema !== snapshotSchema) throw new Error(`retained world snapshot has schema ${String(document.schema)}`);
+  if (document.source !== source) throw new Error(`retained world snapshot source differs: ${String(document.source)}`);
+  if (typeof document.captured_at !== "string" || !document.captured_at) throw new Error("retained world snapshot has no source revision");
+  const worlds = validateWorlds(document.worlds);
+  return { ...document, worlds };
+}
+
+export async function retainSnapshot({ source = defaultSource, target = output } = {}) {
+  const raw = await readFile(target, "utf8");
+  return validateSnapshot(parseRegistryProjection(raw), source);
 }
 
 export async function snapshotWorlds({
@@ -66,13 +81,20 @@ export async function snapshotWorlds({
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(file);
 if (isMain) {
-  const optional = process.env.IDOL_WORLD_SNAPSHOT_OPTIONAL === "1";
+  const retain = process.env.IDOL_WORLD_SNAPSHOT_RETAIN === "1";
   try {
     const document = await snapshotWorlds();
-    console.log(`snapshotted ${document.worlds.length} worlds from ${document.source}`);
+    console.log(`snapshotted ${document.worlds.length} worlds from ${document.source} at source revision ${document.captured_at}`);
   } catch (error) {
-    if (optional) {
-      console.warn(`world snapshot retained: ${error.message}`);
+    if (retain) {
+      try {
+        const document = await retainSnapshot();
+        console.warn(`world source unavailable: ${error.message}`);
+        console.warn(`retained ${document.worlds.length} validated worlds from source revision ${document.captured_at}; freshness not claimed`);
+      } catch (retainedError) {
+        console.error(`world snapshot failed: ${error.message}; retained evidence invalid: ${retainedError.message}`);
+        process.exitCode = 1;
+      }
     } else {
       console.error(`world snapshot failed: ${error.message}`);
       process.exitCode = 1;
