@@ -1,0 +1,24 @@
+name: Idol domain reconciler tests
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - tests/test_domain_reconciler.py
+      - ops/domain_reconciler.py
+      - .github/workflows/idol-domain-reconciler-tests.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/idol-domain-repair-20260828
+      - name: Run safety contract
+        run: python3 -m unittest -v tests/test_domain_reconciler.py
