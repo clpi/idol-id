@@ -1,0 +1,46 @@
+name: Idol domain reconciler red proof
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-domain-reconciler-red.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  red:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/idol-domain-repair-20260828
+      - name: Prove contract fails before implementation
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          python3 -m unittest -v tests/test_domain_reconciler.py > /tmp/red.log 2>&1
+          rc=$?
+          set -e
+          if [[ "$rc" -eq 0 ]]; then
+            echo 'The pre-implementation contract unexpectedly passed.' >&2
+            exit 1
+          fi
+          mkdir -p ops/reports
+          {
+            echo 'schema=idol.domain.reconciler.red.v1'
+            echo "observed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "exit_code=$rc"
+            echo 'expected_failure=ops/domain_reconciler.py missing or unimplemented'
+            echo '--- failure tail ---'
+            tail -n 40 /tmp/red.log
+          } > ops/reports/domain-reconciler-red.txt
+          git config user.name 'idol-domain-bot'
+          git config user.email 'idol-domain-bot@users.noreply.github.com'
+          git add ops/reports/domain-reconciler-red.txt
+          git commit -m 'test: record failing domain reconciliation contract'
+          git push origin HEAD:ops/idol-domain-repair-20260828
