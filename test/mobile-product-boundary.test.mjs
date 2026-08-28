@@ -3,7 +3,22 @@ import assert from "node:assert/strict";
 import { readFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+async function read(path) {
+  try {
+    return await readFile(new URL(`../${path}`, import.meta.url), "utf8");
+  } catch (error) {
+    throw new Error(`failed to read ${path}: ${error.message}`, { cause: error });
+  }
+}
+
+async function parseJsonFile(path) {
+  const source = await read(path);
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    throw new Error(`failed to parse ${path}: ${error.message}`, { cause: error });
+  }
+}
 
 test("global chrome keeps Lib and Worlds distinct while Universe is contextual", async () => {
   const shell = await read("shared/shell.js");
@@ -50,6 +65,7 @@ test("Lib defaults to published records, preserves homes, and links to canonical
   const lib = await read("apps/lib/index.html");
 
   assert.match(lib, /viewport-fit=cover/);
+  // The public query lens is "homes"; the existing transport collection remains "libs".
   assert.match(lib, /let set = requestedSet === "homes" \? "libs" : "worlds"/);
   assert.match(lib, /data-set="worlds"[^>]*class="here"|class="here"[^>]*data-set="worlds"/);
   assert.match(lib, /data-set="libs"/);
@@ -70,12 +86,12 @@ test("build publishes one non-authoritative product-boundary projection", async 
     encoding: "utf8",
     timeout: 30000,
   });
-  if (run.error) throw run.error;
+  if (run.error) throw new Error(`build process failed: ${run.error.message}`, { cause: run.error });
   assert.equal(run.status, 0, run.stderr || run.stdout);
 
-  const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
-  const model = JSON.parse(await readFile("dist/runtime/product-model.json", "utf8"));
-  const authority = JSON.parse(await readFile("runtime/authority.json", "utf8"));
+  const manifest = await parseJsonFile("dist/manifest.json");
+  const model = await parseJsonFile("dist/runtime/product-model.json");
+  const authority = await parseJsonFile("runtime/authority.json");
 
   assert.equal(manifest.surfaces["lib.idol.id"], "lib");
   assert.equal(manifest.surfaces["worlds.idol.id"], "worlds");
