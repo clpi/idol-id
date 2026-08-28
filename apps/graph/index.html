@@ -2,270 +2,612 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Semantic Observatory — idol.id</title>
+<meta name="description" content="Inspect exact compiler-published Idol source spans, graph identities, structural edges, applications, worlds, projections, derivations, witnesses, demand, and physical realization evidence.">
 <link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="/shared/surface.css">
+<link rel="stylesheet" href="/shared/observatory.css">
 <script src="/config.js"></script>
-<style>
-  .notice { min-height: 34px; display: flex; align-items: center; gap: 9px; padding: 6px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-3); font-family: var(--sans); font-size: 10.5px; line-height: 1.5; }
-  .notice strong { color: var(--signal); font-weight: 520; }
-  .pane-editor { flex: 1.05; }
-  .pane-panel { flex: .95; border-left: 1px solid var(--rule); }
-  .editor-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
-  .samples { display: flex; gap: 6px; }
-  .samples select { background: var(--bg-raise); color: var(--ink-2); border: 1px solid var(--rule-2); border-radius: var(--radius); font-family: var(--mono); font-size: 10px; padding: 4px 7px; max-width: 230px; }
-  .busy { position: absolute; top: 45px; right: 12px; z-index: 6; display: none; }
-  .panel { flex: 1; min-height: 0; display: none; flex-direction: column; }
-  .panel.here { display: flex; }
-  .facts { padding: 13px 14px 80px; overflow: auto; }
-  .fact-group { padding: 0 0 14px; margin-bottom: 14px; border-bottom: 1px solid var(--rule); }
-  .fact-group h3 { margin-bottom: 7px; color: var(--ink-4); font-size: 9px; letter-spacing: .13em; text-transform: uppercase; }
-  .kv { display: grid; grid-template-columns: minmax(115px,.45fr) minmax(0,1fr); gap: 12px; padding: 2px 0; font-size: 11px; }
-  .kv .k { color: var(--ink-4); }
-  .kv .v { color: var(--ink-2); overflow-wrap: anywhere; }
-  .empty-state { margin: auto; max-width: 480px; padding: 30px; text-align: center; color: var(--ink-3); font-family: var(--sans); line-height: 1.65; }
-  .controls { display: flex; align-items: center; gap: 7px; padding: 10px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
-  .controls input { min-width: 170px; flex: 1; }
-  .controls .state { margin-left: auto; color: var(--ink-4); font-size: 10px; }
-  .output { flex: 1; min-height: 0; overflow: auto; padding: 13px 14px 80px; white-space: pre-wrap; color: var(--ink-2); }
-  .output .ok { color: var(--ok); }
-  .output .err { color: var(--danger); }
-  .inspector { display: none; padding: 10px 13px; border-bottom: 1px solid var(--rule); max-height: 34%; overflow: auto; }
-  .inspector .title { color: var(--ink); margin-bottom: 6px; }
-  @media (max-width: 800px) {
-    .stage { display: block; overflow: auto; }
-    .pane-editor, .pane-panel { min-height: 58vh; border-left: 0; }
-    .pane-panel { border-top: 1px solid var(--rule); }
-    .split-v { display: none; }
-    .pane-head { min-height: 46px; height: auto; padding: 7px 10px; flex-wrap: wrap; }
-  }
-</style>
 </head>
 <body>
-<div class="app">
+<div class="app observatory" id="observatory" data-mobile-mode="source" data-facts-open="false">
   <div class="topbar"></div>
-  <div class="notice"><strong id="source-status">lexical preview</strong><span id="source-boundary">Spelling and adjacency carry no semantic identity. Analyze to request exact compiler-published graph facts and source spans.</span></div>
-  <div class="stage">
-    <section class="pane pane-editor">
-      <div class="pane-head">
-        <span>source</span><span class="spacer"></span>
-        <span class="samples"><select id="sample" title="Load an authority-pinned source example"></select></span>
-        <button class="ghost" id="fmt">format</button>
-        <button id="analyze">analyze</button>
-        <button id="run" class="primary">run</button>
-      </div>
-      <div class="busy" id="busy"><span class="spin"></span></div>
-      <div id="editor" style="flex:1;display:flex;min-height:0"></div>
-    </section>
-    <div class="split-v" id="split"></div>
-    <section class="pane pane-panel">
-      <div class="tabs" id="tabs">
-        <button class="tab here" data-panel="graph">graph</button>
-        <button class="tab" data-panel="facts">facts</button>
-        <button class="tab" data-panel="lower">realize</button>
-        <button class="tab" data-panel="run">run evidence</button>
-      </div>
-      <div class="pane-body" style="display:flex;flex-direction:column;min-height:0">
-        <div id="panel-graph" class="panel here"><div class="inspector" id="inspector"></div><div id="graph" style="flex:1;min-height:0"></div></div>
-        <div id="panel-facts" class="panel"><div class="facts" id="facts"><div class="empty-state">No compiler projection has been requested. Lexical tokens remain exact source spans with <code>semantic_id: null</code>.</div></div></div>
-        <div id="panel-lower" class="panel">
-          <div class="controls">
-            <select id="target"><option value="native">native</option><option value="aarch64-linux">aarch64-linux</option><option value="aarch64-macos">aarch64-macos</option><option value="wasm32-wasi">wasm32-wasi</option></select>
-            <select id="emit"><option value="asm">assembly</option><option value="c">C bootstrap projection</option><option value="wasm">Wasm</option></select>
-            <select id="opt"><option value="3">O3</option><option value="2">O2</option><option value="1">O1</option><option value="0">O0</option><option value="s">Os</option></select>
-            <button id="lower">request realization</button><span class="state" id="lower-state"></span>
-          </div>
-          <pre class="output" id="lower-output">No realization requested. A machine listing is physical evidence, never semantic authority.</pre>
-        </div>
-        <div id="panel-run" class="panel">
-          <div class="controls"><input id="args" type="text" placeholder="argument vector" spellcheck="false"><button id="run-again">request run</button></div>
-          <pre class="output" id="run-output">No run evidence requested.</pre>
-        </div>
-      </div>
-    </section>
+  <div class="observatory-commandbar">
+    <input id="semantic-search" type="search" placeholder="find exact token, graph id, relation, world…" aria-label="Search the current compiler projection" spellcheck="false">
+    <select id="sample" aria-label="Load an authority-pinned source example"></select>
+    <div>
+      <button id="source-mode" type="button">inspect</button>
+      <button id="analyze" class="primary" type="button">analyze</button>
+      <button id="realize" type="button">realize</button>
+    </div>
+    <div class="observatory-capability" id="capability">lexical preview · semantic identity not published</div>
   </div>
-  <div class="statusbar"></div>
+
+  <nav class="observatory-lenses" aria-label="Semantic inspector lenses">
+    <button class="here" type="button" data-lens="identity">identity</button>
+    <button type="button" data-lens="edges">edges</button>
+    <button type="button" data-lens="occurrences">occurrences</button>
+    <button type="button" data-lens="worlds">worlds</button>
+    <button type="button" data-lens="projection">projection / derivation</button>
+    <button type="button" data-lens="witness">demand / witness</button>
+    <button type="button" data-lens="realization">realization / lowering</button>
+    <button type="button" data-lens="raw">raw record</button>
+  </nav>
+
+  <main class="observatory-workspace">
+    <section class="observatory-pane source-pane" aria-label="Inspectable source">
+      <div class="pane-head"><span>source</span><span class="grow" id="source-state">exact lexical spans</span><button type="button" id="copy-source">copy</button></div>
+      <div class="semantic-source-host" id="semantic-source"></div>
+    </section>
+
+    <section class="observatory-pane graph-pane" aria-label="Semantic graph">
+      <div class="pane-head">
+        <span>semantic graph</span><span class="grow" id="graph-state">not published</span>
+        <button type="button" id="graph-fit">fit</button>
+        <button type="button" id="graph-minus" aria-label="Zoom graph out">−</button>
+        <button type="button" id="graph-plus" aria-label="Zoom graph in">+</button>
+      </div>
+      <div class="graph-host" id="graph"></div>
+    </section>
+
+    <aside class="observatory-pane facts-pane" id="semantic-rail" aria-label="Semantic facts">
+      <div class="pane-head"><span>semantic rail</span><span class="grow" id="rail-lens">identity</span><button type="button" id="compare-selection">compare selection</button></div>
+      <div class="semantic-rail" id="rail-content">
+        <div class="rail-empty">
+          Select any source token, graph node, or structural edge.<br><br>
+          <strong>semantic identity not published</strong> remains different from absent or ambiguous.<br>
+          <strong>definition not published</strong> is never reconstructed from spelling.<br>
+          <strong>world witness not published</strong> is never inferred from a name or package coordinate.<br><br>
+          Same spelling is lexical evidence only; published occurrences require explicit compiler IDs.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="observatory-history" aria-label="Selection history">
+    <span class="label">selection history</span>
+    <button type="button" id="history-back" aria-label="Previous semantic selection">back</button>
+    <button type="button" id="history-forward" aria-label="Next semantic selection">forward</button>
+    <span class="exact" id="history-current">none</span>
+  </div>
+
+  <nav class="observatory-mobile-nav" aria-label="Observatory mobile views">
+    <button class="here" type="button" data-mobile-mode="source">source</button>
+    <button type="button" data-mobile-mode="graph">graph</button>
+    <button type="button" data-mobile-mode="facts">facts</button>
+  </nav>
 </div>
 <script src="/shared/idol.js"></script>
 <script src="/shared/graph.js"></script>
 <script src="/shared/shell.js"></script>
-<script>
-(() => {
-  Shell.boot("graph", { title: "Semantic Observatory", keys: [["⌘1-4", "lenses"], ["⌘↵", "analyze"], ["⌘R", "run"], ["hover", "exact source span"]] });
-  IdolShell.crumbs([{ label: "observatory" }, { label: "source" }]);
+<script type="module">
+import { bundleCapability, lexicalBundle, remoteBundle } from "/shared/semantic-bundle.js";
+import { buildSemanticIndex, selectionForToken } from "/shared/semantic-index.js";
+import { SemanticSourceView } from "/shared/semantic-source.js";
 
-  const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const state = { graph: null, explain: null, status: null };
-  const editor = Idol.editor("#editor", { source: "", oninput: () => scheduleAnalysis() });
-  const explorer = Idol.explore(editor, state);
-  const graphView = new GraphView("#graph", { onSelect: (node) => inspect(node) });
-  let exampleManifest = null;
-  let analyzeTimer = null;
+Shell.boot("graph", { title: "Semantic Observatory", keys: [["⌘↵", "analyze"], ["⌘K", "search"], ["1–8", "lenses"], ["0", "fit graph"]] });
+IdolShell.crumbs([{ label: "observatory" }, { label: "exact projection" }]);
 
-  const setPanel = (name) => {
-    document.querySelectorAll("#tabs .tab").forEach((tab) => tab.classList.toggle("here", tab.dataset.panel === name));
-    document.querySelectorAll(".panel").forEach((panel) => panel.classList.toggle("here", panel.id === `panel-${name}`));
-    if (name === "graph") graphView.fitIfFirst();
-  };
-  document.querySelectorAll("#tabs .tab").forEach((tab) => tab.addEventListener("click", () => setPanel(tab.dataset.panel)));
+const q = (selector) => document.querySelector(selector);
+const authorityResponse = await fetch("/runtime/authority.json", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).catch(() => null);
+const authority = authorityResponse?.language || { repository: "clpi/idol", commit: "not-published" };
+const state = {
+  source: "",
+  bundle: null,
+  index: null,
+  selection: null,
+  selectionKind: null,
+  activeLens: "identity",
+  compare: [],
+  history: [],
+  historyCursor: -1,
+  request: 0,
+  controller: null,
+  realization: null,
+  sourceMode: "inspect",
+};
 
-  const populateExamples = async () => {
-    const response = await fetch("/content/source-examples.json", { cache: "no-store" });
-    if (!response.ok) throw new Error(`example authority ${response.status}`);
-    exampleManifest = await response.json();
-    const select = document.getElementById("sample");
-    const examples = document.createElement("optgroup");
-    examples.label = "authority-pinned source examples";
-    for (const example of exampleManifest.examples) {
-      const option = document.createElement("option");
-      option.value = example.id;
-      option.textContent = `${example.title} · ${example.status.replaceAll("-", " ")}`;
-      examples.appendChild(option);
+const graphView = new GraphView(q("#graph"), {
+  onSelectNode(node) { selectNode(node, true); },
+  onSelectEdge(edge) { selectEdge(edge, true); },
+});
+const sourceView = new SemanticSourceView(q("#semantic-source"), {
+  mode: "inspect",
+  onInput(source) { updateLexical(source, { preserveMode: true }); },
+  onSelect(token, index) { selectToken(index, true); },
+  onHover(token, index) { previewToken(token, index); },
+});
+
+function text(value) { return value === null || value === undefined || value === "" ? "not published" : String(value); }
+function selectionIdentity(selection = state.selection) {
+  if (!selection) return "none";
+  if (state.selectionKind === "token") return selection.token.semantic_id || selection.token.token_id || `span:${selection.token.span.join(":")}`;
+  return selection.id || selection.application || selection.token_id || "published record";
+}
+function element(name, className, content) {
+  const node = document.createElement(name);
+  if (className) node.className = className;
+  if (content !== undefined) node.textContent = content;
+  return node;
+}
+function section(title) {
+  const root = element("section", "rail-section");
+  root.appendChild(element("h3", null, title));
+  const list = element("div", "rail-list");
+  root.appendChild(list);
+  return { root, list };
+}
+function addRow(list, key, value, exact = true) {
+  const row = element("div", "rail-row");
+  row.append(element("span", "key", key), element("span", exact ? "value exact" : "value", text(value)));
+  list.appendChild(row);
+  return row;
+}
+function addLink(list, key, value, action) {
+  const row = element("button", "rail-link");
+  row.type = "button";
+  row.append(element("span", "key", key), element("span", "value exact", text(value)));
+  row.addEventListener("click", action);
+  list.appendChild(row);
+  return row;
+}
+function addRaw(root, value) {
+  const pre = element("pre", "rail-raw");
+  pre.textContent = JSON.stringify(value, null, 2);
+  root.appendChild(pre);
+}
+function notPublished(root, message) {
+  root.appendChild(element("div", "rail-note", message));
+}
+function recordId(record) { return record?.id || record?.application || null; }
+function findLinkedRecord(id) {
+  if (!state.index || id == null) return null;
+  for (const method of ["node", "application", "world", "projection", "derivation", "transformation", "witness", "demand", "realization", "definition", "reference"]) {
+    const record = state.index[method]?.(id);
+    if (record) return { kind: method, record };
+  }
+  return null;
+}
+function recordTokenIndexes(id) {
+  if (!state.index || id == null) return [];
+  return state.index.occurrences(id).map((token) => token.index);
+}
+
+function updateLexical(source, { preserveMode = false } = {}) {
+  state.source = String(source);
+  const tokens = Idol.tokenize(state.source);
+  state.bundle = lexicalBundle({ source: state.source, tokens, authority });
+  state.index = buildSemanticIndex(state.bundle);
+  state.selection = null;
+  state.selectionKind = null;
+  state.realization = null;
+  sourceView.setBundle(state.bundle);
+  if (!preserveMode) sourceView.setMode(state.sourceMode);
+  graphView.setGraph({ nodes: [], edges: [], applications: [] }).catch(() => {});
+  q("#capability").textContent = "lexical preview · semantic identity not published";
+  q("#capability").classList.remove("published");
+  q("#source-state").textContent = `${state.bundle.tokens.length} exact lexical spans`;
+  q("#graph-state").textContent = "not published";
+  renderRail();
+}
+
+async function analyze({ explicit = true } = {}) {
+  const requestId = ++state.request;
+  state.controller?.abort();
+  state.controller = new AbortController();
+  const button = q("#analyze");
+  button.disabled = true;
+  button.textContent = "analyzing…";
+  try {
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: state.source }),
+      signal: state.controller.signal,
+    });
+    const result = await response.json().catch(() => ({ error: `analysis HTTP ${response.status}` }));
+    if (!response.ok) throw new Error(result.detail || result.error || `analysis HTTP ${response.status}`);
+    if (requestId !== state.request) return;
+    const lexical = Idol.tokenize(state.source);
+    state.bundle = remoteBundle({ source: state.source, response: result, authority, tokens: lexical });
+    state.index = buildSemanticIndex(state.bundle);
+    state.selection = null;
+    state.selectionKind = null;
+    sourceView.setBundle(state.bundle);
+    sourceView.setMode("inspect");
+    state.sourceMode = "inspect";
+    q("#source-mode").textContent = "edit";
+    await graphView.setGraph(state.bundle.graph || { nodes: [], edges: [], applications: [] });
+    const capability = bundleCapability(state.bundle);
+    q("#capability").textContent = `${capability} · exact compiler projection`;
+    q("#capability").classList.add("published");
+    q("#source-state").textContent = `${state.bundle.tokens.length} spans · ${state.bundle.tokens.filter((token) => token.binding.status === "published").length} published bindings`;
+    q("#graph-state").textContent = `${state.bundle.graph?.nodes?.length || 0} nodes · ${state.bundle.graph?.edges?.length || 0} structural edges`;
+    renderRail();
+    restoreDeepLink();
+    if (explicit) Idol.toast("Exact compiler projection received");
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    if (requestId !== state.request) return;
+    q("#capability").textContent = `analysis refused · ${error.message}`;
+    q("#capability").classList.remove("published");
+    if (explicit) Idol.toast(error.message, true);
+  } finally {
+    if (requestId === state.request) {
+      button.disabled = false;
+      button.textContent = "analyze";
     }
-    select.appendChild(examples);
-    const first = exampleManifest.examples[0];
-    if (first) {
-      select.value = first.id;
-      editor.setSource(first.source);
-      reportExample(first);
+  }
+}
+
+async function realize() {
+  q("#realize").disabled = true;
+  q("#realize").textContent = "requesting…";
+  try {
+    const response = await fetch("/api/lower", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: state.source, target: "native", emit: "asm", opt: "3" }),
+    });
+    const result = await response.json().catch(() => ({ output: `realization HTTP ${response.status}` }));
+    state.realization = { status: response.ok ? "published physical evidence" : "refused", response: result };
+    setLens("realization");
+    setMobileMode("facts");
+    renderRail();
+  } catch (error) {
+    state.realization = { status: "refused", response: { error: error.message } };
+    setLens("realization");
+    renderRail();
+  } finally {
+    q("#realize").disabled = false;
+    q("#realize").textContent = "realize";
+  }
+}
+
+function selectToken(index, pushHistory = true) {
+  const selection = selectionForToken(state.index, index);
+  if (!selection) return;
+  state.selection = selection;
+  state.selectionKind = "token";
+  sourceView.select(index);
+  const nodes = new Set(selection.nodes.map(recordId));
+  for (const record of selection.applications) nodes.add(recordId(record));
+  graphView.setHighlights({ nodes: [...nodes].filter(Boolean), edges: selection.edges.map(recordId).filter(Boolean) });
+  const firstNode = [...nodes].find((id) => graphView.byId.has(id));
+  if (firstNode) graphView.selectNode(firstNode, false);
+  sourceView.setHighlights(selection.occurrences.map((token) => token.index));
+  if (pushHistory) rememberSelection({ kind: "token", id: index, label: selectionIdentity(selection) });
+  updateDeepLink({ token: index });
+  renderRail();
+}
+
+function nodeSelection(node) {
+  const outgoing = state.index?.outgoing(node.id) || [];
+  const incoming = state.index?.incoming(node.id) || [];
+  return Object.freeze({ ...node, edges: Object.freeze([...incoming, ...outgoing]), occurrences: Object.freeze(state.index?.occurrences(node.id) || []) });
+}
+function selectNode(node, pushHistory = true) {
+  const raw = node?.raw || node;
+  if (!raw?.id) return;
+  state.selection = nodeSelection(raw);
+  state.selectionKind = "node";
+  graphView.setHighlights({ nodes: [raw.id], edges: state.selection.edges.map(recordId).filter(Boolean) });
+  sourceView.setHighlights(recordTokenIndexes(raw.id));
+  if (pushHistory) rememberSelection({ kind: "node", id: raw.id, label: raw.id });
+  updateDeepLink({ node: raw.id });
+  renderRail();
+}
+function selectEdge(edge, pushHistory = true) {
+  if (!edge?.id) return;
+  state.selection = edge;
+  state.selectionKind = "edge";
+  graphView.setHighlights({ nodes: [edge.from, edge.to], edges: [edge.id] });
+  sourceView.setHighlights([...recordTokenIndexes(edge.from), ...recordTokenIndexes(edge.to)]);
+  if (pushHistory) rememberSelection({ kind: "edge", id: edge.id, label: edge.id });
+  updateDeepLink({ edge: edge.id });
+  renderRail();
+}
+function selectRecord(kind, record, pushHistory = true) {
+  state.selection = record;
+  state.selectionKind = kind;
+  const id = recordId(record);
+  graphView.setHighlights({ nodes: id && graphView.byId.has(id) ? [id] : [], edges: [] });
+  sourceView.setHighlights(recordTokenIndexes(id));
+  if (pushHistory) rememberSelection({ kind, id, label: id || kind });
+  updateDeepLink({ record: `${kind}:${id || "not-published"}` });
+  renderRail();
+}
+
+function previewToken(token, index) {
+  if (state.selectionKind === "token" && state.selection?.token.index === index) return;
+  q("#history-current").textContent = token.semantic_id || `${token.value} · semantic identity not published`;
+}
+function rememberSelection(entry) {
+  state.history = state.history.slice(0, state.historyCursor + 1);
+  state.history.push(entry);
+  if (state.history.length > 80) state.history.shift();
+  state.historyCursor = state.history.length - 1;
+  paintHistory();
+}
+function paintHistory() {
+  const current = state.history[state.historyCursor];
+  q("#history-current").textContent = current?.label || selectionIdentity();
+  q("#history-back").disabled = state.historyCursor <= 0;
+  q("#history-forward").disabled = state.historyCursor < 0 || state.historyCursor >= state.history.length - 1;
+}
+function replayHistory(direction) {
+  const next = state.historyCursor + direction;
+  if (next < 0 || next >= state.history.length) return;
+  state.historyCursor = next;
+  const entry = state.history[next];
+  if (entry.kind === "token") selectToken(Number(entry.id), false);
+  else if (entry.kind === "node") {
+    const node = state.index?.node(entry.id);
+    if (node) { graphView.selectNode(entry.id, false); selectNode(node, false); }
+  } else if (entry.kind === "edge") {
+    const edge = state.index?.edge(entry.id);
+    if (edge) { graphView.selectEdge(entry.id, false); selectEdge(edge, false); }
+  } else {
+    const linked = findLinkedRecord(entry.id);
+    if (linked) selectRecord(linked.kind, linked.record, false);
+  }
+  paintHistory();
+}
+
+function setLens(lens) {
+  state.activeLens = lens;
+  q("#rail-lens").textContent = lens;
+  document.querySelectorAll("[data-lens]").forEach((button) => button.classList.toggle("here", button.dataset.lens === lens));
+  graphView.setLens(lens);
+  updateDeepLink({ lens });
+  renderRail();
+}
+function setMobileMode(mode) {
+  q("#observatory").dataset.mobileMode = mode;
+  document.querySelectorAll("[data-mobile-mode]").forEach((button) => button.classList.toggle("here", button.dataset.mobileMode === mode));
+  if (mode === "graph") setTimeout(() => graphView.fitIfFirst(), 30);
+}
+
+function renderSummary(root) {
+  const summary = element("div", "rail-summary");
+  const title = state.selectionKind === "token" ? state.selection.token.value : text(state.selection?.name || state.selection?.label || recordId(state.selection));
+  summary.append(element("h2", null, title), element("div", "kind", state.selectionKind || "selection"));
+  const binding = state.selectionKind === "token" ? state.selection.token.binding.status : "published";
+  const status = element("div", `rail-state ${binding}`,
+    binding === "published" ? "Compiler-published exact record" : binding === "ambiguous" ? "Compiler published multiple candidates" : "semantic identity not published");
+  summary.appendChild(status);
+  root.appendChild(summary);
+}
+function renderIdentity(root) {
+  const { root: sectionRoot, list } = section("canonical identity and source");
+  if (state.selectionKind === "token") {
+    const token = state.selection.token;
+    addRow(list, "span", `${token.span[0]}…${token.span[1]}`);
+    addRow(list, "lexical identity", token.lexical_identity);
+    addRow(list, "source face", token.binding.status === "published" ? token.source_face : "not published");
+    addRow(list, "token identity", token.token_id);
+    addRow(list, "semantic identity", token.semantic_id);
+    addRow(list, "binding", token.binding.status, false);
+    addRow(list, "authority", state.bundle.authority.commit);
+  } else {
+    for (const [key, value] of Object.entries(state.selection || {}).filter(([, value]) => typeof value !== "object").slice(0, 18)) addRow(list, key, value);
+  }
+  root.appendChild(sectionRoot);
+
+  if (state.selectionKind === "token") {
+    const { root: linksRoot, list: links } = section("explicit identity links");
+    const groups = [
+      ["graph", state.selection.nodes], ["application", state.selection.applications], ["definition", state.selection.definitions], ["reference", state.selection.references],
+    ];
+    let count = 0;
+    for (const [kind, records] of groups) for (const record of records) {
+      count += 1;
+      addLink(links, kind, recordId(record), () => selectRecord(kind, record));
     }
-
-    Idol.api.get("/api/libs").then((document) => {
-      const group = window.document.createElement("optgroup");
-      group.label = "registry source projections";
-      for (const library of document.libs || []) {
-        const option = window.document.createElement("option");
-        option.value = `registry:${library.name}`;
-        option.textContent = library.name;
-        group.appendChild(option);
-      }
-      select.appendChild(group);
-    }).catch(() => {});
-  };
-
-  const reportExample = (example) => {
-    document.getElementById("source-status").textContent = example.status.replaceAll("-", " ");
-    document.getElementById("source-boundary").textContent = example.status.includes("implementation-not-claimed")
-      ? "This face is projected from current semantic law; parser, lowering, and execution support are not claimed."
-      : "This source is a bounded projection of current compact law; semantic identity still requires compiler facts.";
-  };
-
-  document.getElementById("sample").addEventListener("change", async (event) => {
-    const value = event.target.value;
-    if (value.startsWith("registry:")) {
-      const name = value.slice("registry:".length);
-      try {
-        editor.setSource(await Idol.api.text(`/api/lib/${encodeURIComponent(name)}/source`));
-        document.getElementById("source-status").textContent = "foreign registry source projection";
-        document.getElementById("source-boundary").textContent = "Registry source retains its declared source law and provenance; this browser does not infer native Idol meaning.";
-      } catch (error) { Idol.toast(error.message, true); }
-      return;
+    if (!state.selection.definitions.length) notPublished(linksRoot, "definition not published; same spelling is not a definition.");
+    if (!state.selection.references.length) notPublished(linksRoot, "reference identities not published; no name-based cross-reference is fabricated.");
+    if (!count) notPublished(linksRoot, "No semantic or graph identity link was published for this exact span.");
+    root.appendChild(linksRoot);
+  }
+}
+function renderEdges(root) {
+  const edges = state.selectionKind === "token" ? state.selection.edges : state.selectionKind === "node" ? state.selection.edges : state.selectionKind === "edge" ? [state.selection] : [];
+  const { root: sectionRoot, list } = section("published structural edges");
+  if (!edges.length) notPublished(sectionRoot, "No structural edge is published for this selection.");
+  for (const edge of edges) {
+    const label = edge.presentation?.label || edge.role || edge.structural_role || edge.relation || edge.label || "role not published";
+    addLink(list, label, `${edge.from} → ${edge.to}`, () => { graphView.selectEdge(edge.id, true); selectEdge(edge); setMobileMode("graph"); });
+  }
+  root.appendChild(sectionRoot);
+  if (state.selectionKind === "edge") {
+    const { root: endpointsRoot, list: endpoints } = section("edge endpoints");
+    for (const [key, id] of [["from", state.selection.from], ["to", state.selection.to]]) {
+      const linked = findLinkedRecord(id);
+      if (linked) addLink(endpoints, key, id, () => selectRecord(linked.kind, linked.record)); else addRow(endpoints, key, id);
     }
-    const example = exampleManifest?.examples.find((candidate) => candidate.id === value);
-    if (example) { editor.setSource(example.source); reportExample(example); }
-  });
+    addRow(endpoints, "published role field", state.selection.presentation?.field);
+    addRow(endpoints, "classification", state.selection.presentation?.status, false);
+    root.appendChild(endpointsRoot);
+  }
+}
+function renderOccurrences(root) {
+  const { root: publishedRoot, list: published } = section("published occurrences");
+  const occurrences = state.selectionKind === "token" ? state.selection.occurrences : recordTokenIndexes(recordId(state.selection)).map((index) => state.bundle.tokens[index]);
+  if (!occurrences.length) notPublished(publishedRoot, "No compiler-published occurrence is linked to this identity.");
+  for (const occurrence of occurrences) addLink(published, `span ${occurrence.span.join("…")}`, occurrence.token_id || occurrence.semantic_id || "exact source span", () => { selectToken(occurrence.index); setMobileMode("source"); });
+  root.appendChild(publishedRoot);
 
-  const scheduleAnalysis = () => {
-    clearTimeout(analyzeTimer);
-    analyzeTimer = setTimeout(() => analyze(false), 700);
+  if (state.selectionKind === "token") {
+    const { root: spellingRoot, list: spelling } = section("same spelling · lexical only");
+    for (const occurrence of state.selection.same_spelling) addLink(spelling, `span ${occurrence.span.join("…")}`, occurrence.value, () => { sourceView.select(occurrence.index, { focus: true }); setMobileMode("source"); });
+    notPublished(spellingRoot, "Same spelling does not establish identity, definition, reference, equivalence, or reach.");
+    root.appendChild(spellingRoot);
+  }
+}
+function renderRecordCollection(root, title, records, emptyMessage, kind) {
+  const { root: sectionRoot, list } = section(title);
+  if (!records.length) notPublished(sectionRoot, emptyMessage);
+  for (const record of records) addLink(list, kind, recordId(record), () => selectRecord(kind, record));
+  root.appendChild(sectionRoot);
+}
+function renderWorlds(root) {
+  const records = state.selectionKind === "token" ? state.selection.worlds : state.selectionKind === "world" ? [state.selection] : [];
+  renderRecordCollection(root, "published worlds", records, "world identity not published for this selection.", "world");
+  if (!records.length) notPublished(root, "world witness not published; a name, home, path, or package record cannot manufacture one.");
+}
+function renderProjection(root) {
+  const selection = state.selectionKind === "token" ? state.selection : null;
+  renderRecordCollection(root, "projections", selection?.projections || (state.selectionKind === "projection" ? [state.selection] : []), "projection record not published.", "projection");
+  renderRecordCollection(root, "derivations", selection?.derivations || (state.selectionKind === "derivation" ? [state.selection] : []), "derivation record not published.", "derivation");
+  renderRecordCollection(root, "transformations", selection?.transformations || (state.selectionKind === "transformation" ? [state.selection] : []), "transformation record not published.", "transformation");
+}
+function renderWitness(root) {
+  const selection = state.selectionKind === "token" ? state.selection : null;
+  renderRecordCollection(root, "demands", selection?.demands || (state.selectionKind === "demand" ? [state.selection] : []), "occurrence demand not published.", "demand");
+  renderRecordCollection(root, "witnesses", selection?.witnesses || (state.selectionKind === "witness" ? [state.selection] : []), "constraint, equivalence, or world witness not published.", "witness");
+}
+function renderRealization(root) {
+  const selection = state.selectionKind === "token" ? state.selection : null;
+  renderRecordCollection(root, "realizations", selection?.realizations || (state.selectionKind === "realization" ? [state.selection] : []), "realization record not published.", "realization");
+  const { root: loweringRoot } = section("lowering and physical evidence");
+  if (selection?.lowering?.length) addRaw(loweringRoot, selection.lowering);
+  else if (state.realization) addRaw(loweringRoot, state.realization);
+  else if (state.bundle?.output != null) addRaw(loweringRoot, state.bundle.output);
+  else notPublished(loweringRoot, "No lowering range or physical realization evidence has been published.");
+  root.appendChild(loweringRoot);
+}
+function renderRaw(root) {
+  const { root: rawRoot } = section("raw compiler or lexical record");
+  addRaw(rawRoot, state.selectionKind === "token" ? state.selection.token.raw : state.selection);
+  root.appendChild(rawRoot);
+}
+function renderCompare(root) {
+  if (state.compare.length !== 2) return;
+  const { root: compareRoot, list } = section("compare selection");
+  addRow(list, state.compare[0].kind, state.compare[0].id);
+  addRow(list, state.compare[1].kind, state.compare[1].id);
+  notPublished(compareRoot, "Comparison exposes published records side by side; it does not prove equivalence, compatibility, reach, composition, or authority.");
+  root.appendChild(compareRoot);
+}
+function renderRail() {
+  const root = q("#rail-content");
+  root.replaceChildren();
+  if (!state.selection) {
+    const empty = element("div", "rail-empty");
+    empty.innerHTML = "Select any exact source token, compiler-published graph node, or structural edge.<br><br><strong>semantic identity not published</strong>, <strong>definition not published</strong>, and <strong>world witness not published</strong> are explicit states.";
+    root.appendChild(empty);
+    return;
+  }
+  renderSummary(root);
+  if (state.activeLens === "identity") renderIdentity(root);
+  else if (state.activeLens === "edges") renderEdges(root);
+  else if (state.activeLens === "occurrences") renderOccurrences(root);
+  else if (state.activeLens === "worlds") renderWorlds(root);
+  else if (state.activeLens === "projection") renderProjection(root);
+  else if (state.activeLens === "witness") renderWitness(root);
+  else if (state.activeLens === "realization") renderRealization(root);
+  else renderRaw(root);
+  renderCompare(root);
+}
+
+function updateDeepLink(values) {
+  const url = new URL(location.href);
+  for (const key of ["token", "node", "edge", "record"]) if (key in values) {
+    for (const clear of ["token", "node", "edge", "record"]) url.searchParams.delete(clear);
+    url.searchParams.set(key, values[key]);
+  }
+  if (values.lens) url.searchParams.set("lens", values.lens);
+  history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+}
+function restoreDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const lens = params.get("lens");
+  if (lens) setLens(lens);
+  if (params.has("token")) selectToken(Number(params.get("token")), false);
+  else if (params.has("node")) {
+    const node = state.index?.node(params.get("node"));
+    if (node) { graphView.selectNode(node.id, false); selectNode(node, false); }
+  } else if (params.has("edge")) {
+    const edge = state.index?.edge(params.get("edge"));
+    if (edge) { graphView.selectEdge(edge.id, false); selectEdge(edge, false); }
+  }
+}
+
+function searchProjection(query) {
+  const needle = query.trim().toLowerCase();
+  if (!needle || !state.bundle) return null;
+  const token = state.bundle.tokens.find((record) => [record.value, record.semantic_id, record.token_id, ...(record.graph_ids || [])].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle)));
+  if (token) return { kind: "token", record: token };
+  for (const node of state.bundle.graph?.nodes || []) if ([node.id, node.name, node.kind].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))) return { kind: "node", record: node };
+  for (const edge of state.bundle.graph?.edges || []) if ([edge.id, edge.role, edge.structural_role, edge.relation, edge.from, edge.to].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))) return { kind: "edge", record: edge };
+  return null;
+}
+
+async function loadExamples() {
+  const response = await fetch("/content/source-examples.json", { cache: "no-store" });
+  if (!response.ok) throw new Error(`source examples ${response.status}`);
+  const manifest = await response.json();
+  const select = q("#sample");
+  select.replaceChildren();
+  for (const example of manifest.examples || []) {
+    const option = element("option", null, `${example.title} · ${example.status.replaceAll("-", " ")}`);
+    option.value = example.id;
+    select.appendChild(option);
+  }
+  const apply = () => {
+    const example = manifest.examples.find((candidate) => candidate.id === select.value) || manifest.examples[0];
+    if (example) updateLexical(example.source);
   };
+  select.addEventListener("change", apply);
+  apply();
+}
 
-  const analyze = async (explicit) => {
-    document.getElementById("busy").style.display = "block";
-    try {
-      const result = await Idol.api.post("/api/analyze", { source: editor.source });
-      state.graph = result.graph || null;
-      state.explain = result.explain || null;
-      state.status = result.check || null;
-      explorer.rebind();
-      graphView.setGraph(state.graph || { nodes: [], edges: [] });
-      renderFacts(result);
-      document.getElementById("source-status").textContent = state.graph ? "compiler projection received" : "analysis returned no graph";
-      document.getElementById("source-boundary").textContent = state.graph
-        ? "Only exact compiler-published identities and spans are shown as semantic facts. Unbound source remains lexical provenance."
-        : "No exact semantic graph was published; lexical preview remains non-semantic.";
-      if (explicit) Idol.toast(state.graph ? `compiler graph · ${(state.graph.nodes || []).length} nodes` : "compiler returned no graph");
-    } catch (error) {
-      state.graph = null;
-      explorer.rebind();
-      graphView.setGraph({ nodes: [], edges: [] });
-      document.getElementById("source-status").textContent = "analysis refused";
-      document.getElementById("source-boundary").textContent = error.message;
-      if (explicit) Idol.toast(error.message, true);
-    } finally {
-      document.getElementById("busy").style.display = "none";
-    }
-  };
+q("#analyze").addEventListener("click", () => analyze());
+q("#realize").addEventListener("click", realize);
+q("#source-mode").addEventListener("click", () => {
+  state.sourceMode = state.sourceMode === "inspect" ? "edit" : "inspect";
+  sourceView.setMode(state.sourceMode);
+  q("#source-mode").textContent = state.sourceMode === "inspect" ? "edit" : "inspect";
+});
+q("#copy-source").addEventListener("click", () => navigator.clipboard.writeText(state.source).then(() => Idol.toast("source copied")).catch((error) => Idol.toast(error.message, true)));
+q("#graph-fit").addEventListener("click", () => graphView.fit());
+q("#graph-minus").addEventListener("click", () => graphView.zoomBy(.86));
+q("#graph-plus").addEventListener("click", () => graphView.zoomBy(1.16));
+q("#history-back").addEventListener("click", () => replayHistory(-1));
+q("#history-forward").addEventListener("click", () => replayHistory(1));
+q("#compare-selection").addEventListener("click", () => {
+  if (!state.selection) return;
+  const candidate = { kind: state.selectionKind, id: selectionIdentity() };
+  if (state.compare.length === 2) state.compare = [];
+  state.compare.push(candidate);
+  q("#compare-selection").textContent = state.compare.length === 1 ? "select second" : "clear compare";
+  renderRail();
+});
+document.querySelectorAll("[data-lens]").forEach((button) => button.addEventListener("click", () => setLens(button.dataset.lens)));
+document.querySelectorAll("[data-mobile-mode]").forEach((button) => button.addEventListener("click", () => setMobileMode(button.dataset.mobileMode)));
+q("#semantic-search").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const found = searchProjection(event.currentTarget.value);
+  if (!found) { Idol.toast("No exact token, node, or edge matches", true); return; }
+  if (found.kind === "token") { selectToken(found.record.index); setMobileMode("source"); }
+  else if (found.kind === "node") { graphView.selectNode(found.record.id, true); selectNode(found.record); setMobileMode("graph"); }
+  else { graphView.selectEdge(found.record.id, true); selectEdge(found.record); setMobileMode("graph"); }
+});
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); analyze(); }
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); q("#semantic-search").focus(); }
+  if (/^[1-8]$/.test(event.key) && !event.metaKey && !event.ctrlKey && !event.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) {
+    const lenses = ["identity", "edges", "occurrences", "worlds", "projection", "witness", "realization", "raw"];
+    setLens(lenses[Number(event.key) - 1]);
+  }
+});
 
-  const valueRow = (key, value) => `<div class="kv"><span class="k">${escapeHtml(key)}</span><span class="v">${escapeHtml(value)}</span></div>`;
-  const renderFacts = (result) => {
-    const graph = result.graph || {};
-    const check = result.check || {};
-    const groups = [];
-    groups.push(`<section class="fact-group"><h3>source and check</h3>${valueRow("source law", graph.root_source_law ? `${graph.root_source_law.family || ""} · ${graph.root_source_law.schema || ""}` : "not published")}${valueRow("check", check.ok === true ? "pass" : check.ok === false ? "refused" : "not reported")}${check.output ? valueRow("diagnostic", check.output) : ""}</section>`);
-    groups.push(`<section class="fact-group"><h3>semantic graph</h3>${valueRow("schema", graph.schema || "not published")}${valueRow("nodes", String((graph.nodes || []).length))}${valueRow("edges", String((graph.edges || []).length))}${valueRow("applications", String((graph.applications || []).length))}${valueRow("exact token projections", String((graph.tokens || graph.token_projections || []).length))}</section>`);
-    if (Array.isArray(graph.worlds) && graph.worlds.length) groups.push(`<section class="fact-group"><h3>world projections</h3>${graph.worlds.map((world, index) => valueRow(`world ${index + 1}`, JSON.stringify(world))).join("")}</section>`);
-    document.getElementById("facts").innerHTML = groups.join("");
-  };
-
-  const inspect = (node) => {
-    const panel = document.getElementById("inspector");
-    if (!node) { panel.style.display = "none"; return; }
-    const rows = Object.entries(node).slice(0, 18).map(([key, value]) => valueRow(key, typeof value === "object" ? JSON.stringify(value) : String(value))).join("");
-    panel.innerHTML = `<div class="title">exact published node</div>${rows}`;
-    panel.style.display = "block";
-  };
-
-  const requestLowering = async () => {
-    const output = document.getElementById("lower-output");
-    const status = document.getElementById("lower-state");
-    status.textContent = "requesting";
-    output.textContent = "";
-    try {
-      const result = await Idol.api.post("/api/lower", {
-        source: editor.source,
-        target: document.getElementById("target").value,
-        emit: document.getElementById("emit").value,
-        opt: document.getElementById("opt").value,
-      });
-      output.textContent = result.output || result.code || JSON.stringify(result, null, 2);
-      status.textContent = result.ok === false ? "refused" : "physical projection received";
-    } catch (error) { output.textContent = error.message; status.textContent = "refused"; }
-  };
-
-  const requestRun = async () => {
-    setPanel("run");
-    const output = document.getElementById("run-output");
-    output.textContent = "requesting run evidence";
-    try {
-      const raw = document.getElementById("args").value.trim();
-      const result = await Idol.api.post("/api/run", { source: editor.source, args: raw ? raw.split(/\s+/) : [] });
-      output.innerHTML = `<span class="${result.rc === 0 ? "ok" : "err"}">exit ${escapeHtml(String(result.rc))}</span>\n${escapeHtml(result.stdout || "")}${result.stderr ? `\n${escapeHtml(result.stderr)}` : ""}`;
-    } catch (error) { output.innerHTML = `<span class="err">${escapeHtml(error.message)}</span>`; }
-  };
-
-  document.getElementById("analyze").addEventListener("click", () => analyze(true));
-  document.getElementById("lower").addEventListener("click", requestLowering);
-  document.getElementById("run").addEventListener("click", requestRun);
-  document.getElementById("run-again").addEventListener("click", requestRun);
-  document.getElementById("fmt").addEventListener("click", async () => {
-    try {
-      const result = await Idol.api.post("/api/fmt", { source: editor.source });
-      if (result.ok && typeof result.source === "string") editor.setSource(result.source);
-      else throw new Error(result.output || "formatter refused");
-    } catch (error) { Idol.toast(error.message, true); }
-  });
-  addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); analyze(true); }
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "r") { event.preventDefault(); requestRun(); }
-    if ((event.metaKey || event.ctrlKey) && /^[1-4]$/.test(event.key)) { event.preventDefault(); setPanel(["graph", "facts", "lower", "run"][Number(event.key) - 1]); }
-  });
-
-  populateExamples().catch((error) => {
-    document.getElementById("source-status").textContent = "authority unavailable";
-    document.getElementById("source-boundary").textContent = error.message;
-  });
-})();
+paintHistory();
+loadExamples().catch((error) => {
+  updateLexical("# exact source examples unavailable");
+  q("#capability").textContent = `source example refused · ${error.message}`;
+});
 </script>
 </body>
 </html>

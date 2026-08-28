@@ -30,9 +30,63 @@ jobs:
       - name: Repository authority and transport security
         run: node --test test/repository-platform-errors.test.mjs test/repository-worker.test.mjs test/repository-transformation-worker.test.mjs
       - name: Test and build every surface
-        run: npm run check
+        id: full_check
+        shell: bash
+        run: |
+          set +e
+          npm run check 2>&1 | tee /tmp/idol-check.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Produce concise failure evidence
+        if: steps.full_check.outputs.status != '0'
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path('/tmp/idol-check.log').read_text(errors='replace')
+          lines = source.splitlines()
+          selected = []
+          for index, line in enumerate(lines):
+              if line.startswith('not ok '):
+                  selected.extend(lines[index:index + 24])
+              elif re.match(r'^# (?:tests|pass|fail|cancelled|skipped|todo) ', line):
+                  selected.append(line)
+          Path('/tmp/idol-check-summary.txt').write_text('\n'.join(selected) + '\n')
+          print('\n'.join(selected))
+          PY
+      - name: Upload failed test evidence
+        if: steps.full_check.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: idol-check-failure-${{ github.run_id }}
+          path: |
+            /tmp/idol-check.log
+            /tmp/idol-check-summary.txt
+          retention-days: 7
+      - name: Enforce full check result
+        if: steps.full_check.outputs.status != '0'
+        run: exit 1
       - name: Validate Worker bundle
         run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
+      - name: Browser interaction and responsive semantic QA
+        run: node scripts/browser-smoke.mjs
+      - name: Upload browser interaction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: idol-browser-smoke-${{ github.run_id }}
+          path: .artifacts/browser-smoke
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload verified preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: idol-preview-${{ github.run_id }}
+          path: dist
+          retention-days: 7
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

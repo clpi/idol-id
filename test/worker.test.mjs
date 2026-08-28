@@ -20,32 +20,26 @@ function envWithAssets() {
   return {
     IDOL_COMMIT: "abc123",
     IDOL_AUTHORITY: "authority123",
-    ASSETS: {
-      async fetch(request) {
-        const path = new URL(request.url).pathname;
-        const found = files.get(path);
-        if (!found) return new Response("missing", { status: 404 });
-        if (request.headers.get("if-none-match") === "worlds-v1") {
-          return new Response(null, { status: 304, headers: { etag: "worlds-v1" } });
-        }
-        return new Response(found[1], { headers: { "content-type": found[0], etag: "worlds-v1" } });
-      },
-    },
+    ASSETS: { async fetch(request) {
+      const path = new URL(request.url).pathname;
+      const found = files.get(path);
+      if (!found) return new Response("missing", { status: 404 });
+      if (request.headers.get("if-none-match") === "worlds-v1") return new Response(null, { status: 304, headers: { etag: "worlds-v1" } });
+      return new Response(found[1], { headers: { "content-type": found[0], etag: "worlds-v1" } });
+    } },
   };
 }
 
 const originalFetch = globalThis.fetch;
-test.afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
+test.afterEach(() => { globalThis.fetch = originalFetch; });
 
 test("host map uses one graph application for graph and architecture aliases", () => {
   assert.deepEqual(resolveHost("graph.idol.id"), { app: "graph", surface: "graph", origin: true });
   assert.deepEqual(resolveHost("r16.idol.id"), { app: "graph", surface: "r16", origin: true });
 });
 
-test("worlds and platform are originless custom-domain surfaces", () => {
-  assert.deepEqual(resolveHost("worlds.idol.id"), { app: "worlds", surface: "worlds", origin: false });
+test("Worlds is a Lib compatibility host while Platform remains originless", () => {
+  assert.deepEqual(resolveHost("worlds.idol.id"), { app: "lib", surface: "lib", origin: false, redirect: "https://lib.idol.id" });
   assert.deepEqual(resolveHost("platform.idol.id"), { app: "platform", surface: "platform", origin: false });
 });
 
@@ -59,37 +53,27 @@ test("root serves the site shell with security headers", async () => {
 });
 
 test("graph aliases receive the graph shell", async () => {
-  const response = await handle(new Request("https://r8a.idol.id/explore", {
-    headers: { "sec-fetch-mode": "navigate" },
-  }), envWithAssets());
+  const response = await handle(new Request("https://r8a.idol.id/explore", { headers: { "sec-fetch-mode": "navigate" } }), envWithAssets());
   assert.equal(await response.text(), "<html>graph</html>");
 });
 
-test("worlds navigation receives the atlas shell", async () => {
-  const response = await handle(new Request("https://worlds.idol.id/world/std", {
-    headers: { "sec-fetch-mode": "navigate" },
-  }), envWithAssets());
-  assert.equal(await response.text(), "<html>worlds</html>");
+test("Worlds navigation preserves its path and query through the Lib compatibility alias", async () => {
+  const response = await handle(new Request("https://worlds.idol.id/world/std?lens=facts", { headers: { "sec-fetch-mode": "navigate" } }), envWithAssets());
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get("location"), "https://lib.idol.id/world/std?lens=facts");
 });
 
 test("Platform IDE navigation receives the IDE shell without changing other host applications", async () => {
   for (const path of ["/ide", "/ide/", "/ide/workspace/workspace-1"]) {
-    const response = await handle(new Request(`https://platform.idol.id${path}`, {
-      headers: { "sec-fetch-mode": "navigate" },
-    }), envWithAssets());
+    const response = await handle(new Request(`https://platform.idol.id${path}`, { headers: { "sec-fetch-mode": "navigate" } }), envWithAssets());
     assert.equal(response.status, 200);
     assert.equal(await response.text(), "<html>ide</html>");
   }
-
-  const rootResponse = await handle(new Request("https://idol.id/ide", {
-    headers: { "sec-fetch-mode": "navigate" },
-  }), envWithAssets());
+  const rootResponse = await handle(new Request("https://idol.id/ide", { headers: { "sec-fetch-mode": "navigate" } }), envWithAssets());
   assert.equal(await rootResponse.text(), "<html>site</html>");
-
-  const worldsResponse = await handle(new Request("https://worlds.idol.id/ide", {
-    headers: { "sec-fetch-mode": "navigate" },
-  }), envWithAssets());
-  assert.equal(await worldsResponse.text(), "<html>worlds</html>");
+  const worldsResponse = await handle(new Request("https://worlds.idol.id/ide", { headers: { "sec-fetch-mode": "navigate" } }), envWithAssets());
+  assert.equal(worldsResponse.status, 308);
+  assert.equal(worldsResponse.headers.get("location"), "https://lib.idol.id/ide");
 });
 
 test("config reports the precise host surface and authority", async () => {
@@ -107,10 +91,10 @@ test("api requests preserve the existing tunnel origin", async () => {
   assert.equal(await response.text(), "origin:/api/authority");
 });
 
-test("originless surfaces refuse dynamic proxy paths instead of recursing", async () => {
+test("originless Platform refuses dynamic proxy paths instead of recursing", async () => {
   let called = false;
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
-  const response = await handle(new Request("https://worlds.idol.id/api/worlds"), envWithAssets());
+  const response = await handle(new Request("https://platform.idol.id/api/worlds"), envWithAssets());
   assert.equal(response.status, 404);
   assert.equal(called, false);
 });
@@ -118,9 +102,7 @@ test("originless surfaces refuse dynamic proxy paths instead of recursing", asyn
 test("conditional static asset responses survive originless routing", async () => {
   let called = false;
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
-  const response = await handle(new Request("https://worlds.idol.id/runtime/worlds.json", {
-    headers: { "if-none-match": "worlds-v1" },
-  }), envWithAssets());
+  const response = await handle(new Request("https://platform.idol.id/runtime/worlds.json", { headers: { "if-none-match": "worlds-v1" } }), envWithAssets());
   assert.equal(response.status, 304);
   assert.equal(response.headers.get("etag"), "worlds-v1");
   assert.equal(called, false);
