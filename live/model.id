@@ -1,0 +1,32 @@
+# Lawful Live collaboration model. Host execution is not claimed.
+
+project = (id, name, slug, summary, visibility)
+    {
+        id = id
+        name = name
+        slug = slug
+        summary = summary
+        visibility = visibility
+        identity = "not-published"
+        authority = "none"
+    }
+
+event = (id, project, kind, predecessor, intent, application, payload)
+    {
+        id = id
+        project = project
+        kind = kind
+        predecessor = predecessor
+        intent = intent
+        application = application
+        payload = payload
+    }
+
+frontier = (id, project, event, state, reason)
+    {
+        id = id
+        project = project
+        event = event
+        state = state
+        reason = reason
+    }

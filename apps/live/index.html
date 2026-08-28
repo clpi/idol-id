@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live — idol.id</title>
+<link rel="stylesheet" href="/shared/live-app.css">
+<script src="/config.js"></script>
+</head>
+<body class="app live-shell" data-mobile="projects" data-inspector="closed">
+  <header class="topbar"></header>
+
+  <main class="live-layout" aria-label="Idsem Live project control plane">
+    <aside class="live-panel live-projects" aria-label="Projects">
+      <div class="live-head">
+        <div>
+          <div class="live-kicker">collaboration truth</div>
+          <h1>Live</h1>
+        </div>
+        <span class="spacer"></span>
+        <a class="live-button" href="https://platform.idol.id/#tokens">API keys</a>
+      </div>
+      <p class="live-muted" style="margin-top:10px">One causal history, one accepted frontier, exact attempts retained. Live does not own language truth or mint world authority.</p>
+      <div id="live-project-list" class="live-project-list" aria-live="polite"></div>
+
+      <form id="live-project-form" class="live-form" autocomplete="off">
+        <div class="live-kicker">new project</div>
+        <label class="live-field"><span>Name</span><input name="name" required maxlength="120" placeholder="Idsem compiler"></label>
+        <label class="live-field"><span>Slug</span><input name="slug" required maxlength="63" pattern="[a-z0-9][a-z0-9-]{0,62}" placeholder="idsem-compiler"></label>
+        <label class="live-field"><span>Summary</span><textarea name="summary" maxlength="1024" placeholder="The desired project outcome and active constraints"></textarea></label>
+        <label class="live-field"><span>Visibility</span><select name="visibility"><option value="private">private</option><option value="public">public record, still Access-controlled</option></select></label>
+        <button class="live-button primary" type="submit">Create project</button>
+      </form>
+      <div id="live-notice" class="live-notice" hidden role="status"></div>
+    </aside>
+
+    <section class="live-workbench" aria-label="Project graph and history">
+      <div class="live-project-header">
+        <div class="live-kicker">project projection</div>
+        <h2 id="live-project-title" class="live-project-title">Select a project</h2>
+        <p id="live-project-summary" class="live-project-summary">Projects retain one immutable causal history and one accepted frontier. Nothing here grants semantic or world authority.</p>
+        <div class="live-boundary">
+          <span id="live-project-id">semantic identity not published</span>
+          <span>semantic universes 1</span>
+          <span>authority grant none</span>
+          <span>dispatcher authority none</span>
+        </div>
+      </div>
+
+      <nav class="live-tabs" aria-label="Project lenses">
+        <button class="live-tab here" type="button" data-live-lens="graph">Graph</button>
+        <button class="live-tab" type="button" data-live-lens="history">History</button>
+      </nav>
+
+      <div id="live-graph-lens" class="live-lens here">
+        <section class="live-section">
+          <div class="live-section-title"><h3>Nodes</h3><span id="live-node-count" class="live-count">0</span></div>
+          <div id="live-node-grid" class="live-record-grid"></div>
+        </section>
+        <section class="live-section">
+          <div class="live-section-title"><h3>Applications</h3><span id="live-application-count" class="live-count">0</span></div>
+          <p class="live-muted" style="margin-top:9px">An operation remains a relation identity. The application projects relation, subject, target, operand, result, witness, demand, and provenance as structural roles.</p>
+          <div id="live-application-grid" class="live-record-grid"></div>
+        </section>
+        <section class="live-section">
+          <div class="live-section-title"><h3>Derived structural edges</h3><span id="live-edge-count" class="live-count">0</span></div>
+          <div id="live-edge-list" class="live-edge-list"></div>
+        </section>
+      </div>
+
+      <div id="live-history-lens" class="live-lens">
+        <section class="live-section">
+          <div class="live-section-title"><h3>Immutable history</h3><span id="live-event-count" class="live-count">0</span></div>
+          <div id="live-history-list" class="live-history-list"></div>
+        </section>
+        <section class="live-section">
+          <div class="live-section-title"><h3>Accepted frontier decisions</h3><span id="live-frontier-count" class="live-count">0</span></div>
+          <p class="live-muted" style="margin-top:9px">Admission is causally closed. Rejecting or superseding an event adds a decision; it does not delete the attempt.</p>
+          <div id="live-frontier-list" class="live-frontier-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <aside class="live-panel live-inspector" aria-label="Facts and project commands">
+      <div class="live-head">
+        <div>
+          <div class="live-kicker">verified identity</div>
+          <h2 id="live-identity">loading</h2>
+        </div>
+        <span class="spacer"></span>
+        <a class="live-button" href="https://platform.idol.id/">Profile</a>
+      </div>
+
+      <div id="live-inspector-record"></div>
+
+      <div class="live-command-stack" style="margin-top:16px">
+        <details class="live-command" open>
+          <summary>Add node</summary>
+          <form id="live-node-form" class="live-form" data-project-form autocomplete="off">
+            <label class="live-field"><span>Category</span><select name="category"><option>goal</option><option>task</option><option>attempt</option><option>intent</option><option>observation</option><option>actor</option><option>delegation</option><option>capability</option><option>claim</option><option>conflict</option><option>review</option><option>witness</option><option>evidence</option><option>policy</option><option>artifact</option><option>outcome</option><option>context</option><option>world-view</option><option>projection</option><option>release</option><option>incident</option></select></label>
+            <label class="live-field"><span>Label</span><input name="label" required maxlength="160"></label>
+            <label class="live-field"><span>Summary</span><textarea name="summary" maxlength="1024"></textarea></label>
+            <button class="live-button" type="submit">Publish node record</button>
+          </form>
+        </details>
+
+        <details class="live-command">
+          <summary>Add application</summary>
+          <form id="live-application-form" class="live-form" data-project-form autocomplete="off">
+            <datalist id="live-node-ids"></datalist><datalist id="live-subject-ids"></datalist><datalist id="live-target-ids"></datalist>
+            <label class="live-field"><span>Relation identity</span><input name="relation" required maxlength="160" placeholder="requires"></label>
+            <label class="live-field"><span>Subject node</span><input name="subject" list="live-subject-ids" required></label>
+            <label class="live-field"><span>Target node</span><input name="target" list="live-target-ids"></label>
+            <label class="live-field"><span>Operand IDs, comma separated</span><input name="operands"></label>
+            <label class="live-field"><span>Result IDs, comma separated</span><input name="results"></label>
+            <label class="live-field"><span>World reference IDs</span><input name="worlds"></label>
+            <label class="live-field"><span>Witness IDs</span><input name="witnesses"></label>
+            <label class="live-field"><span>Demand fact</span><input name="demand"></label>
+            <button class="live-button" type="submit">Publish application facts</button>
+          </form>
+        </details>
+
+        <details class="live-command">
+          <summary>Append history event</summary>
+          <form id="live-event-form" class="live-form" data-project-form autocomplete="off">
+            <datalist id="live-event-ids"></datalist><datalist id="live-application-ids"></datalist>
+            <label class="live-field"><span>Kind</span><select name="kind"><option>observed</option><option>attempted</option><option>completed</option><option>failed</option><option>reviewed</option><option>witness-produced</option><option>external-injected</option><option>context-invalidated</option></select></label>
+            <label class="live-field"><span>Predecessor event IDs</span><input name="predecessors" list="live-event-ids"></label>
+            <label class="live-field"><span>Intent node ID</span><input name="intent" list="live-node-ids"></label>
+            <label class="live-field"><span>Application IDs</span><input name="applications" list="live-application-ids"></label>
+            <label class="live-field"><span>Note</span><textarea name="note" maxlength="2048"></textarea></label>
+            <button class="live-button" type="submit">Append immutable event</button>
+          </form>
+        </details>
+
+        <details class="live-command">
+          <summary>Set frontier decision</summary>
+          <form id="live-frontier-form" class="live-form" data-project-form autocomplete="off">
+            <label class="live-field"><span>Event ID</span><input name="event" list="live-event-ids" required></label>
+            <label class="live-field"><span>State</span><select name="state"><option>held</option><option>admitted</option><option>rejected</option><option>superseded</option><option>reversed</option></select></label>
+            <label class="live-field"><span>Reason</span><input name="reason" maxlength="1024"></label>
+            <button class="live-button" type="submit">Append frontier decision</button>
+          </form>
+        </details>
+
+        <details class="live-command">
+          <summary>Bind Universe View</summary>
+          <form id="live-world-form" class="live-form" data-project-form autocomplete="off">
+            <label class="live-field"><span>Universe View ID</span><input name="universe_view_id" required pattern="uv_[A-Za-z0-9_-]{12,}" placeholder="uv_…"></label>
+            <p class="live-muted">This stores a subject-owned operational projection reference. It copies no world and grants no authority.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="live-button" type="submit">Bind view</button><a class="live-button" href="https://platform.idol.id/universe">Manage views</a></div>
+          </form>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <nav class="live-mobile-nav" aria-label="Live mobile modes">
+    <button type="button" class="here" data-mobile-view="projects">Projects</button>
+    <button type="button" data-mobile-view="graph">Graph</button>
+    <button type="button" data-mobile-view="history">History</button>
+    <button type="button" data-mobile-view="facts">Facts</button>
+  </nav>
+  <footer class="statusbar"></footer>
+
+  <script src="/shared/shell.js"></script>
+  <script src="/shared/live-app.js"></script>
+</body>
+</html>

@@ -8,6 +8,7 @@
 
 const APPS = Object.freeze([
   { id: "graph", label: "explorer", href: "https://graph.idol.id/", title: "Semantic Observatory" },
+  { id: "live", label: "live", href: "https://live.idol.id/", title: "Causal project control plane" },
   { id: "ide", label: "ide", href: "https://platform.idol.id/ide", title: "Browser IDE" },
   { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Admitted world registry" },
   { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Law and documentation" },
@@ -22,6 +23,7 @@ const CONTEXTUAL = Object.freeze([
   { label: "public universe views", href: "https://lib.idol.id/universe", title: "Public operational projections" },
   { label: "manage universe views", href: "https://platform.idol.id/universe", title: "Authenticated Universe management" },
   { label: "repository observatory", href: "https://platform.idol.id/repo", title: "Authenticated Repository Observatory" },
+  { label: "hosted mcp", href: "https://mcp.idol.id/", title: "Stateless scoped MCP transport" },
 ]);
 
 function ensureSurfaceStyles() {
@@ -72,6 +74,7 @@ function activeApp(candidate, app) {
   const host = global.location.hostname;
   if (host === "platform.idol.id" && /^\/ide(?:\/|$)/.test(path)) return candidate.id === "ide";
   if (host === "platform.idol.id" && /^\/(?:universe|repo)(?:\/|$)/.test(path)) return candidate.id === "platform";
+  if (host === "live.idol.id") return candidate.id === "live";
   if (host === "lib.idol.id" || host === "worlds.idol.id" || app === "worlds") return candidate.id === "lib";
   return candidate.id === app;
 }
@@ -90,7 +93,7 @@ function createMobilePanel(app, toggle) {
       ${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}
     </nav>
     <div class="nav-panel-context" aria-label="Contextual projections">
-      <div class="nav-panel-label">library, world, and operational projections</div>
+      <div class="nav-panel-label">library, world, operational, and tool projections</div>
       ${CONTEXTUAL.map((item) => linkMarkup(item)).join("")}
     </div>`;
   document.body.appendChild(panel);
