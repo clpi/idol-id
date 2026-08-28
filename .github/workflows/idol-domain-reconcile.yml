@@ -1,0 +1,206 @@
+name: Idol domain reconcile
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-domain-reconcile.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: idol-domain-reconcile
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  ZONE_NAME: idol.id
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/idol-domain-repair-20260828
+
+      - name: Verify reconciler safety contract
+        run: python3 -m unittest -v tests/test_domain_reconciler.py
+
+      - name: Collect pre-state, plan, and apply fenced DNS corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ops/reports
+          TMP="$(mktemp -d)"
+          export TMP
+          trap 'rm -rf "$TMP"' EXIT
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          api=https://api.cloudflare.com/client/v4
+
+          get() {
+            local url="$1" dst="$2"
+            curl -fsS --retry 3 --retry-all-errors --max-time 30 "${auth[@]}" "$url" > "$dst"
+            jq -e '.success == true' "$dst" >/dev/null
+          }
+
+          collect() {
+            local output="$1" prefix="$2"
+            get "$api/zones?name=$ZONE_NAME&status=active&per_page=50" "$TMP/$prefix-zone.json"
+            ZONE_ID="$(jq -er '.result[0].id' "$TMP/$prefix-zone.json")"
+            export ZONE_ID
+            get "$api/zones/$ZONE_ID/dns_records?per_page=5000" "$TMP/$prefix-dns.json"
+            get "$api/zones/$ZONE_ID/workers/routes?per_page=5000" "$TMP/$prefix-routes.json" \
+              || printf '{"success":false,"result":[]}' > "$TMP/$prefix-routes.json"
+            get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100" "$TMP/$prefix-pages.json" \
+              || printf '{"success":false,"result":[]}' > "$TMP/$prefix-pages.json"
+            get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel?is_deleted=false&per_page=100" "$TMP/$prefix-tunnels.json"
+
+            printf '[]' > "$TMP/$prefix-ingress.json"
+            while IFS=$'\t' read -r tid tname tstatus connection_count; do
+              [[ -n "$tid" ]] || continue
+              cfg="$TMP/$prefix-tunnel-$tid.json"
+              if get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$tid/configurations" "$cfg"; then
+                jq --arg id "$tid" --arg name "$tname" --arg status "$tstatus" --argjson count "$connection_count" \
+                  '[.result.config.ingress[]? | select(.hostname != null) | {tunnel_id:$id,tunnel_name:$name,tunnel_status:$status,connection_count:$count,hostname:.hostname,path:(.path // null),service:(.service // null),origin_request:(.originRequest // {})}]' \
+                  "$cfg" > "$TMP/one-ingress.json"
+                jq -s '.[0]+.[1]' "$TMP/$prefix-ingress.json" "$TMP/one-ingress.json" > "$TMP/merged-ingress.json"
+                mv "$TMP/merged-ingress.json" "$TMP/$prefix-ingress.json"
+              fi
+            done < <(jq -r '.result[] | [.id,.name,.status,(.connections|length)] | @tsv' "$TMP/$prefix-tunnels.json")
+
+            printf '[]' > "$TMP/$prefix-pages-domains.json"
+            while IFS=$'\t' read -r project subdomain; do
+              [[ -n "$project" ]] || continue
+              domains="$TMP/$prefix-pages-$project-domains.json"
+              if get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/domains" "$domains"; then
+                jq --arg project "$project" --arg target "$subdomain" \
+                  '[.result[]? | {project:$project,host:(.name // .domain),status:(.status // "unknown"),target:$target,verification_data:(.verification_data // null),validation_data:(.validation_data // null)}]' \
+                  "$domains" > "$TMP/one-pages.json"
+                jq -s '.[0]+.[1]' "$TMP/$prefix-pages-domains.json" "$TMP/one-pages.json" > "$TMP/merged-pages.json"
+                mv "$TMP/merged-pages.json" "$TMP/$prefix-pages-domains.json"
+              fi
+            done < <(jq -r '.result[]? | [.name,.subdomain] | @tsv' "$TMP/$prefix-pages.json")
+
+            jq -r '.result[].name' "$TMP/$prefix-dns.json" \
+              | awk 'NF && $0 !~ /^\*/ && $0 != "hermes.idol.id" && $0 != "claw.idol.id"' \
+              | sort -u > "$TMP/$prefix-hosts"
+            jq -r '.[].hostname' "$TMP/$prefix-ingress.json" \
+              | awk 'NF && $0 != "hermes.idol.id" && $0 != "claw.idol.id"' >> "$TMP/$prefix-hosts"
+            jq -r '.[].host' "$TMP/$prefix-pages-domains.json" \
+              | awk 'NF && $0 != "hermes.idol.id" && $0 != "claw.idol.id"' >> "$TMP/$prefix-hosts"
+            printf '%s\n' "$ZONE_NAME" >> "$TMP/$prefix-hosts"
+            sort -u -o "$TMP/$prefix-hosts" "$TMP/$prefix-hosts"
+
+            printf '[]' > "$TMP/$prefix-http.json"
+            while IFS= read -r host; do
+              [[ -n "$host" ]] || continue
+              body="$TMP/body"; rm -f "$body"
+              meta="$(curl -ksS -L --connect-timeout 7 --max-time 20 --retry 1 -o "$body" \
+                -w '%{http_code}\t%{url_effective}\t%{content_type}\t%{num_redirects}\t%{size_download}\t%{time_total}\t%{ssl_verify_result}' \
+                "https://$host/" 2>/dev/null || printf '000\thttps://%s/\t\t0\t0\t0\t1' "$host")"
+              IFS=$'\t' read -r code final ctype redirects bytes seconds ssl <<< "$meta"
+              jq -n --arg host "$host" --arg code "$code" --arg final "$final" --arg type "$ctype" \
+                --arg redirects "$redirects" --arg bytes "$bytes" --arg seconds "$seconds" --arg ssl "$ssl" \
+                '{host:$host,path:"/",http:($code|tonumber? // 0),final_url:$final,content_type:$type,redirects:($redirects|tonumber? // 0),bytes:($bytes|tonumber? // 0),seconds:($seconds|tonumber? // 0),ssl_verify_result:($ssl|tonumber? // 1)}' \
+                > "$TMP/one-http.json"
+              jq -s '.[0]+[.[1]]' "$TMP/$prefix-http.json" "$TMP/one-http.json" > "$TMP/merged-http.json"
+              mv "$TMP/merged-http.json" "$TMP/$prefix-http.json"
+            done < "$TMP/$prefix-hosts"
+
+            jq -n \
+              --arg observed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg zone "$ZONE_NAME" --arg zone_id "$ZONE_ID" \
+              --slurpfile dns "$TMP/$prefix-dns.json" --slurpfile tunnels "$TMP/$prefix-tunnels.json" \
+              --slurpfile ingress "$TMP/$prefix-ingress.json" --slurpfile pages "$TMP/$prefix-pages-domains.json" \
+              --slurpfile routes "$TMP/$prefix-routes.json" --slurpfile http "$TMP/$prefix-http.json" \
+              '{schema:"idol.domain.snapshot.v1",observed_at:$observed_at,zone:$zone,zone_id:$zone_id,
+                excluded:["hermes.idol.id","claw.idol.id"],
+                dns:($dns[0].result // [] | map({id,name,type,content,proxied,ttl,comment,tags})),
+                tunnels:($tunnels[0].result // [] | map({id,name,status,connection_count:(.connections|length)})),
+                tunnel_ingress:$ingress[0],pages_domains:$pages[0],
+                worker_routes:($routes[0].result // [] | map({id,pattern,script})),http:$http[0]}' > "$output"
+          }
+
+          collect ops/reports/idol-domain-pre.json pre
+          python3 ops/domain_reconciler.py plan \
+            --snapshot ops/reports/idol-domain-pre.json \
+            --output ops/reports/idol-domain-plan.json
+          python3 ops/domain_reconciler.py apply \
+            --plan ops/reports/idol-domain-plan.json \
+            --output ops/reports/idol-domain-application.json
+
+          # Give Cloudflare's edge a bounded interval to observe control-plane changes.
+          sleep 15
+          collect ops/reports/idol-domain-post.json post
+          python3 ops/domain_reconciler.py plan \
+            --snapshot ops/reports/idol-domain-post.json \
+            --output ops/reports/idol-domain-post-plan.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          plan=json.loads(Path('ops/reports/idol-domain-plan.json').read_text())
+          app=json.loads(Path('ops/reports/idol-domain-application.json').read_text())
+          post=json.loads(Path('ops/reports/idol-domain-post.json').read_text())
+          post_plan=json.loads(Path('ops/reports/idol-domain-post-plan.json').read_text())
+          touched={x['host'] for x in plan['actions']}
+          post_dns={}
+          for r in post['dns']:
+              post_dns.setdefault(r['name'].rstrip('.').lower(),[]).append(r)
+          checks=[]
+          for action in plan['actions']:
+              records=post_dns.get(action['host'],[])
+              ok=len(records)==1 and records[0].get('type')=='CNAME' and records[0].get('content','').rstrip('.').lower()==action['content'] and records[0].get('proxied') is True
+              checks.append({'host':action['host'],'expected':action['content'],'ok':ok,'record_count':len(records)})
+          remaining=[x for x in post_plan['actions'] if x['host'] in touched]
+          report={
+              'schema':'idol.domain.reconciliation-verification.v1',
+              'automatic_actions':plan['actions'],
+              'manual_decisions':plan['manual'],
+              'application_results':app['results'],
+              'post_dns_checks':checks,
+              'remaining_actions_for_touched_hosts':remaining,
+              'verified':all(x['ok'] for x in checks) and not remaining,
+          }
+          Path('ops/reports/idol-domain-reconciliation-verification.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          lines=[
+              '# Idol domain reconciliation', '',
+              f"Automatic DNS actions: **{len(plan['actions'])}**", 
+              f"Manual decisions retained: **{len(plan['manual'])}**", 
+              f"Touched-host DNS verification: **{'PASS' if report['verified'] else 'FAIL'}**", '',
+              '## Automatic actions', '',
+          ]
+          lines += [f"- `{x['host']}`: `{x['kind']}` → `{x['content']}` ({x['reason']})" for x in plan['actions']] or ['- None']
+          lines += ['', '## Still requires origin/application or authority work', '']
+          lines += [f"- `{x['host']}`: `{x['reason']}`" for x in plan['manual']] or ['- None']
+          Path('ops/reports/idol-domain-reconciliation.md').write_text('\n'.join(lines)+'\n')
+          if not report['verified']:
+              raise SystemExit('post-mutation DNS verification failed')
+          PY
+
+      - name: Commit reconciliation evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'idol-domain-bot'
+          git config user.email 'idol-domain-bot@users.noreply.github.com'
+          git add ops/reports/idol-domain-pre.json \
+            ops/reports/idol-domain-plan.json \
+            ops/reports/idol-domain-application.json \
+            ops/reports/idol-domain-post.json \
+            ops/reports/idol-domain-post-plan.json \
+            ops/reports/idol-domain-reconciliation-verification.json \
+            ops/reports/idol-domain-reconciliation.md
+          if git diff --cached --quiet; then
+            echo 'evidence_unchanged=yes'
+          else
+            git commit -m 'ops: reconcile and verify non-agent Idol DNS authority'
+            git push origin HEAD:ops/idol-domain-repair-20260828
+          fi
