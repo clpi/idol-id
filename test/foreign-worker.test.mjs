@@ -43,7 +43,7 @@ const foreign = {
 function envWithForeign() {
   const files = new Map([
     ["/runtime/foreign.json", ["application/json", JSON.stringify(foreign)]],
-    ["/apps/worlds/index.html", ["text/html", "<html>worlds</html>"]],
+    ["/apps/lib/index.html", ["text/html", "<html>lib</html>"]],
     ["/apps/api/index.html", ["text/html", "<html>api</html>"]],
   ]);
   return {
@@ -63,10 +63,10 @@ function envWithForeign() {
 const originalFetch = globalThis.fetch;
 test.afterEach(() => { globalThis.fetch = originalFetch; });
 
-test("foreign world index is available on Worlds and API surfaces without origin fetch", async () => {
+test("foreign world index is available on Lib and API surfaces without origin fetch", async () => {
   let called = false;
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
-  for (const host of ["worlds.idol.id", "api.idol.id"]) {
+  for (const host of ["lib.idol.id", "api.idol.id"]) {
     const response = await handle(new Request(`https://${host}/v1/world/foreign`), envWithForeign());
     assert.equal(response.status, 200);
     const body = await response.json();
@@ -76,8 +76,14 @@ test("foreign world index is available on Worlds and API surfaces without origin
   assert.equal(called, false);
 });
 
+test("worlds compatibility host redirects before foreign transport", async () => {
+  const response = await handle(new Request("https://worlds.idol.id/v1/world/foreign"), envWithForeign());
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get("location"), "https://lib.idol.id/v1/world/foreign");
+});
+
 test("one integration record is returned by provenance slug", async () => {
-  const response = await handle(new Request("https://worlds.idol.id/v1/world/c17/integration"), envWithForeign());
+  const response = await handle(new Request("https://lib.idol.id/v1/world/c17/integration"), envWithForeign());
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.world.slug, "c17");
@@ -86,14 +92,14 @@ test("one integration record is returned by provenance slug", async () => {
 });
 
 test("unknown foreign integration slug fails closed", async () => {
-  const response = await handle(new Request("https://worlds.idol.id/v1/world/unknown/integration"), envWithForeign());
+  const response = await handle(new Request("https://lib.idol.id/v1/world/unknown/integration"), envWithForeign());
   assert.equal(response.status, 404);
 });
 
 test("import plan is deterministic, plan-only, and performs no fetch", async () => {
   let called = false;
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
-  const request = new Request("https://worlds.idol.id/v1/world/import-plan", {
+  const request = new Request("https://lib.idol.id/v1/world/import-plan", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ kind: "repository", locator: "https://example.invalid/repo", version: "abc" }),
@@ -108,12 +114,12 @@ test("import plan is deterministic, plan-only, and performs no fetch", async () 
 });
 
 test("invalid import JSON and unsupported kinds fail exactly", async () => {
-  let response = await handle(new Request("https://worlds.idol.id/v1/world/import-plan", {
+  let response = await handle(new Request("https://lib.idol.id/v1/world/import-plan", {
     method: "POST", body: "{", headers: { "content-type": "application/json" },
   }), envWithForeign());
   assert.equal(response.status, 400);
 
-  response = await handle(new Request("https://worlds.idol.id/v1/world/import-plan", {
+  response = await handle(new Request("https://lib.idol.id/v1/world/import-plan", {
     method: "POST",
     body: JSON.stringify({ kind: "magic", locator: "x" }),
     headers: { "content-type": "application/json" },
@@ -122,7 +128,7 @@ test("invalid import JSON and unsupported kinds fail exactly", async () => {
 });
 
 test("import plan body is bounded", async () => {
-  const response = await handle(new Request("https://worlds.idol.id/v1/world/import-plan", {
+  const response = await handle(new Request("https://lib.idol.id/v1/world/import-plan", {
     method: "POST",
     body: JSON.stringify({ kind: "repository", locator: "x".repeat(33000) }),
     headers: { "content-type": "application/json" },
