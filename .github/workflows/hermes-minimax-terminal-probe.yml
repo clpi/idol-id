@@ -49,19 +49,26 @@ jobs:
           jq -e '.ok == true' /tmp/login.json >/dev/null
 
           curl -fsS --max-time 20 -b /tmp/cookies -H 'Content-Type: application/json' \
-            --data '{"workspace":"/Users/clp","model":"MiniMax-M2.7","model_provider":"minimax"}' \
+            --data '{"model":"MiniMax-M2.7","model_provider":"minimax"}' \
             "$BASE/api/session/new" > /tmp/new.json
           SID="$(jq -er '.session.session_id' /tmp/new.json)"
-          echo "session_created=yes model=$(jq -r '.session.model' /tmp/new.json) provider=$(jq -r '.session.model_provider' /tmp/new.json)"
+          WORKSPACE="$(jq -er '.session.workspace' /tmp/new.json)"
+          echo "session_created=yes model=$(jq -r '.session.model' /tmp/new.json) provider=$(jq -r '.session.model_provider' /tmp/new.json) workspace_basename=$(basename "$WORKSPACE")"
 
           cat > /tmp/probe.sh <<'PROBE'
           #!/usr/bin/env bash
           set -euo pipefail
-          printf 'IDOL_HA_CONTROL_OK host=%s user=%s arch=%s\n' "$(hostname)" "$(id -un)" "$(uname -m)"
+          printf 'IDOL_HA_CONTROL_OK host=%s user=%s arch=%s kernel=%s cwd=%s\n' "$(hostname)" "$(id -un)" "$(uname -m)" "$(uname -s)" "$PWD"
+          for command_name in tailscale ssh systemctl launchctl docker cloudflared hermes openclaw; do
+            if command -v "$command_name" >/dev/null 2>&1; then
+              printf 'COMMAND_%s=present\n' "$(printf '%s' "$command_name" | tr '[:lower:]' '[:upper:]')"
+            else
+              printf 'COMMAND_%s=absent\n' "$(printf '%s' "$command_name" | tr '[:lower:]' '[:upper:]')"
+            fi
+          done
           test -s "$HOME/.hermes/.env"
           python3 - <<'PY'
           from pathlib import Path
-          import re
           value=''
           for raw in (Path.home()/'.hermes/.env').read_text(errors='replace').splitlines():
               line=raw.strip()
@@ -81,7 +88,7 @@ jobs:
 
           PROMPT="Use the terminal tool exactly once. Run exactly: bash '$SCRIPT_PATH'. Do not run any other command, do not inspect any file yourself, and return the command stdout verbatim."
           curl -fsS --max-time 30 -b /tmp/cookies -H 'Content-Type: application/json' \
-            --data "$(jq -nc --arg sid "$SID" --arg m "$PROMPT" '{session_id:$sid,message:$m,model:"MiniMax-M2.7",model_provider:"minimax",workspace:"/Users/clp"}')" \
+            --data "$(jq -nc --arg sid "$SID" --arg m "$PROMPT" --arg ws "$WORKSPACE" '{session_id:$sid,message:$m,model:"MiniMax-M2.7",model_provider:"minimax",workspace:$ws}')" \
             "$BASE/api/chat/start" > /tmp/start.json
           STREAM_ID="$(jq -er '.stream_id' /tmp/start.json)"
           echo "stream_started=yes"
