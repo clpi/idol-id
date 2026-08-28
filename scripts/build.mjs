@@ -1,28 +1,328 @@
-import {access,cp,mkdir,readFile,rm,stat,writeFile} from "node:fs/promises";
-import {constants} from "node:fs";
-import {createHash} from "node:crypto";
-import {dirname,join,resolve} from "node:path";
-import {fileURLToPath} from "node:url";
-import {normaliseForeignWorld} from "../shared/foreign.js";
-const here=dirname(fileURLToPath(import.meta.url)),root=resolve(here,".."),dist=join(root,"dist");
-const authorityPin=JSON.parse(await readFile(join(root,"runtime","authority.json"),"utf8"));
-const authority=authorityPin.language.commit,native=authorityPin.native.commit,commit=process.env.GITHUB_SHA||process.env.IDOL_WEB_COMMIT||"development";
-async function exists(path){try{await access(path,constants.R_OK);return true}catch{return false}}
-function requireText(value,label){if(typeof value!=="string"||!value.trim())throw new Error(`${label} must be a nonempty string`);return value.trim()}
-function validateForeignSource(source){if(!source||source.schema!=="idol.web.foreign.source.v1")throw new Error("foreign source schema mismatch");const revision=requireText(source.revision,"foreign revision");if(!Array.isArray(source.worlds)||!source.worlds.length)throw new Error("foreign source requires worlds[]");if(!Array.isArray(source.import_kinds)||!source.import_kinds.length)throw new Error("foreign source requires import_kinds[]");const worlds=source.worlds.map((candidate,index)=>{requireText(candidate?.slug,`foreign world ${index} slug`);requireText(candidate?.name,`foreign world ${index} name`);requireText(candidate?.version,`foreign world ${index} version`);if(candidate.semantic_id!==null)throw new Error(`foreign world ${candidate.slug} must not fabricate semantic_id`);if(candidate.identity_status!=="not-published")throw new Error(`foreign world ${candidate.slug} identity_status must be not-published`);requireText(candidate?.provenance?.origin?.family,`foreign world ${candidate.slug} origin family`);if(!Array.isArray(candidate.uncertainty)||!candidate.uncertainty.length)throw new Error(`foreign world ${candidate.slug} requires uncertainty`);if(!Array.isArray(candidate.projections)||!candidate.projections.length)throw new Error(`foreign world ${candidate.slug} requires projections`);for(const projection of candidate.projections){requireText(projection.id,`foreign world ${candidate.slug} projection id`);requireText(projection.target,`foreign world ${candidate.slug} projection target`);requireText(projection.status,`foreign world ${candidate.slug} projection status`);if(!projection.obligations||typeof projection.obligations!=="object")throw new Error(`projection ${projection.id} requires obligations`);if(!projection.evidence||typeof projection.evidence!=="object")throw new Error(`projection ${projection.id} requires evidence`);if(!projection.refusal||typeof projection.refusal!=="object")throw new Error(`projection ${projection.id} requires refusal`);if(projection.status==="available"){if(!projection.artifact?.sha256||projection.evidence.status!=="verified")throw new Error(`available projection ${projection.id} requires signed artifact evidence`)}else if(Object.hasOwn(projection,"copy_command"))throw new Error(`unavailable projection ${projection.id} cannot publish a copy command`)}return normaliseForeignWorld(candidate)});const kinds=source.import_kinds.map((record,index)=>{const kind=requireText(record?.kind,`import kind ${index}`);for(const field of["stages","required_grants","missing_facts","refusals"])if(!Array.isArray(record[field])||!record[field].length)throw new Error(`import kind ${kind} requires ${field}[]`);return record});return{revision,worlds,import_kinds:kinds}}
-function injectBeforeModule(html,scripts,label){const marker=/<script type="module">/i;if(!marker.test(html))throw new Error(`${label} has no module entrypoint`);return html.replace(marker,`${scripts.join("\n")}\n<script type="module">`)}
-function injectBeforeBodyEnd(html,scripts,label){if(!/<\/body>/i.test(html))throw new Error(`${label} has no body end`);return html.replace(/<\/body>/i,`${scripts.join("\n")}\n</body>`)}
-await rm(dist,{recursive:true,force:true});await mkdir(dist,{recursive:true});for(const directory of["apps","shared","content","authority"])await cp(join(root,directory),join(dist,directory),{recursive:true});
-const runtimeScripts=['<script src="/shared/web.js" defer></script>','<script src="/shared/wasm.js" defer></script>'].join("\n    ");
-for(const app of["site","docs","lib","api","graph","worlds","platform","ide","repository","universe"]){const path=join(dist,"apps",app,"index.html");let html=await readFile(path,"utf8");if(!html.includes("/shared/web.js"))html=html.replace(/<head([^>]*)>/i,`<head$1>\n    <!-- idol runtime -->\n    ${runtimeScripts}`);const tail=[];if(!html.includes("/shared/repository-nav.js"))tail.push('<script src="/shared/repository-nav.js"></script>');if(app==="platform"&&!html.includes("/shared/platform-ide-entry.js"))tail.push('<script src="/shared/platform-ide-entry.js"></script>');if(app==="platform"&&!html.includes("/shared/platform-repository-entry.js"))tail.push('<script src="/shared/platform-repository-entry.js"></script>');if(app==="platform"&&!html.includes("/shared/platform-universe-entry.js"))tail.push('<script src="/shared/platform-universe-entry.js"></script>');if(app==="site"&&!html.includes("/shared/site-install-entry.js"))tail.push('<script src="/shared/site-install-entry.js"></script>');if(tail.length)html=injectBeforeBodyEnd(html,tail,app);if(app==="ide"&&!html.includes("/shared/ide-semantic-layer.js"))html=injectBeforeModule(html,['<script src="/shared/ide-semantic-layer.js"></script>','<script src="/shared/ide-directory.js"></script>'],"IDE");await writeFile(path,html)}
-await mkdir(join(dist,"runtime"),{recursive:true});
-for(const file of["authority.json","source-law.json","worlds.json","idol-source-manifest.json"])await cp(join(root,"runtime",file),join(dist,"runtime",file));
-const research=JSON.parse(await readFile(join(root,"authority","manifest.json"),"utf8"));const languageAuthority={schema:"idol.web.language-authority.v1",semantic_authority:false,authority:authorityPin,research,rule:"This deployment projects clpi/idol authority; it cannot mint language law."};await writeFile(join(dist,"runtime","language-authority.json"),`${JSON.stringify(languageAuthority,null,2)}\n`);
-const foreignSource=validateForeignSource(JSON.parse(await readFile(join(root,"content","foreign.json"),"utf8")));const foreignManifest={schema:"idol.web.foreign.v1",revision:foreignSource.revision,authority:{language:{repository:authorityPin.language.repository,commit:authority},native:{repository:authorityPin.native.repository,commit:native}},worlds:foreignSource.worlds,import_kinds:foreignSource.import_kinds};await writeFile(join(dist,"runtime","foreign.json"),`${JSON.stringify(foreignManifest,null,2)}\n`);
-const wasmPath=process.env.IDOL_WASM_PATH?resolve(process.env.IDOL_WASM_PATH):null;const descriptorPath=process.env.IDOL_WASM_DESCRIPTOR_PATH?resolve(process.env.IDOL_WASM_DESCRIPTOR_PATH):null;let wasm={available:false,admitted:false,file:null,bytes:0,sha256:null,admission:null};if(wasmPath||descriptorPath){if(!wasmPath)throw new Error("IDOL_WASM_PATH is required when IDOL_WASM_DESCRIPTOR_PATH is supplied");if(!descriptorPath)throw new Error("IDOL_WASM_DESCRIPTOR_PATH is required when IDOL_WASM_PATH is supplied");if(!await exists(wasmPath))throw new Error(`Idol Wasm artifact is unavailable: ${wasmPath}`);if(!await exists(descriptorPath))throw new Error(`Idol Wasm admission descriptor is unavailable: ${descriptorPath}`);const content=await readFile(wasmPath);const artifactSha=createHash("sha256").update(content).digest("hex");const descriptor=JSON.parse(await readFile(descriptorPath,"utf8"));if(descriptor.schema!=="idol.wasm.admission.v1")throw new Error("Wasm descriptor schema must be idol.wasm.admission.v1");if(descriptor.admitted!==true)throw new Error("Wasm descriptor must explicitly set admitted=true");if(descriptor.artifact_sha256!==artifactSha)throw new Error("Wasm descriptor artifact_sha256 does not match artifact bytes");if(descriptor.authority?.language!==authority)throw new Error("Wasm descriptor language authority mismatch");if(descriptor.authority?.native!==native)throw new Error("Wasm descriptor native authority mismatch");if(descriptor.authority?.source_law!==authorityPin.language.source_law.sha256)throw new Error("Wasm descriptor source-law mismatch");if(!Array.isArray(descriptor.capabilities)||!descriptor.capabilities.length)throw new Error("Wasm descriptor requires capabilities[]");const target=join(dist,"runtime","idol-web.wasm");await cp(wasmPath,target);await writeFile(join(dist,"runtime","idol-web.admission.json"),`${JSON.stringify(descriptor,null,2)}\n`);wasm={available:true,admitted:true,file:"/runtime/idol-web.wasm",bytes:(await stat(target)).size,sha256:artifactSha,admission:{file:"/runtime/idol-web.admission.json",admitted:true,capabilities:descriptor.capabilities}}}
-const ide={route:"https://platform.idol.id/ide",local_storage:"indexeddb",source_upload:"explicit-remote-analysis-only",remote_analysis:"/v1/ide/analyze",browser_wasm:wasm.admitted};
-const repository={route:"https://platform.idol.id/repo",visibility:"public-repository-metadata-only",providers:["github","gitlab","bitbucket"],browser_observe:"/v1/repository/browser/observe",api_observe:"/v1/repository/api/observe",scaffold:"review-only",transformation:{status:"derived-world-preview-only",browser_create:"/v1/repository/browser/scaffolds/:id/transformations",api_create:"/v1/repository/api/scaffolds/:id/transformations",semantic_identity:"not-published",evidence:"unexecuted",execution:false,source_world_mutation:false,repository_write:false,world_publication:false},mutation:false,source_transfer:"provider tree metadata only",installer:{unix:"/install",unix_alias:"/install.sh",windows:"/install.ps1",kind:"bootstrap-seed",self_hosted:false}};
-const universe={manager:"https://platform.idol.id/universe",public:"https://worlds.idol.id/universe",browser_views:"/v1/universe/browser/views",api_views:"/v1/universe/api/views",public_views:"/v1/universe/public",kind:"operational-projection",semantic_universes:1,semantic_identity:"not-published",composition:"not-proven",reachability:"published-facts-only",compatibility:"not-proven",equivalence:"not-proven",injection:"not-proven",authority_grant:"none",execution:false,source_world_mutation:false,world_publication:false,dispatcher_access:false};
-const runtimeManifest={schema:"idol.web.runtime.v1",authority:{repository:"clpi/idol",commit:authority},native:{repository:"clpi/idol-native",commit:native},authority_projection:"/runtime/authority.json",language_authority:"/runtime/language-authority.json",research_projection:"/authority/manifest.json",source_law:"/runtime/source-law.json",source_examples:"/content/source-examples.json",authored_sources:"/runtime/idol-source-manifest.json",browser_preview:{kind:"lexical-provenance",semantic_identity:false,exact_span_only:true,shadow_grammar:false},bridge:"/shared/web.js",worlds:"/runtime/worlds.json",foreign:"/runtime/foreign.json",wasm,ide,repository,universe,note:wasm.admitted?"An artifact-bound Idol Wasm realization is admitted and digest-verified before instantiation.":"No Idol Wasm realization is admitted; JavaScript remains transport/presentation and cannot impersonate semantic authority."};await writeFile(join(dist,"runtime","manifest.json"),`${JSON.stringify(runtimeManifest,null,2)}\n`);
-const manifest={schema:"idol.web.deploy.v1",commit,authority,native_authority:native,source_law:authorityPin.language.source_law.sha256,surfaces:{"idol.id":"site","docs.idol.id":"docs","lib.idol.id":"lib","api.idol.id":"api","graph.idol.id":"graph","worlds.idol.id":"worlds","platform.idol.id":"platform","r8a.idol.id":"graph:r8a","r8b.idol.id":"graph:r8b","r16.idol.id":"graph:r16"},runtime:runtimeManifest};await writeFile(join(dist,"manifest.json"),`${JSON.stringify(manifest,null,2)}\n`);
-console.log(`built ${Object.keys(manifest.surfaces).length} idol.id surfaces plus protected IDE, repository, derived-preview, and Universe View workbenches at ${commit}`);console.log(`foreign candidates: ${foreignManifest.worlds.length} · revision ${foreignManifest.revision}`);console.log(`idol wasm: ${wasm.admitted?`${wasm.bytes} bytes ${wasm.sha256}`:"not admitted"}`);
+import { access, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { createHash } from "node:crypto";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { normaliseForeignWorld } from "../shared/foreign.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = resolve(here, "..");
+const dist = join(root, "dist");
+const authorityPin = JSON.parse(await readFile(join(root, "runtime", "authority.json"), "utf8"));
+const authority = authorityPin.language.commit;
+const native = authorityPin.native.commit;
+const commit = process.env.GITHUB_SHA || process.env.IDOL_WEB_COMMIT || "development";
+
+async function exists(path) {
+  try {
+    await access(path, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function requireText(value, label) {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${label} must be a nonempty string`);
+  return value.trim();
+}
+
+function validateForeignSource(source) {
+  if (!source || source.schema !== "idol.web.foreign.source.v1") throw new Error("foreign source schema mismatch");
+  const revision = requireText(source.revision, "foreign revision");
+  if (!Array.isArray(source.worlds) || !source.worlds.length) throw new Error("foreign source requires worlds[]");
+  if (!Array.isArray(source.import_kinds) || !source.import_kinds.length) throw new Error("foreign source requires import_kinds[]");
+
+  const worlds = source.worlds.map((candidate, index) => {
+    requireText(candidate?.slug, `foreign world ${index} slug`);
+    requireText(candidate?.name, `foreign world ${index} name`);
+    requireText(candidate?.version, `foreign world ${index} version`);
+    if (candidate.semantic_id !== null) throw new Error(`foreign world ${candidate.slug} must not fabricate semantic_id`);
+    if (candidate.identity_status !== "not-published") throw new Error(`foreign world ${candidate.slug} identity_status must be not-published`);
+    requireText(candidate?.provenance?.origin?.family, `foreign world ${candidate.slug} origin family`);
+    if (!Array.isArray(candidate.uncertainty) || !candidate.uncertainty.length) throw new Error(`foreign world ${candidate.slug} requires uncertainty`);
+    if (!Array.isArray(candidate.projections) || !candidate.projections.length) throw new Error(`foreign world ${candidate.slug} requires projections`);
+    for (const projection of candidate.projections) {
+      requireText(projection.id, `foreign world ${candidate.slug} projection id`);
+      requireText(projection.target, `foreign world ${candidate.slug} projection target`);
+      requireText(projection.status, `foreign world ${candidate.slug} projection status`);
+      if (!projection.obligations || typeof projection.obligations !== "object") throw new Error(`projection ${projection.id} requires obligations`);
+      if (!projection.evidence || typeof projection.evidence !== "object") throw new Error(`projection ${projection.id} requires evidence`);
+      if (!projection.refusal || typeof projection.refusal !== "object") throw new Error(`projection ${projection.id} requires refusal`);
+      if (projection.status === "available") {
+        if (!projection.artifact?.sha256 || projection.evidence.status !== "verified") throw new Error(`available projection ${projection.id} requires signed artifact evidence`);
+      } else if (Object.hasOwn(projection, "copy_command")) {
+        throw new Error(`unavailable projection ${projection.id} cannot publish a copy command`);
+      }
+    }
+    return normaliseForeignWorld(candidate);
+  });
+
+  const importKinds = source.import_kinds.map((record, index) => {
+    const kind = requireText(record?.kind, `import kind ${index}`);
+    for (const field of ["stages", "required_grants", "missing_facts", "refusals"]) {
+      if (!Array.isArray(record[field]) || !record[field].length) throw new Error(`import kind ${kind} requires ${field}[]`);
+    }
+    return record;
+  });
+
+  return { revision, worlds, import_kinds: importKinds };
+}
+
+function injectBeforeModule(html, scripts, label) {
+  const marker = /<script type="module">/i;
+  if (!marker.test(html)) throw new Error(`${label} has no module entrypoint`);
+  return html.replace(marker, `${scripts.join("\n")}\n<script type="module">`);
+}
+
+function injectBeforeBodyEnd(html, scripts, label) {
+  if (!/<\/body>/i.test(html)) throw new Error(`${label} has no body end`);
+  return html.replace(/<\/body>/i, `${scripts.join("\n")}\n</body>`);
+}
+
+await rm(dist, { recursive: true, force: true });
+await mkdir(dist, { recursive: true });
+for (const directory of ["apps", "shared", "content", "authority"]) {
+  await cp(join(root, directory), join(dist, directory), { recursive: true });
+}
+
+const runtimeScripts = [
+  '<script src="/shared/web.js" defer></script>',
+  '<script src="/shared/wasm.js" defer></script>',
+].join("\n    ");
+
+for (const app of ["site", "docs", "lib", "api", "graph", "worlds", "platform", "ide", "repository", "universe"]) {
+  const path = join(dist, "apps", app, "index.html");
+  let html = await readFile(path, "utf8");
+  if (!html.includes("/shared/web.js")) {
+    html = html.replace(/<head([^>]*)>/i, `<head$1>\n    <!-- idol runtime -->\n    ${runtimeScripts}`);
+  }
+  const tail = [];
+  if (!html.includes("/shared/repository-nav.js")) tail.push('<script src="/shared/repository-nav.js"></script>');
+  if (app === "platform" && !html.includes("/shared/platform-ide-entry.js")) tail.push('<script src="/shared/platform-ide-entry.js"></script>');
+  if (app === "platform" && !html.includes("/shared/platform-repository-entry.js")) tail.push('<script src="/shared/platform-repository-entry.js"></script>');
+  if (app === "platform" && !html.includes("/shared/platform-universe-entry.js")) tail.push('<script src="/shared/platform-universe-entry.js"></script>');
+  if (app === "site" && !html.includes("/shared/site-install-entry.js")) tail.push('<script src="/shared/site-install-entry.js"></script>');
+  if (tail.length) html = injectBeforeBodyEnd(html, tail, app);
+  if (app === "ide" && !html.includes("/shared/ide-semantic-layer.js")) {
+    html = injectBeforeModule(html, [
+      '<script src="/shared/ide-semantic-layer.js"></script>',
+      '<script src="/shared/ide-directory.js"></script>',
+    ], "IDE");
+  }
+  await writeFile(path, html);
+}
+
+await mkdir(join(dist, "runtime"), { recursive: true });
+for (const file of ["authority.json", "source-law.json", "worlds.json", "idol-source-manifest.json"]) {
+  await cp(join(root, "runtime", file), join(dist, "runtime", file));
+}
+
+const research = JSON.parse(await readFile(join(root, "authority", "manifest.json"), "utf8"));
+const languageAuthority = {
+  schema: "idol.web.language-authority.v1",
+  semantic_authority: false,
+  authority: authorityPin,
+  research,
+  rule: "This deployment projects clpi/idol authority; it cannot mint language law.",
+};
+await writeFile(join(dist, "runtime", "language-authority.json"), `${JSON.stringify(languageAuthority, null, 2)}\n`);
+
+const foreignSource = validateForeignSource(JSON.parse(await readFile(join(root, "content", "foreign.json"), "utf8")));
+const foreignManifest = {
+  schema: "idol.web.foreign.v1",
+  revision: foreignSource.revision,
+  authority: {
+    language: { repository: authorityPin.language.repository, commit: authority },
+    native: { repository: authorityPin.native.repository, commit: native },
+  },
+  worlds: foreignSource.worlds,
+  import_kinds: foreignSource.import_kinds,
+};
+await writeFile(join(dist, "runtime", "foreign.json"), `${JSON.stringify(foreignManifest, null, 2)}\n`);
+
+const wasmPath = process.env.IDOL_WASM_PATH ? resolve(process.env.IDOL_WASM_PATH) : null;
+const descriptorPath = process.env.IDOL_WASM_DESCRIPTOR_PATH ? resolve(process.env.IDOL_WASM_DESCRIPTOR_PATH) : null;
+let wasm = { available: false, admitted: false, file: null, bytes: 0, sha256: null, admission: null };
+if (wasmPath || descriptorPath) {
+  if (!wasmPath) throw new Error("IDOL_WASM_PATH is required when IDOL_WASM_DESCRIPTOR_PATH is supplied");
+  if (!descriptorPath) throw new Error("IDOL_WASM_DESCRIPTOR_PATH is required when IDOL_WASM_PATH is supplied");
+  if (!await exists(wasmPath)) throw new Error(`Idol Wasm artifact is unavailable: ${wasmPath}`);
+  if (!await exists(descriptorPath)) throw new Error(`Idol Wasm admission descriptor is unavailable: ${descriptorPath}`);
+  const content = await readFile(wasmPath);
+  const artifactSha = createHash("sha256").update(content).digest("hex");
+  const descriptor = JSON.parse(await readFile(descriptorPath, "utf8"));
+  if (descriptor.schema !== "idol.wasm.admission.v1") throw new Error("Wasm descriptor schema must be idol.wasm.admission.v1");
+  if (descriptor.admitted !== true) throw new Error("Wasm descriptor must explicitly set admitted=true");
+  if (descriptor.artifact_sha256 !== artifactSha) throw new Error("Wasm descriptor artifact_sha256 does not match artifact bytes");
+  if (descriptor.authority?.language !== authority) throw new Error("Wasm descriptor language authority mismatch");
+  if (descriptor.authority?.native !== native) throw new Error("Wasm descriptor native authority mismatch");
+  if (descriptor.authority?.source_law !== authorityPin.language.source_law.sha256) throw new Error("Wasm descriptor source-law mismatch");
+  if (!Array.isArray(descriptor.capabilities) || !descriptor.capabilities.length) throw new Error("Wasm descriptor requires capabilities[]");
+  const target = join(dist, "runtime", "idol-web.wasm");
+  await cp(wasmPath, target);
+  await writeFile(join(dist, "runtime", "idol-web.admission.json"), `${JSON.stringify(descriptor, null, 2)}\n`);
+  wasm = {
+    available: true,
+    admitted: true,
+    file: "/runtime/idol-web.wasm",
+    bytes: (await stat(target)).size,
+    sha256: artifactSha,
+    admission: { file: "/runtime/idol-web.admission.json", admitted: true, capabilities: descriptor.capabilities },
+  };
+}
+
+const ide = {
+  route: "https://platform.idol.id/ide",
+  local_storage: "indexeddb",
+  source_upload: "explicit-remote-analysis-only",
+  remote_analysis: "/v1/ide/analyze",
+  browser_wasm: wasm.admitted,
+};
+
+const repository = {
+  route: "https://platform.idol.id/repo",
+  visibility: "public-repository-metadata-only",
+  providers: ["github", "gitlab", "bitbucket"],
+  browser_observe: "/v1/repository/browser/observe",
+  api_observe: "/v1/repository/api/observe",
+  scaffold: "review-only",
+  transformation: {
+    status: "derived-world-preview-only",
+    browser_create: "/v1/repository/browser/scaffolds/:id/transformations",
+    api_create: "/v1/repository/api/scaffolds/:id/transformations",
+    semantic_identity: "not-published",
+    evidence: "unexecuted",
+    execution: false,
+    source_world_mutation: false,
+    repository_write: false,
+    world_publication: false,
+  },
+  mutation: false,
+  source_transfer: "provider tree metadata only",
+  installer: {
+    unix: "/install",
+    unix_alias: "/install.sh",
+    windows: "/install.ps1",
+    kind: "bootstrap-seed",
+    self_hosted: false,
+  },
+};
+
+const universe = {
+  manager: "https://platform.idol.id/universe",
+  public: "https://worlds.idol.id/universe",
+  browser_views: "/v1/universe/browser/views",
+  api_views: "/v1/universe/api/views",
+  public_views: "/v1/universe/public",
+  kind: "operational-projection",
+  semantic_universes: 1,
+  semantic_identity: "not-published",
+  composition: "not-proven",
+  reachability: "published-facts-only",
+  compatibility: "not-proven",
+  equivalence: "not-proven",
+  injection: "not-proven",
+  authority_grant: "none",
+  execution: false,
+  source_world_mutation: false,
+  world_publication: false,
+  dispatcher_access: false,
+};
+
+const productModel = {
+  schema: "idol.web.product-model.v1",
+  semantic_authority: false,
+  semantic_universes: 1,
+  authority: {
+    language: authority,
+    native,
+    source_law: authorityPin.language.source_law.sha256,
+  },
+  surfaces: {
+    lib: {
+      kind: "package-and-world-registry-projection",
+      canonical: "https://lib.idol.id",
+      package_record_is_semantic_identity: false,
+      default_lens: "published-worlds",
+      home_lens: "reach-and-provenance",
+    },
+    worlds: {
+      kind: "world-atlas-projection",
+      canonical: "https://worlds.idol.id",
+      identity_source: "registry-or-compiler-published-only",
+      foreignness: "qualification",
+    },
+    universe: {
+      kind: "operational-projection",
+      manager: "https://platform.idol.id/universe",
+      public: "https://worlds.idol.id/universe",
+      mints_semantic_universe: false,
+      authority_grant: "none",
+    },
+  },
+  entities: {
+    home: { kind: "reach-and-provenance", is_world: false, is_subject: false },
+    path: { is_identity: false },
+    package_provenance: { is_authority: false, is_semantic_identity: false },
+  },
+  graph: {
+    structural_roles_source: "compiler-projection-only",
+    web_declared_roles: [],
+    operations_are_relation_identities: true,
+    reverse_traversal: "derived-index",
+  },
+  rule: "These are presentation and transport projections over one semantic universe; they cannot mint identities, worlds, equivalence, or authority.",
+};
+await writeFile(join(dist, "runtime", "product-model.json"), `${JSON.stringify(productModel, null, 2)}\n`);
+
+const runtimeManifest = {
+  schema: "idol.web.runtime.v1",
+  authority: { repository: "clpi/idol", commit: authority },
+  native: { repository: "clpi/idol-native", commit: native },
+  authority_projection: "/runtime/authority.json",
+  language_authority: "/runtime/language-authority.json",
+  research_projection: "/authority/manifest.json",
+  product_model: "/runtime/product-model.json",
+  source_law: "/runtime/source-law.json",
+  source_examples: "/content/source-examples.json",
+  authored_sources: "/runtime/idol-source-manifest.json",
+  browser_preview: { kind: "lexical-provenance", semantic_identity: false, exact_span_only: true, shadow_grammar: false },
+  bridge: "/shared/web.js",
+  worlds: "/runtime/worlds.json",
+  foreign: "/runtime/foreign.json",
+  wasm,
+  ide,
+  repository,
+  universe,
+  note: wasm.admitted
+    ? "An artifact-bound Idol Wasm realization is admitted and digest-verified before instantiation."
+    : "No Idol Wasm realization is admitted; JavaScript remains transport/presentation and cannot impersonate semantic authority.",
+};
+await writeFile(join(dist, "runtime", "manifest.json"), `${JSON.stringify(runtimeManifest, null, 2)}\n`);
+
+const manifest = {
+  schema: "idol.web.deploy.v1",
+  commit,
+  authority,
+  native_authority: native,
+  source_law: authorityPin.language.source_law.sha256,
+  surfaces: {
+    "idol.id": "site",
+    "docs.idol.id": "docs",
+    "lib.idol.id": "lib",
+    "api.idol.id": "api",
+    "graph.idol.id": "graph",
+    "worlds.idol.id": "worlds",
+    "platform.idol.id": "platform",
+    "r8a.idol.id": "graph:r8a",
+    "r8b.idol.id": "graph:r8b",
+    "r16.idol.id": "graph:r16",
+  },
+  runtime: runtimeManifest,
+};
+await writeFile(join(dist, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+
+console.log(`built ${Object.keys(manifest.surfaces).length} idol.id surfaces plus protected IDE, repository, derived-preview, and Universe View workbenches at ${commit}`);
+console.log(`foreign candidates: ${foreignManifest.worlds.length} · revision ${foreignManifest.revision}`);
+console.log(`idol wasm: ${wasm.admitted ? `${wasm.bytes} bytes ${wasm.sha256}` : "not admitted"}`);
