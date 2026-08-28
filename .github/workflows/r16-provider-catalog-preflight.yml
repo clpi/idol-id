@@ -1,0 +1,98 @@
+name: r16 provider catalog preflight
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-provider-catalog-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DEPLOY_KEY_ARTIFACT_ID: "9696748865"
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open sealed provider bundle
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts /tmp/r16key
+          python -m pip install -q cryptography
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$DEPLOY_KEY_ARTIFACT_ID/zip" -o /tmp/key.zip
+          unzip -q /tmp/key.zip -d /tmp/r16key
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+          p=json.loads(Path('/tmp/r16key/r16-deploy-private.enc.json').read_text())
+          k=HKDF(algorithm=hashes.SHA256(),length=32,salt=base64.b64decode(p['salt']),info=p['info'].encode()).derive(os.environ['CLOUDFLARE_API_TOKEN'].encode())
+          pem=AESGCM(k).decrypt(base64.b64decode(p['nonce']),base64.b64decode(p['ciphertext']),p['aad'].encode())
+          private=serialization.load_pem_private_key(pem,password=None)
+          e=json.loads(Path('ops/r16-provider-bundle.rsa.json').read_text())
+          dk=private.decrypt(base64.b64decode(e['encrypted_key']),padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=None))
+          plain=AESGCM(dk).decrypt(base64.b64decode(e['nonce']),base64.b64decode(e['ciphertext']),e['aad'].encode())
+          assert hashlib.sha256(plain).hexdigest()==e['payload_sha256']
+          assert json.loads(plain)['marker']=='idol-r16-provider-migration-v2'
+          Path('/tmp/r16-provider-bundle.json').write_bytes(plain)
+          Path('/tmp/r16-provider-bundle.json').chmod(0o600)
+          PY
+          rm -rf /tmp/r16key /tmp/key.zip
+
+      - name: Resolve live model catalogs
+        shell: bash
+        run: |
+          set -euo pipefail
+          nano="$(jq -r '.nanogpt_key' /tmp/r16-provider-bundle.json)"
+          nano_base="$(jq -r '.nanogpt_base_url' /tmp/r16-provider-bundle.json)"
+          synthetic="$(jq -r '.synthetic_key' /tmp/r16-provider-bundle.json)"
+          minimax="$(jq -r '.minimax_key' /tmp/r16-provider-bundle.json)"
+
+          fetch_catalog(){
+            name="$1"; url="$2"; token="$3"
+            code="$(curl -sS --max-time 45 -H "Authorization: Bearer $token" -H 'Accept: application/json' -o "/tmp/$name.json" -w '%{http_code}' "$url" || true)"
+            jq -nc --arg provider "$name" --arg url "$url" --arg code "$code" '{provider:$provider,url:$url,http:($code|tonumber? // 0)}' > "artifacts/$name-status.json"
+            if [ "$code" = 200 ]; then
+              jq '[.data[]? | (.id//.name//.model//empty)] | map(select(type=="string" and length>0)) | unique | sort' "/tmp/$name.json" > "artifacts/$name-models.json"
+            else
+              jq -nc '[]' > "artifacts/$name-models.json"
+              jq 'walk(if type=="object" then with_entries(if (.key|test("key|token|secret|password|credential";"i")) then .value="<redacted>" else . end) else . end)' "/tmp/$name.json" > "artifacts/$name-error-redacted.json" 2>/dev/null || true
+            fi
+            echo "$name: HTTP $code, $(jq length "artifacts/$name-models.json") models"
+          }
+
+          fetch_catalog nanogpt "${nano_base%/}/models" "$nano"
+          fetch_catalog synthetic-openai "https://api.synthetic.new/openai/v1/models" "$synthetic"
+          fetch_catalog synthetic-anthropic "https://api.synthetic.new/anthropic/v1/models" "$synthetic"
+          fetch_catalog minimax-openai "https://api.minimax.io/v1/models" "$minimax"
+          fetch_catalog minimax-anthropic "https://api.minimax.io/anthropic/v1/models" "$minimax"
+
+          jq -n '{nanogpt:input[0],synthetic_openai:input[1],synthetic_anthropic:input[2],minimax_openai:input[3],minimax_anthropic:input[4]}' \
+            artifacts/nanogpt-models.json artifacts/synthetic-openai-models.json artifacts/synthetic-anthropic-models.json artifacts/minimax-openai-models.json artifacts/minimax-anthropic-models.json \
+            > artifacts/provider-catalogs.json
+          rm -f /tmp/r16-provider-bundle.json /tmp/nanogpt.json /tmp/synthetic-*.json /tmp/minimax-*.json
+
+      - name: Upload provider catalog evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-provider-catalog-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
