@@ -17,6 +17,7 @@ const APPS = Object.freeze([
 const CONTEXTUAL = Object.freeze([
   { label: "public universe views", href: "https://worlds.idol.id/universe", title: "Public operational projections" },
   { label: "manage universe views", href: "https://platform.idol.id/universe", title: "Authenticated Universe management" },
+  { label: "repository observatory", href: "https://platform.idol.id/repo", title: "Authenticated Repository Observatory" },
 ]);
 
 function ensureSurfaceStyles() {
