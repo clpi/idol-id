@@ -41,7 +41,9 @@ jobs:
             'runtime/authority.json', 'runtime/source-law.json', 'content/source-examples.json',
             'runtime/idol-source-manifest.json', 'authority/manifest.json', 'README.md',
             'content/install.sh', 'content/install.ps1', 'content/docs/spec.md', 'wrangler.jsonc',
-            'test/source-authority-projection.test.mjs'
+            'test/source-authority-projection.test.mjs', 'test/installer.test.mjs',
+            'test/semantic-bundle-sparse.test.mjs', 'test/ide-worker.test.mjs',
+            'test/semantic-bundle.test.mjs'
           ];
           for (const path of paths) {
             const text = fs.readFileSync(path, 'utf8');
@@ -53,7 +55,13 @@ jobs:
       - name: Verify generated authority consumers
         run: |
           set -euo pipefail
-          node --test test/source-authority-projection.test.mjs test/regression-closure.test.mjs
+          node --test \
+            test/source-authority-projection.test.mjs \
+            test/regression-closure.test.mjs \
+            test/installer.test.mjs \
+            test/semantic-bundle-sparse.test.mjs \
+            test/ide-worker.test.mjs \
+            test/semantic-bundle.test.mjs
           git diff --check
           test "$(git grep -l 'f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99' -- runtime authority content README.md wrangler.jsonc test || true)" = ""
       - name: Commit the reconciled projection
