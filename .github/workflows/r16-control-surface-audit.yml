@@ -1,0 +1,89 @@
+name: r16 control surface audit
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-control-surface-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 12
+    steps:
+      - name: Capture r16 control clients
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          account="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          r16="$account/cfd_tunnel/$R16_TUNNEL_ID"
+          zone_id="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active' | jq -er '.result[0].id')"
+          dns_base="https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records"
+          original="$(curl -fsS "${auth[@]}" "$r16/configurations" | jq -e '.result.config')"
+          host="r16-control-${RUN_ID}.pecunies.com"
+          dns_id=''
+          mkdir -p artifacts
+
+          cleanup() {
+            set +e
+            curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --argjson config "$original" '{config:$config}')" \
+              "$r16/configurations" >/dev/null
+            if [ -n "$dns_id" ]; then curl -sS -X DELETE "${auth[@]}" "$dns_base/$dns_id" >/dev/null; fi
+          }
+          trap cleanup EXIT
+
+          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg name "$host" --arg content "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')" \
+            "$dns_base")"
+          dns_id="$(jq -er '.result.id' <<<"$created")"
+          for _ in $(seq 1 45); do dig +short @1.1.1.1 "$host" | grep -q . && break; sleep 2; done
+
+          route() {
+            service="$1"
+            cfg="$(jq --arg h "$host" --arg s "$service" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:$s}]+[$i[-1]])' <<<"$original")"
+            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --argjson config "$cfg" '{config:$config}')" \
+              "$r16/configurations" | jq -e '.success == true' >/dev/null
+            sleep 10
+          }
+
+          route http://localhost:8787
+          curl -fsS "https://$host/login" -o artifacts/hermes-login.html
+          curl -fsS "https://$host/static/login.js?v=unknown" -o artifacts/hermes-login.js
+          printf '%s\n' '=== hermes login client endpoints ==='
+          grep -Eo '(/[A-Za-z0-9_./?=&-]+|fetch\([^)]*|localStorage\.[A-Za-z]+\([^)]*)' artifacts/hermes-login.js | sort -u | head -80 || true
+
+          route http://localhost:18789
+          curl -fsS "https://$host/" -o artifacts/claw-index.html
+          asset="$(grep -oE 'src="/assets/index-[^"]+\.js' artifacts/claw-index.html | head -1 | cut -d\" -f2)"
+          test -n "$asset"
+          curl -fsS "https://$host$asset" -o artifacts/claw-index.js
+          printf '%s\n' '=== openclaw control client protocol hints ==='
+          grep -Eo '.{0,100}(bootstrapToken|gatewayToken|models\.providers|config\.(get|set|patch|apply)|terminal|WebSocket|localStorage|openclaw[^" ]*token).{0,180}' artifacts/claw-index.js \
+            | head -120 || true
+
+      - name: Preserve control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-control-surface-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 7
