@@ -75,12 +75,17 @@ test("homepage and Observatory obtain examples from one authority-pinned manifes
   }
   assert.doesNotMatch(graph, /const\s+SAMPLES\s*=/);
 
-  assert.equal(manifest.schema, "idol.web.source-examples.v1");
+  assert.equal(manifest.schema, "idol.web.source-examples.v2");
   assert.equal(manifest.authority.commit, CURRENT_LANGUAGE_COMMIT);
   assert.equal(manifest.authority.source_law, CURRENT_SOURCE_LAW);
   assert.ok(manifest.examples.length >= 4);
   for (const example of manifest.examples) {
-    assert.match(example.status, /^(?:current-law|lawful-source-implementation-not-claimed)$/);
+    assert.match(example.status, /^(?:current-law|compiler-evidence|lawful-source-implementation-not-claimed)$/);
+    assert.match(example.capability, /^(?:compiler-evidence|law-projection)$/);
+    assert.equal(example.authority.repository, "clpi/idol");
+    assert.equal(example.authority.commit, CURRENT_LANGUAGE_COMMIT);
+    assert.ok(Array.isArray(example.actions) && example.actions.includes("analyze"));
+    if (example.capability === "law-projection") assert.ok(!example.actions.includes("run"));
     assertCanonicalNative(example.source, `content/source-examples.json#${example.id}`);
   }
 });
