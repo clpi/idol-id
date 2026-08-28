@@ -3,23 +3,27 @@ import assert from "node:assert/strict";
 import { readFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-test("build emits worlds, foreign integrations, authenticated platform, and local-first IDE", async () => {
+test("build emits Lib-owned world projections, foreign integrations, authenticated platform, and local-first IDE", async () => {
   await rm("dist", { recursive: true, force: true });
   const run = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr || run.stdout);
 
   const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
-  assert.equal(manifest.surfaces["worlds.idol.id"], "worlds");
+  assert.equal(manifest.surfaces["worlds.idol.id"], "lib:compatibility-alias");
+  assert.equal(manifest.surfaces["lib.idol.id"], "lib");
   assert.equal(manifest.surfaces["platform.idol.id"], "platform");
+  assert.equal(manifest.runtime.universe.public, "https://lib.idol.id/universe");
+  assert.equal(manifest.runtime.product_model, "/runtime/product-model.json");
   assert.deepEqual(manifest.runtime.ide, {
     route: "https://platform.idol.id/ide",
     local_storage: "indexeddb",
     source_upload: "explicit-remote-analysis-only",
     remote_analysis: "/v1/ide/analyze",
-    browser_wasm: manifest.runtime.wasm.available,
+    browser_wasm: manifest.runtime.wasm.admitted,
   });
 
   const worldsHtml = await readFile("dist/apps/worlds/index.html", "utf8");
+  const universeHtml = await readFile("dist/apps/universe/index.html", "utf8");
   const platformHtml = await readFile("dist/apps/platform/index.html", "utf8");
   const ideHtml = await readFile("dist/apps/ide/index.html", "utf8");
   const platformIdeEntry = await readFile("dist/shared/platform-ide-entry.js", "utf8");
@@ -27,6 +31,7 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   const ideSemanticLayer = await readFile("dist/shared/ide-semantic-layer.js", "utf8");
   const surfaceCss = await readFile("dist/shared/surface.css", "utf8");
   const shellJs = await readFile("dist/shared/shell.js", "utf8");
+  const productModel = JSON.parse(await readFile("dist/runtime/product-model.json", "utf8"));
 
   assert.match(worldsHtml, /World Atlas/);
   assert.match(worldsHtml, /runtime\/worlds\.json/);
@@ -37,10 +42,18 @@ test("build emits worlds, foreign integrations, authenticated platform, and loca
   assert.match(worldsHtml, /plan-only/);
   assert.match(worldsHtml, /identity not published/i);
   assert.match(worldsHtml, /@media \(max-width: 699px\)/);
+  assert.match(universeHtml, /shared\/universe-canonical\.js/);
   assert.match(shellJs, /function decodeWorldHash\(/);
   assert.match(shellJs, /function worldFromPath\(/);
   assert.match(shellJs, /function worldLensFromPath\(/);
   assert.match(shellJs, /platform\.idol\.id\/ide/);
+  assert.match(shellJs, /lib\.idol\.id\/atlas/);
+  assert.match(shellJs, /lib\.idol\.id\/universe/);
+  assert.doesNotMatch(shellJs, /id:\s*"worlds"/);
+  assert.doesNotMatch(shellJs, /id:\s*"universe"/);
+  assert.equal(productModel.semantic_universes, 1);
+  assert.equal(productModel.surfaces.lib.published_library_is_world, true);
+  assert.equal(productModel.surfaces.worlds.kind, "compatibility-alias");
   assert.match(surfaceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.detail\s*\{\s*transition:\s*none/);
 
   assert.match(platformHtml, /Platform/);
