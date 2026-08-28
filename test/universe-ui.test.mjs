@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Universe workspace is packaged for authenticated Platform and public Worlds routes", async () => {
+test("Universe workspace is packaged for authenticated Platform and contextual public Worlds routes", async () => {
   const [html, app, worker, build, shell] = await Promise.all([
     read("apps/universe/index.html"),
     read("shared/universe-app.js"),
@@ -24,7 +24,9 @@ test("Universe workspace is packaged for authenticated Platform and public World
   assert.match(worker, /\/apps\/universe\/index\.html/);
   assert.match(build, /"universe"/);
   assert.match(build, /platform-universe-entry\.js/);
-  assert.match(shell, /id:"universe"/);
+  assert.doesNotMatch(shell, /id:\s*"universe"/);
+  assert.match(shell, /public universe views/i);
+  assert.match(shell, /manage universe views/i);
 });
 
 test("local public Universe mode follows the routing query and canonical config object", async () => {
@@ -66,7 +68,7 @@ test("Universe presentation names exact non-semantic boundaries", async () => {
   assert.match(html, /does not grant authority/i);
   assert.match(manifestBuild, /universe/);
   assert.match(manifestBuild, /operational-projection/);
-  assert.match(manifestBuild, /dispatcher_access:false/);
+  assert.match(manifestBuild, /dispatcher_access\s*:\s*false/);
   assert.doesNotMatch(app, /semantic_id\s*:\s*["'][^"']+["']/);
 });
 
