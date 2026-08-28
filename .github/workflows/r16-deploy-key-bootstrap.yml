@@ -1,0 +1,65 @@
+name: r16 deploy key bootstrap
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-deploy-key-bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Generate one-time deployment keypair
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          umask 077
+          openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /tmp/r16-deploy-private.pem
+          openssl pkey -in /tmp/r16-deploy-private.pem -pubout -out artifacts/r16-deploy-public.pem
+          python -m pip install -q cryptography
+          python - <<'PY'
+          import base64, json, os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+          salt = os.urandom(32)
+          nonce = os.urandom(12)
+          info = b'idol/r16/deploy-private-key/2026-08-28'
+          aad = b'clpi/idol-id:r16-deploy-private-key:v1'
+          key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=info).derive(
+              os.environ['CLOUDFLARE_API_TOKEN'].encode()
+          )
+          plain = Path('/tmp/r16-deploy-private.pem').read_bytes()
+          encrypted = AESGCM(key).encrypt(nonce, plain, aad)
+          Path('artifacts/r16-deploy-private.enc.json').write_text(json.dumps({
+              'version': 1,
+              'kdf': 'HKDF-SHA256',
+              'cipher': 'AES-256-GCM',
+              'info': info.decode(),
+              'aad': aad.decode(),
+              'salt': base64.b64encode(salt).decode(),
+              'nonce': base64.b64encode(nonce).decode(),
+              'ciphertext': base64.b64encode(encrypted).decode(),
+          }, indent=2) + '\n')
+          PY
+          shred -u /tmp/r16-deploy-private.pem
+          echo 'one-time public deployment key generated'
+
+      - name: Preserve public key and protected private envelope
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-deploy-key-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 1
