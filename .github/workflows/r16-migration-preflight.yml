@@ -1,0 +1,189 @@
+name: r16 migration preflight
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-migration-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
+  DEPLOY_KEY_ARTIFACT_ID: "9696748865"
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open sealed migration bundle
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts /tmp/r16key /tmp/oc-client
+          python -m pip install -q cryptography
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$DEPLOY_KEY_ARTIFACT_ID/zip" -o /tmp/key.zip
+          unzip -q /tmp/key.zip -d /tmp/r16key
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+          p=json.loads(Path('/tmp/r16key/r16-deploy-private.enc.json').read_text())
+          k=HKDF(algorithm=hashes.SHA256(),length=32,salt=base64.b64decode(p['salt']),info=p['info'].encode()).derive(os.environ['CLOUDFLARE_API_TOKEN'].encode())
+          pem=AESGCM(k).decrypt(base64.b64decode(p['nonce']),base64.b64decode(p['ciphertext']),p['aad'].encode())
+          private=serialization.load_pem_private_key(pem,password=None)
+          e=json.loads(Path('ops/r16-provider-bundle.rsa.json').read_text())
+          dk=private.decrypt(base64.b64decode(e['encrypted_key']),padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=None))
+          plain=AESGCM(dk).decrypt(base64.b64decode(e['nonce']),base64.b64decode(e['ciphertext']),e['aad'].encode())
+          assert hashlib.sha256(plain).hexdigest()==e['payload_sha256']
+          payload=json.loads(plain)
+          assert payload['marker']=='idol-r16-provider-migration-v2'
+          Path('/tmp/r16-provider-bundle.json').write_bytes(plain)
+          Path('/tmp/r16-provider-bundle.json').chmod(0o600)
+          PY
+          rm -rf /tmp/r16key /tmp/key.zip
+
+      - name: Create temporary authenticated r16 routes
+        id: route
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          account="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          r16="$account/cfd_tunnel/$R16_TUNNEL_ID"
+          zone_id="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active'|jq -er '.result[0].id')"
+          dns_base="https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records"
+          original="$(curl -fsS "${auth[@]}" "$r16/configurations"|jq -e '.result.config')"
+          printf '%s' "$original" > /tmp/r16-original.json
+          hermes="r16-hpre-${RUN_ID}.pecunies.com"
+          claw="r16-cpre-${RUN_ID}.pecunies.com"
+          for host in "$hermes" "$claw"; do
+            created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg name "$host" --arg content "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')" "$dns_base")"
+            jq -er '.result.id'<<<"$created" >> /tmp/r16-dns-ids
+          done
+          cfg="$(jq --arg h "$hermes" --arg c "$claw" '.ingress as $i|.ingress=(($i[0:-1])+[{hostname:$h,service:"http://localhost:8787"},{hostname:$c,service:"http://localhost:18789"}]+[$i[-1]])'<<<"$original")"
+          curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson config "$cfg" '{config:$config}')" "$r16/configurations"|jq -e '.success==true'>/dev/null
+          for host in "$hermes" "$claw"; do for _ in $(seq 1 45); do dig +short @1.1.1.1 "$host"|grep -q .&&break;sleep 2;done; done
+          sleep 10
+          echo "hermes_host=$hermes" >> "$GITHUB_OUTPUT"
+          echo "claw_host=$claw" >> "$GITHUB_OUTPUT"
+          echo "zone_id=$zone_id" >> "$GITHUB_OUTPUT"
+
+      - name: Read Hermes provider inventory
+        env:
+          HERMES_HOST: ${{ steps.route.outputs.hermes_host }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          password="$(jq -r '.hermes_password' /tmp/r16-provider-bundle.json)"
+          curl -fsS -c /tmp/hermes.cookies -H 'Content-Type: application/json' --data "$(jq -nc --arg password "$password" '{password:$password}')" "https://$HERMES_HOST/api/auth/login"|jq -e '.ok==true'>/dev/null
+          curl -fsS -b /tmp/hermes.cookies "https://$HERMES_HOST/api/providers" > /tmp/hermes-providers.json
+          curl -fsS -b /tmp/hermes.cookies "https://$HERMES_HOST/api/models" > /tmp/hermes-models.json
+          curl -fsS -b /tmp/hermes.cookies "https://$HERMES_HOST/api/settings" > /tmp/hermes-settings.json
+          jq '{providers:[.providers[]?|{id:(.id//.provider//.provider_id//.name),name:(.display_name//.label//.name),configured:(.configured//.is_configured//.has_key//false),configurable:(.configurable//false),custom:(.is_custom//false),plugin:(.is_plugin_provider//false),self_hosted:(.is_self_hosted//false),fields:(keys)}]}' /tmp/hermes-providers.json > artifacts/hermes-provider-inventory.json
+          jq '{groups:[.groups[]?|{provider:(.provider_id//.provider),models:([.models[]?|(.id//.model//.name)]),extra:([.extra_models[]?|(.id//.model//.name)])}]}' /tmp/hermes-models.json > artifacts/hermes-model-inventory.json
+          jq 'walk(if type=="object" then with_entries(if (.key|test("key|token|secret|password|credential";"i")) then .value="<redacted>" else . end) else . end)' /tmp/hermes-settings.json > artifacts/hermes-settings-redacted.json
+          echo "Hermes providers: $(jq '.providers|length' artifacts/hermes-provider-inventory.json); configured: $(jq '[.providers[]|select(.configured)]|length' artifacts/hermes-provider-inventory.json)"
+          jq -r '.providers[]|select(.configured or .configurable or .custom or .plugin or .self_hosted)|[.id,.configured,.custom,.plugin,.self_hosted]|@tsv' artifacts/hermes-provider-inventory.json
+
+      - name: Probe OpenClaw config and operator terminal
+        env:
+          CLAW_HOST: ${{ steps.route.outputs.claw_host }}
+        shell: bash
+        working-directory: /tmp/oc-client
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null
+          npm install --silent @openclaw/gateway-client@latest @openclaw/gateway-protocol@latest >/dev/null
+          cat > preflight.mjs <<'JS'
+          import fs from 'node:fs';
+          import { GatewayClient } from '@openclaw/gateway-client';
+          import { PROTOCOL_VERSION } from '@openclaw/gateway-protocol/version';
+          const bundle=JSON.parse(fs.readFileSync('/tmp/r16-provider-bundle.json','utf8'));
+          const connected=Promise.withResolvers();
+          const finished=Promise.withResolvers();
+          let sessionId='';
+          let output='';
+          const client=new GatewayClient({
+            url:`wss://${process.env.CLAW_HOST}`,
+            token:bundle.openclaw_token,
+            role:'operator',
+            scopes:['operator.admin','operator.read','operator.write','operator.approvals','operator.questions','operator.pairing'],
+            minProtocol:PROTOCOL_VERSION,
+            maxProtocol:PROTOCOL_VERSION,
+            onHelloOk:hello=>connected.resolve(hello),
+            onConnectError:error=>connected.reject(error),
+            onEvent:event=>{
+              if(event.event==='terminal.data'&&event.payload?.sessionId===sessionId){
+                output+=String(event.payload.data||'');
+                if(output.includes('__R16_TERMINAL_DONE__')) finished.resolve();
+              }
+              if(event.event==='terminal.exit'&&event.payload?.sessionId===sessionId&&!output.includes('__R16_TERMINAL_DONE__')) finished.reject(new Error('terminal exited early'));
+            },
+          });
+          const timeout=(ms,label)=>new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} timeout`)),ms));
+          function redact(value){
+            if(Array.isArray(value)) return value.map(redact);
+            if(value&&typeof value==='object') return Object.fromEntries(Object.entries(value).map(([k,v])=>[/key|token|secret|password|credential/i.test(k)?k:k,/key|token|secret|password|credential/i.test(k)?'<redacted>':redact(v)]));
+            return value;
+          }
+          try{
+            client.start();
+            const hello=await Promise.race([connected.promise,timeout(20000,'connect')]);
+            const config=await client.request('config.get',{});
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/artifacts/openclaw-config-redacted.json`,JSON.stringify(redact(config),null,2));
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/artifacts/openclaw-hello-summary.json`,JSON.stringify({protocol:hello.protocol,server:hello.server,features:hello.features,policy:hello.policy},null,2));
+            const opened=await client.request('terminal.open',{cols:100,rows:24});
+            sessionId=opened.sessionId;
+            await client.request('terminal.input',{sessionId,data:"printf '__R16_TERMINAL__ '; hostname; printf ' uid='; id -u; printf ' cwd='; pwd; printf '__R16_TERMINAL_DONE__\\n'\r"});
+            await Promise.race([finished.promise,timeout(15000,'terminal')]);
+            await client.request('terminal.close',{sessionId});
+            const clean=output.replace(/\x1b\[[0-?]*[ -\/]*[@-~]/g,'').replace(/[\r\b]/g,'').split('\n').filter(line=>line.includes('__R16_TERMINAL__')||line.includes('uid=')||line.includes('cwd=')||line.includes('__R16_TERMINAL_DONE__')).join('\n');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/artifacts/openclaw-terminal-proof.txt`,clean+'\n');
+            console.log('OpenClaw config read and operator terminal passed');
+          } finally { client.stop(); }
+          JS
+          node preflight.mjs
+
+      - name: Restore temporary routes
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ steps.route.outputs.zone_id }}
+        shell: bash
+        run: |
+          set +e
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          account="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          if [ -s /tmp/r16-original.json ]; then curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson config "$(cat /tmp/r16-original.json)" '{config:$config}')" "$account/cfd_tunnel/$R16_TUNNEL_ID/configurations" >/dev/null; fi
+          if [ -s /tmp/r16-dns-ids ] && [ -n "$ZONE_ID" ]; then while read -r id; do curl -sS -X DELETE "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$id" >/dev/null; done < /tmp/r16-dns-ids; fi
+          rm -f /tmp/r16-provider-bundle.json /tmp/hermes.cookies /tmp/hermes-*.json /tmp/r16-original.json /tmp/r16-dns-ids
+
+      - name: Upload redacted preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-migration-preflight-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
