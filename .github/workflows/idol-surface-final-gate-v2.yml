@@ -1,0 +1,81 @@
+name: Idol surface final gate v2
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-surface-final-gate-v2.yml
+      - ops/reports/idol-surface-production-admission-v3.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: idol-surface-final-gate-v2
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/idol-domain-repair-20260828
+          fetch-depth: 0
+
+      - name: Derive authoritative final status
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ops/reports
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('ops/reports/idol-surface-production-admission-v3.json')
+          if not p.is_file():
+              status='PENDING_SOURCE_OR_DEPLOYMENT'
+              data={'schema':'idol.surface.final-gate.v2','status':status,'admitted':False,
+                    'reason':'v3_production_admission_not_yet_present',
+                    'exclusions':['hermes.idol.id','claw.idol.id']}
+              lines=['# Idol surface final gate v2','',f'Status: **{status}**','',
+                     'The deterministic source-ready, independent-admission, deployment, and live-validation sequence has not produced its production report yet.',
+                     'No live repair claim is admitted.']
+          else:
+              report=json.loads(p.read_text())
+              failures=[r for r in report.get('results',[]) if not r.get('healthy')]
+              admitted=bool(report.get('passed')) and not failures
+              status='ADMITTED' if admitted else 'BLOCKED_LIVE_FAILURES'
+              data={'schema':'idol.surface.final-gate.v2','status':status,'admitted':admitted,
+                    'observed_at':report.get('observed_at'),'main_sha':report.get('main_sha'),
+                    'deploy_run_id':report.get('deploy_run_id'),'pr_number':report.get('pr_number'),
+                    'exclusions':['hermes.idol.id','claw.idol.id'],
+                    'failures':[{'host':r.get('host'),'transport_ok':r.get('transport_ok'),
+                                 'assets_ok':r.get('assets_ok'),'blank_ok':r.get('blank_ok'),
+                                 'probes':r.get('probes',[])} for r in failures]}
+              lines=['# Idol surface final gate v2','',f'Status: **{status}**','',
+                     f"Observed: `{report.get('observed_at','')}`",f"Main SHA: `{report.get('main_sha','')}`",
+                     f"Deploy run: `{report.get('deploy_run_id','')}`",f"Repair PR: `#{report.get('pr_number','')}`",'',
+                     'Hermes and Claw were excluded from the entire repair and admission pass.','']
+              if admitted:
+                  lines.append('Every discovered public non-agent Idol hostname passed fresh transport/TLS, same-origin asset, and nonblank-page admission after the admitted deployment.')
+              else:
+                  lines += ['## Failing surfaces','']
+                  for r in failures:
+                      codes={x.get('path'):x.get('http') for x in r.get('probes',[])}
+                      health=max(codes.get('/health',0),codes.get('/api/health',0),codes.get('/__idol/health',0))
+                      lines.append(f"- `{r.get('host')}`: transport={r.get('transport_ok')}, assets={r.get('assets_ok')}, nonblank={r.get('blank_ok')}, root={codes.get('/')}, health={health}")
+          Path('ops/reports/idol-surface-final-status-v2.json').write_text(json.dumps(data,indent=2,sort_keys=True)+'\n')
+          Path('ops/reports/idol-surface-final-status-v2.md').write_text('\n'.join(lines)+'\n')
+          PY
+
+      - name: Commit final gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name idol-surface-gate
+          git config user.email idol-surface-gate@users.noreply.github.com
+          git add ops/reports/idol-surface-final-status-v2.json ops/reports/idol-surface-final-status-v2.md
+          git commit -m 'ops: record deterministic final Idol surface gate' || exit 0
+          git push origin HEAD:ops/idol-domain-repair-20260828
