@@ -77,19 +77,23 @@ jobs:
           assert source.count(main_marker) == 1, 'main insertion point drifted'
           source = source.replace(main_marker, insertion + main_marker)
 
-          old = '''  } finally {
-            try { await cdp?.close(); } catch {}
-            chrome.kill("SIGTERM");
-            server.close();
-            await rm(profile, { recursive: true, force: true });
-          }'''
-          new = '''  } finally {
-            let cleanupError;
-            try { await terminateChrome(chrome, cdp); } catch (error) { cleanupError = error; }
-            try { await closeServer(server); } catch (error) { cleanupError ||= error; }
-            try { await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (error) { cleanupError ||= error; }
-            if (cleanupError) throw cleanupError;
-          }'''
+          old = (
+              '  } finally {\n'
+              '    try { await cdp?.close(); } catch {}\n'
+              '    chrome.kill("SIGTERM");\n'
+              '    server.close();\n'
+              '    await rm(profile, { recursive: true, force: true });\n'
+              '  }'
+          )
+          new = (
+              '  } finally {\n'
+              '    let cleanupError;\n'
+              '    try { await terminateChrome(chrome, cdp); } catch (error) { cleanupError = error; }\n'
+              '    try { await closeServer(server); } catch (error) { cleanupError ||= error; }\n'
+              '    try { await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (error) { cleanupError ||= error; }\n'
+              '    if (cleanupError) throw cleanupError;\n'
+              '  }'
+          )
           assert source.count(old) == 1, 'browser cleanup boundary drifted'
           source = source.replace(old, new)
           path.write_text(source)
