@@ -1,0 +1,66 @@
+name: Reconcile verified authority pin once
+
+on:
+  push:
+    branches: [fix/authority-pin-20260828]
+    paths: [.github/workflows/authority-pin-reconcile-once.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Replace only the independently verified commit pin
+        env:
+          BEFORE: f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99
+          AFTER: cb2199dff026c1b2d3fbd0caa04d6d323370a9e8
+          SOURCE_LAW: 95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b
+          COMPACT_BLOB: 155edf8e9204d00316dab8363676f0fd7b2fb552
+          CONSTITUTION_BLOB: 56ec285b3d320981711a190d8414c4f557bade4b
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const before = process.env.BEFORE;
+          const after = process.env.AFTER;
+          const authority = JSON.parse(fs.readFileSync('runtime/authority.json', 'utf8'));
+          if (authority.language.commit !== before) throw new Error(`unexpected pinned commit ${authority.language.commit}`);
+          if (authority.language.source_law.sha256 !== process.env.SOURCE_LAW) throw new Error('source-law drift');
+          if (authority.language.compact_law_blob !== process.env.COMPACT_BLOB) throw new Error('compact-law drift');
+          if (authority.language.constitution_blob !== process.env.CONSTITUTION_BLOB) throw new Error('constitution drift');
+          const paths = [
+            'runtime/authority.json', 'runtime/source-law.json', 'content/source-examples.json',
+            'runtime/idol-source-manifest.json', 'authority/manifest.json', 'README.md',
+            'content/install.sh', 'content/install.ps1', 'content/docs/spec.md', 'wrangler.jsonc',
+            'test/source-authority-projection.test.mjs', 'test/regression-closure.test.mjs'
+          ];
+          for (const path of paths) {
+            const text = fs.readFileSync(path, 'utf8');
+            if (!text.includes(before)) throw new Error(`${path} lacks exact old pin`);
+            fs.writeFileSync(path, text.split(before).join(after));
+          }
+          fs.rmSync('.github/workflows/authority-pin-reconcile-once.yml');
+          NODE
+      - name: Verify generated authority consumers
+        run: |
+          set -euo pipefail
+          node --test test/source-authority-projection.test.mjs test/regression-closure.test.mjs
+          git diff --check
+          test "$(git grep -l 'f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99' -- runtime authority content README.md wrangler.jsonc test || true)" = ""
+      - name: Commit the reconciled projection
+        run: |
+          set -euo pipefail
+          git config user.name 'idol-authority-bot'
+          git config user.email 'actions@github.com'
+          git add -A
+          git commit -m 'fix: reconcile website authority to current Idol main'
+          git push origin HEAD:fix/authority-pin-20260828
