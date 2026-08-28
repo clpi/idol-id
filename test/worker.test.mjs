@@ -44,8 +44,13 @@ test("host map uses one graph application for graph and architecture aliases", (
   assert.deepEqual(resolveHost("r16.idol.id"), { app: "graph", surface: "r16", origin: true });
 });
 
-test("worlds and platform are originless custom-domain surfaces", () => {
-  assert.deepEqual(resolveHost("worlds.idol.id"), { app: "worlds", surface: "worlds", origin: false });
+test("Worlds is a Lib compatibility host while Platform remains originless", () => {
+  assert.deepEqual(resolveHost("worlds.idol.id"), {
+    app: "lib",
+    surface: "lib",
+    origin: false,
+    redirect: "https://lib.idol.id",
+  });
   assert.deepEqual(resolveHost("platform.idol.id"), { app: "platform", surface: "platform", origin: false });
 });
 
@@ -65,11 +70,12 @@ test("graph aliases receive the graph shell", async () => {
   assert.equal(await response.text(), "<html>graph</html>");
 });
 
-test("worlds navigation receives the atlas shell", async () => {
-  const response = await handle(new Request("https://worlds.idol.id/world/std", {
+test("worlds navigation redirects to the canonical Lib lens", async () => {
+  const response = await handle(new Request("https://worlds.idol.id/world/std?lens=facts", {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
-  assert.equal(await response.text(), "<html>worlds</html>");
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get("location"), "https://lib.idol.id/world/std?lens=facts");
 });
 
 test("Platform IDE navigation receives the IDE shell without changing other host applications", async () => {
@@ -89,7 +95,8 @@ test("Platform IDE navigation receives the IDE shell without changing other host
   const worldsResponse = await handle(new Request("https://worlds.idol.id/ide", {
     headers: { "sec-fetch-mode": "navigate" },
   }), envWithAssets());
-  assert.equal(await worldsResponse.text(), "<html>worlds</html>");
+  assert.equal(worldsResponse.status, 308);
+  assert.equal(worldsResponse.headers.get("location"), "https://lib.idol.id/ide");
 });
 
 test("config reports the precise host surface and authority", async () => {
@@ -107,10 +114,10 @@ test("api requests preserve the existing tunnel origin", async () => {
   assert.equal(await response.text(), "origin:/api/authority");
 });
 
-test("originless surfaces refuse dynamic proxy paths instead of recursing", async () => {
+test("originless Platform refuses dynamic proxy paths instead of recursing", async () => {
   let called = false;
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
-  const response = await handle(new Request("https://worlds.idol.id/api/worlds"), envWithAssets());
+  const response = await handle(new Request("https://platform.idol.id/api/worlds"), envWithAssets());
   assert.equal(response.status, 404);
   assert.equal(called, false);
 });
@@ -118,7 +125,7 @@ test("originless surfaces refuse dynamic proxy paths instead of recursing", asyn
 test("conditional static asset responses survive originless routing", async () => {
   let called = false;
   globalThis.fetch = async () => { called = true; return new Response("unexpected"); };
-  const response = await handle(new Request("https://worlds.idol.id/runtime/worlds.json", {
+  const response = await handle(new Request("https://platform.idol.id/runtime/worlds.json", {
     headers: { "if-none-match": "worlds-v1" },
   }), envWithAssets());
   assert.equal(response.status, 304);
