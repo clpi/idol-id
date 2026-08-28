@@ -18,6 +18,7 @@ const artifacts = resolve(".artifacts/browser-smoke");
 const port = Number(process.env.IDOL_BROWSER_SMOKE_PORT || 41739);
 const debugPort = Number(process.env.IDOL_BROWSER_DEBUG_PORT || 9229);
 const origin = `http://127.0.0.1:${port}`;
+const SMOKE_EXAMPLE_ID = "declaration-specialization";
 const mime = Object.freeze({
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
@@ -225,10 +226,17 @@ async function screenshot(cdp, path) {
   const result = await cdp.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await writeFile(path, Buffer.from(result.data, "base64"));
 }
+async function selectSmokeExample(cdp) {
+  await waitExpression(cdp, `document.querySelector("#sample")?.querySelector('option[value="${SMOKE_EXAMPLE_ID}"]')`);
+  const selected = await evaluate(cdp, `(()=>{const SMOKE_EXAMPLE_ID=${JSON.stringify(SMOKE_EXAMPLE_ID)};const select=document.querySelector("#sample");if(!select)return false;select.value=SMOKE_EXAMPLE_ID;select.dispatchEvent(new Event("change",{bubbles:true}));return select.value === SMOKE_EXAMPLE_ID;})()`);
+  if (!selected) throw new Error(`browser smoke example unavailable: ${SMOKE_EXAMPLE_ID}`);
+  await waitExpression(cdp, `document.querySelector("#sample")?.value===${JSON.stringify(SMOKE_EXAMPLE_ID)}&&document.querySelectorAll(".semantic-token").length>0`);
+}
 async function navigate(cdp, width, height) {
   await cdp.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width <= 760, screenWidth: width, screenHeight: height });
   await cdp.call("Page.navigate", { url: origin });
-  await waitExpression(cdp, `document.readyState==="complete"&&document.querySelectorAll(".semantic-token").length>0`);
+  await waitExpression(cdp, `document.readyState==="complete"`);
+  await selectSmokeExample(cdp);
 }
 
 async function mobileFlow(cdp, exceptions) {
