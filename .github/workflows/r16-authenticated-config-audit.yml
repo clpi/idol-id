@@ -1,0 +1,136 @@
+name: r16 authenticated config audit
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-authenticated-config-audit.yml
+      - ops/r16-provider-bundle.enc.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decrypt one-time bundle in runner memory
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -q cryptography
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+          envelope = json.loads(Path('ops/r16-provider-bundle.enc.json').read_text())
+          salt = base64.b64decode(envelope['salt'])
+          nonce = base64.b64decode(envelope['nonce'])
+          key = HKDF(
+              algorithm=hashes.SHA256(), length=32, salt=salt,
+              info=envelope['info'].encode(),
+          ).derive(os.environ['CLOUDFLARE_API_TOKEN'].encode())
+          plain = AESGCM(key).decrypt(
+              nonce, base64.b64decode(envelope['ciphertext']), envelope['aad'].encode()
+          )
+          if hashlib.sha256(plain).hexdigest() != envelope['payload_sha256']:
+              raise SystemExit('bundle integrity mismatch')
+          payload = json.loads(plain)
+          if payload.get('marker') != 'idol-r16-provider-migration-v1':
+              raise SystemExit('bundle marker mismatch')
+          path = Path('/tmp/r16-provider-bundle.json')
+          path.write_bytes(plain)
+          path.chmod(0o600)
+          print('encrypted bundle authenticated and decrypted')
+          PY
+
+      - name: Read current Hermes and OpenClaw configuration without mutation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+          npm install -g openclaw@latest >/dev/null
+
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          account="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          r16="$account/cfd_tunnel/$R16_TUNNEL_ID"
+          zone_id="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active' | jq -er '.result[0].id')"
+          dns_base="https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records"
+          original="$(curl -fsS "${auth[@]}" "$r16/configurations" | jq -e '.result.config')"
+          host="r16-auth-${RUN_ID}.pecunies.com"
+          dns_id=''
+          mkdir -p artifacts
+
+          cleanup() {
+            set +e
+            rm -f /tmp/r16-provider-bundle.json /tmp/hermes.cookies
+            curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --argjson config "$original" '{config:$config}')" \
+              "$r16/configurations" >/dev/null
+            if [ -n "$dns_id" ]; then curl -sS -X DELETE "${auth[@]}" "$dns_base/$dns_id" >/dev/null; fi
+          }
+          trap cleanup EXIT
+
+          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg name "$host" --arg content "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')" \
+            "$dns_base")"
+          dns_id="$(jq -er '.result.id' <<<"$created")"
+          for _ in $(seq 1 45); do dig +short @1.1.1.1 "$host" | grep -q . && break; sleep 2; done
+
+          route() {
+            service="$1"
+            cfg="$(jq --arg h "$host" --arg s "$service" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:$s}]+[$i[-1]])' <<<"$original")"
+            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --argjson config "$cfg" '{config:$config}')" \
+              "$r16/configurations" | jq -e '.success == true' >/dev/null
+            sleep 10
+          }
+
+          password="$(jq -r '.hermes_password' /tmp/r16-provider-bundle.json)"
+          route http://localhost:8787
+          login="$(curl -fsS -c /tmp/hermes.cookies -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg password "$password" '{password:$password}')" \
+            "https://$host/api/auth/login")"
+          jq -e '.ok == true' <<<"$login" >/dev/null
+          curl -fsS -b /tmp/hermes.cookies "https://$host/openapi.json" > artifacts/hermes-openapi.json
+          curl -fsS -b /tmp/hermes.cookies "https://$host/api/env" > /tmp/hermes-env.json
+          jq 'to_entries | map({key:.key,is_set:(.value.is_set//false),category:(.value.category//null),custom:(.value.custom//false)}) | sort_by(.key)' \
+            /tmp/hermes-env.json > artifacts/hermes-env-inventory.json
+          jq '{paths:[.paths|to_entries[]|select(.key|test("^/api/(env|config|model)"))|{path:.key,methods:(.value|keys)}],schemas:(.components.schemas|keys)}' \
+            artifacts/hermes-openapi.json > artifacts/hermes-control-schema.json
+          echo "Hermes configured keys: $(jq '[.[]|select(.is_set)]|length' artifacts/hermes-env-inventory.json)"
+
+          token="$(jq -r '.openclaw_token' /tmp/r16-provider-bundle.json)"
+          route http://localhost:18789
+          openclaw gateway probe --url "wss://$host" --token "$token" --json > artifacts/openclaw-probe.json
+          openclaw gateway call config.get --url "wss://$host" --token "$token" --params '{}' --json > artifacts/openclaw-config-redacted.json
+          jq '{ok,capability,targets:[.targets[]?|{id,connect,auth}]}' artifacts/openclaw-probe.json > artifacts/openclaw-probe-summary.json
+          jq '[..|objects|select(has("providers"))|.providers|if type=="object" then keys else [] end] | add | unique' \
+            artifacts/openclaw-config-redacted.json > artifacts/openclaw-provider-ids.json
+          echo "OpenClaw provider IDs: $(jq 'length' artifacts/openclaw-provider-ids.json)"
+
+      - name: Preserve redacted audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-authenticated-config-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 7
