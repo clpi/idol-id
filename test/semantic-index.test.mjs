@@ -82,10 +82,16 @@ function exactResponse() {
   };
 }
 
+function tokenIndex(bundle, tokenId) {
+  const index = bundle.tokens.findIndex((token) => token.token_id === tokenId);
+  assert.notEqual(index, -1, `missing exact token ${tokenId}`);
+  return index;
+}
+
 test("semantic index links exact compiler IDs across tokens, graph, worlds, projections, derivations, and realization", () => {
   const bundle = remoteBundle({ source, response: exactResponse(), authority, tokens: lexicalTokens });
   const index = buildSemanticIndex(bundle);
-  const selected = selectionForToken(index, 2);
+  const selected = selectionForToken(index, tokenIndex(bundle, "token:read"));
 
   assert.equal(selected.token.value, "read");
   assert.equal(selected.token.semantic_id, "relation:read");
@@ -97,9 +103,7 @@ test("semantic index links exact compiler IDs across tokens, graph, worlds, proj
   assert.deepEqual(selected.demands.map((record) => record.id), ["demand:read"]);
   assert.deepEqual(selected.realizations.map((record) => record.id), ["realization:read:native"]);
 
-  assert.deepEqual(index.outgoing("application:read").map((record) => record.id), [
-    "edge:relation", "edge:subject", "edge:operand", "edge:result",
-  ]);
+  assert.deepEqual(index.outgoing("application:read").map((record) => record.id), ["edge:relation", "edge:subject", "edge:operand", "edge:result"]);
   assert.deepEqual(index.incoming("relation:read").map((record) => record.id), ["edge:relation"]);
   assert.deepEqual(index.occurrences("relation:read").map((record) => record.token_id), ["token:read"]);
   assert.ok(Object.isFrozen(index));
@@ -111,8 +115,7 @@ test("definitions and references are never inferred from spelling or node names"
   response.tokens = response.tokens.map((token) => ({ ...token, definition_ids: [], reference_ids: [] }));
   response.graph = { ...response.graph, definitions: [], references: [] };
   const bundle = remoteBundle({ source, response, authority, tokens: lexicalTokens });
-  const index = buildSemanticIndex(bundle);
-  const selected = selectionForToken(index, 0);
+  const selected = selectionForToken(buildSemanticIndex(bundle), tokenIndex(bundle, "token:thing"));
 
   assert.deepEqual(selected.definitions, []);
   assert.deepEqual(selected.references, []);
@@ -122,15 +125,12 @@ test("definitions and references are never inferred from spelling or node names"
 test("unknown and unsafe explicit links fail closed instead of selecting a nearby record", () => {
   const response = exactResponse();
   response.tokens[0] = { ...response.tokens[0], world_ids: [9007199254740992] };
-  assert.throws(
-    () => remoteBundle({ source, response, authority, tokens: lexicalTokens }),
-    /unsafe numeric world identity/,
-  );
+  assert.throws(() => remoteBundle({ source, response, authority, tokens: lexicalTokens }), /unsafe numeric world identity/);
 
   const valid = exactResponse();
   valid.tokens[0] = { ...valid.tokens[0], graph_ids: ["missing:node"] };
   const bundle = remoteBundle({ source, response: valid, authority, tokens: lexicalTokens });
-  const selected = selectionForToken(buildSemanticIndex(bundle), 0);
+  const selected = selectionForToken(buildSemanticIndex(bundle), tokenIndex(bundle, "token:thing"));
   assert.deepEqual(selected.nodes, []);
   assert.deepEqual(selected.unresolved.graph_ids, ["missing:node"]);
 });
