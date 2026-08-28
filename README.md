@@ -18,7 +18,7 @@ A push to `main` runs tests, builds every surface once, validates the Worker bun
 
 The single `runtime/authority.json` producer pins:
 
-- language and semantic authority: `clpi/idol@f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99`
+- language and semantic authority: `clpi/idol@cb2199dff026c1b2d3fbd0caa04d6d323370a9e8`
 - native realization/evidence: `clpi/idol-native@ad438a856daa8786e77ac9f033d38deb9e8f5c29`
 
 Source spelling, package coordinates, foreign provenance slugs, account identifiers, credential IDs, workspace paths and hostnames are provenance. They do not mint relation, application, value, world, demand or realization identity.
