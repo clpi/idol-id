@@ -1,6 +1,38 @@
-(function installEntry(){
+(function installEntry() {
 "use strict";
-function copyButton(label,command){const wrap=document.createElement("div");wrap.style.cssText="display:flex;align-items:center;gap:8px;border:1px solid var(--rule-2);border-radius:10px;padding:9px 10px;background:rgba(255,255,255,.02);min-width:0";const code=document.createElement("code");code.textContent=command;code.style.cssText="flex:1;min-width:0;overflow:auto;white-space:nowrap;font-family:var(--mono);font-size:11px";const button=document.createElement("button");button.textContent=label;button.style.minHeight="36px";button.onclick=async()=>{await navigator.clipboard.writeText(command);button.textContent="copied";setTimeout(()=>button.textContent=label,1000)};wrap.append(code,button);return wrap;}
-function install(){const inner=document.querySelector(".hero .inner"),grid=document.querySelector(".grid");if(inner&&!document.getElementById("idol-install-entry")){const panel=document.createElement("section");panel.id="idol-install-entry";panel.style.cssText="margin-top:26px;max-width:760px;display:grid;gap:8px";const title=document.createElement("div");title.innerHTML='<strong style="font-family:var(--sans);font-weight:520">Install the exact bootstrap seed</strong><span style="display:block;margin-top:5px;color:var(--ink-4);font-family:var(--sans);font-size:11px">User-local, authority-pinned, built with Zig. This is not yet a self-hosted release.</span>';panel.append(title,copyButton("copy","curl -fsSL https://idol.id/install | sh"),copyButton("copy pwsh","irm https://idol.id/install.ps1 | iex"));inner.append(panel)}if(grid&&!grid.querySelector('[href="https://platform.idol.id/repo"]')){const card=document.createElement("a");card.className="cell-a";card.href="https://platform.idol.id/repo";card.style.cssText="border:0;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)";card.innerHTML='<div class="n">Repository Observatory</div><div class="u">PLATFORM.IDOL.ID/REPO</div><div class="d">Resolve an exact public revision, inspect build/test/bench evidence, and download a review-only Idol scaffold.</div><div class="arrow">↗</div>';grid.append(card)}}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
+
+async function copy(button) {
+  const command = button.dataset.copyCommand || "";
+  if (!command) return;
+  const original = button.textContent;
+  try {
+    await navigator.clipboard.writeText(command);
+    button.textContent = "copied";
+    button.dataset.copyState = "copied";
+  } catch {
+    button.textContent = "select command";
+    button.dataset.copyState = "unavailable";
+    const code = button.closest(".install-command")?.querySelector("code");
+    const selection = globalThis.getSelection?.();
+    if (code && selection) {
+      const range = document.createRange();
+      range.selectNodeContents(code);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
+  setTimeout(() => {
+    button.textContent = original;
+    delete button.dataset.copyState;
+  }, 1300);
+}
+
+function install() {
+  for (const button of document.querySelectorAll("[data-copy-command]")) {
+    button.addEventListener("click", () => copy(button));
+  }
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
+else install();
 })();
