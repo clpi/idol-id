@@ -41,7 +41,7 @@ jobs:
             'runtime/authority.json', 'runtime/source-law.json', 'content/source-examples.json',
             'runtime/idol-source-manifest.json', 'authority/manifest.json', 'README.md',
             'content/install.sh', 'content/install.ps1', 'content/docs/spec.md', 'wrangler.jsonc',
-            'test/source-authority-projection.test.mjs', 'test/regression-closure.test.mjs'
+            'test/source-authority-projection.test.mjs'
           ];
           for (const path of paths) {
             const text = fs.readFileSync(path, 'utf8');
