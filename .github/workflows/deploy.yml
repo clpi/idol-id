@@ -70,6 +70,13 @@ jobs:
         run: exit 1
       - name: Validate Worker bundle
         run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
+      - name: Upload verified preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: idol-preview-${{ github.run_id }}
+          path: dist
+          retention-days: 7
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
