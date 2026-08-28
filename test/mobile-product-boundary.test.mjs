@@ -30,16 +30,18 @@ test("shared mobile chrome replaces the overflowing product strip before it can 
   assert.doesNotMatch(surface, /\.topbar \.nav\s*\{[^}]*overflow-x:\s*auto/);
 });
 
-test("homepage removes pseudo-semantic decoration and converges Atlas beneath the Lib product", async () => {
-  const [site, convergence, web] = await Promise.all([read("apps/site/index.html"), read("shared/site-product-convergence.js"), read("shared/web.js")]);
+test("homepage is statically converged under Idol, Lib, Atlas lenses, and mobile workbench views", async () => {
+  const [site, siteCss, web] = await Promise.all([read("apps/site/index.html"), read("shared/site.css"), read("shared/web.js")]);
   assert.doesNotMatch(site, /<canvas\b/i);
   assert.doesNotMatch(site, /Math\.random\(/);
-  assert.match(convergence, /Library worlds/);
-  assert.match(convergence, /https:\/\/lib\.idol\.id\/atlas/);
-  assert.match(convergence, /atlas\?\.remove\(\)/);
-  assert.match(convergence, /package coordinates remain provenance/i);
-  assert.match(web, /site-product-convergence\.js/);
-  assert.match(site, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.cell-a[\s\S]*?min-height:\s*0/);
+  assert.match(site, /aria-label="Library projections"/);
+  assert.match(site, /https:\/\/lib\.idol\.id\/atlas/);
+  assert.match(site, /https:\/\/lib\.idol\.id\/\?set=homes/);
+  assert.match(site, /https:\/\/lib\.idol\.id\/universe/);
+  assert.match(site, /package coordinates and source homes remain reach\/provenance facts/i);
+  assert.doesNotMatch(web, /site-product-convergence\.js/);
+  assert.match(siteCss, /@media \(max-width: 760px\)[\s\S]*?\.product-link[^}]*min-height:\s*0/);
+  assert.match(siteCss, /\.demo-mobile-nav[\s\S]*?min-height:\s*58px/);
 });
 
 test("Lib preserves mobile list/detail navigation and exact home boundary", async () => {
