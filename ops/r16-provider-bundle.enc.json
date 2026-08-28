@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "kdf": "HKDF-SHA256",
+  "cipher": "AES-256-GCM",
+  "info": "idol/r16/provider-migration/2026-08-28",
+  "aad": "clpi/idol-id:ops/r16-agent-migration-20260828:v1",
+  "salt": "t8U1AEe00zlDV3JrhiKgNsXVauVW9E4e0oUW3CYbyuM=",
+  "nonce": "nY4ObATGkq8IipDT",
+  "ciphertext": "9n6V/pBRXMx6T7RkYcBK5DzRLoHOK3mqx1qHzV7YEXVeY2b6jNs2hrxcWEbpqB6iKZkoH0+7Ry1LSDt8HlxxcIsZFRQKXy9tlHWu5MLTN1DE4tF9P43Xh7XgoGmNwcs8gPDLBXdyp0rbEZw8Fgdke01Y+/wvQ2SozRkLRIy4NpGKcRF7cOLepnC/RU+E4mEfT7jC+5DFg6y+H4F+04DJ3T2Xlz92fO3aEUkSTkiA18cYAvy8e5/9Y+2Yg26NRkbjXY9lpvYuyKAFgXjKdxWR8gQgIt3BSYtjjZED9Hl8tLEPyReuuSs2hQPvjhXJ8MvE0jcfua2Ejjw9Vr2KvtnIcs+SyrWWykvm9zk2pfqZwxQh7i6y5Ri9VaztKQhJjdvZQugnnM+Yz9GEV5y7Ndq5QhRniR8Kh4W3PNEhwAcI0hf7VJ0ADrnH9J1+4zqfI48KyHwG7SYls2K9krz9H6fOMZhM2wA=",
+  "payload_sha256": "28509156b5f32849f4e320ac41aaf0423e115cd37f09e3c598e44d6b817fc2c5"
+}
