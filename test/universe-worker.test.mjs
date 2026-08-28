@@ -5,6 +5,7 @@ import { handleUniverseTransport } from "../worker/universe.js";
 const platformInfo = { app: "platform", surface: "platform", origin: false };
 const apiInfo = { app: "api", surface: "api", origin: true };
 const worldsInfo = { app: "worlds", surface: "worlds", origin: false };
+const libInfo = { app: "lib", surface: "lib", origin: true };
 const identity = { subject: "user-1", email: "user@example.com", displayName: "User" };
 const env = {
   ACCESS_TEAM_DOMAIN: "team.example",
@@ -28,6 +29,9 @@ function fakeServices() {
   const service = {
     async listViews(candidate) {
       return [...views.values()].filter((view) => view.subject === candidate.subject).map(({ subject, ...view }) => view);
+    },
+    async listPublicViews(limit = 50) {
+      return [...views.values()].filter((view) => view.visibility === "public").slice(0, limit).map(({ subject, ...view }) => view);
     },
     async createView(candidate, input) {
       const id = `uv_test_identifier_${++index}`;
@@ -146,27 +150,44 @@ test("browser view creation and update require Access, same-origin proof, and st
   assert.equal(services.views.size, 1);
 });
 
-test("private views never cross into the public Worlds transport", async () => {
+test("private views never cross into either public projection", async () => {
   const services = fakeServices();
   let response = await handleUniverseTransport(browserRequest("/v1/universe/browser/views", {
     method: "POST",
     body: JSON.stringify(privateInput),
   }), env, "/v1/universe/browser/views", platformInfo, services);
   const privateView = await response.json();
-  response = await handleUniverseTransport(new Request(`https://worlds.idol.id/v1/universe/public/${privateView.id}`), env, `/v1/universe/public/${privateView.id}`, worldsInfo, services);
-  assert.equal(response.status, 404);
-  assert.equal((await response.json()).error, "UNIVERSE_VIEW_NOT_FOUND");
 
-  response = await handleUniverseTransport(browserRequest("/v1/universe/browser/views", {
+  for (const [host, info] of [["worlds.idol.id", worldsInfo], ["lib.idol.id", libInfo]]) {
+    response = await handleUniverseTransport(new Request(`https://${host}/v1/universe/public/${privateView.id}`), env, `/v1/universe/public/${privateView.id}`, info, services);
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).error, "UNIVERSE_VIEW_NOT_FOUND");
+  }
+});
+
+test("public views are readable through canonical Worlds and the Lib contextual lens", async () => {
+  const services = fakeServices();
+  let response = await handleUniverseTransport(browserRequest("/v1/universe/browser/views", {
     method: "POST",
     body: JSON.stringify({ ...privateInput, title: "Public constellation", visibility: "public" }),
   }), env, "/v1/universe/browser/views", platformInfo, services);
   const publicView = await response.json();
-  response = await handleUniverseTransport(new Request(`https://worlds.idol.id/v1/universe/public/${publicView.id}`), env, `/v1/universe/public/${publicView.id}`, worldsInfo, services);
-  assert.equal(response.status, 200);
-  const published = await response.json();
-  assert.equal(published.visibility, "public");
-  assert.equal("subject" in published, false);
+
+  for (const [host, info] of [["worlds.idol.id", worldsInfo], ["lib.idol.id", libInfo]]) {
+    response = await handleUniverseTransport(new Request(`https://${host}/v1/universe/public/${publicView.id}`), env, `/v1/universe/public/${publicView.id}`, info, services);
+    assert.equal(response.status, 200);
+    const published = await response.json();
+    assert.equal(published.visibility, "public");
+    assert.equal("subject" in published, false);
+
+    response = await handleUniverseTransport(new Request(`https://${host}/v1/universe/public`), env, "/v1/universe/public", info, services);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).views.length, 1);
+  }
+
+  response = await handleUniverseTransport(new Request("https://api.idol.id/v1/universe/public"), env, "/v1/universe/public", apiInfo, services);
+  assert.equal(response.status, 404);
+  assert.equal((await response.json()).error, "UNIVERSE_PUBLIC_HOST_REQUIRED");
 });
 
 test("API routes require operation-specific universe scopes", async () => {
