@@ -1,16 +1,16 @@
 const EMPTY = Object.freeze([]);
 const COLLECTIONS = Object.freeze([
-  ["nodes", "graph_ids"],
-  ["applications", "application_ids"],
-  ["worlds", "world_ids"],
-  ["projections", "projection_ids"],
-  ["derivations", "derivation_ids"],
-  ["transformations", "transformation_ids"],
-  ["witnesses", "witness_ids"],
-  ["demands", "demand_ids"],
-  ["realizations", "realization_ids"],
-  ["definitions", "definition_ids"],
-  ["references", "reference_ids"],
+  ["nodes", "graph_ids", "node"],
+  ["applications", "application_ids", "application"],
+  ["worlds", "world_ids", "world"],
+  ["projections", "projection_ids", "projection"],
+  ["derivations", "derivation_ids", "derivation"],
+  ["transformations", "transformation_ids", "transformation"],
+  ["witnesses", "witness_ids", "witness"],
+  ["demands", "demand_ids", "demand"],
+  ["realizations", "realization_ids", "realization"],
+  ["definitions", "definition_ids", "definition"],
+  ["references", "reference_ids", "reference"],
 ]);
 
 const freezeArray = (values) => Object.freeze(values);
@@ -50,16 +50,16 @@ function frozenLookup(map, key) {
   const value = map.get(String(key));
   return value ? freezeArray([...value]) : EMPTY;
 }
-function normalizeTokenIndex(bundle, tokenOrIndex) {
+function normalizeTokenIndex(tokenOrIndex) {
   if (Number.isInteger(tokenOrIndex)) return tokenOrIndex;
   if (tokenOrIndex && Number.isInteger(tokenOrIndex.index)) return tokenOrIndex.index;
   return -1;
 }
-function linkResult(token, field, map) {
+function linkResult(token, field, lookup) {
   const resolved = [];
   const unresolved = [];
   for (const id of token[field] || EMPTY) {
-    const record = map.get(String(id));
+    const record = lookup(String(id));
     if (record) resolved.push(record);
     else unresolved.push(String(id));
   }
@@ -120,19 +120,14 @@ export function buildSemanticIndex(bundle) {
 
 export function selectionForToken(index, tokenOrIndex) {
   if (!index || !index.bundle) return null;
-  const tokenIndex = normalizeTokenIndex(index.bundle, tokenOrIndex);
+  const tokenIndex = normalizeTokenIndex(tokenOrIndex);
   const token = index.bundle.tokens[tokenIndex];
   if (!token) return null;
 
   const resolved = {};
   const unresolved = {};
-  for (const [collection, field] of COLLECTIONS) {
-    const result = linkResult(token, field, {
-      get(id) {
-        const singular = collection === "applications" ? "application" : collection.replace(/s$/, "");
-        return index[singular]?.(id) || null;
-      },
-    });
+  for (const [collection, field, method] of COLLECTIONS) {
+    const result = linkResult(token, field, (id) => index[method](id));
     resolved[collection] = result.resolved;
     unresolved[field] = result.unresolved;
   }
@@ -148,10 +143,7 @@ export function selectionForToken(index, tokenOrIndex) {
     for (const edge of index.incoming(id)) addEdge(edge);
   }
 
-  const semanticIds = new Set([
-    ...(token.semantic_id === null ? [] : [token.semantic_id]),
-    ...(token.graph_ids || EMPTY),
-  ]);
+  const semanticIds = new Set([...(token.semantic_id === null ? [] : [token.semantic_id]), ...(token.graph_ids || EMPTY)]);
   const occurrences = [];
   const occurrenceKeys = new Set();
   for (const id of semanticIds) {

@@ -1,0 +1,21 @@
+/* Lexical fallback remains provenance-only. These colors encode published lexical
+   identities, never semantic identity, declaration role, type, relation, or reach. */
+.semantic-token.lx-comment,
+.semantic-token.lx-line-comment,
+.semantic-token.lx-block-comment { color: #737d88; font-style: italic; }
+.semantic-token.lx-string,
+.semantic-token.lx-text,
+.semantic-token.lx-byte-string { color: #a9c58d; }
+.semantic-token.lx-number,
+.semantic-token.lx-integer,
+.semantic-token.lx-float { color: #c4a5de; }
+.semantic-token.lx-operator,
+.semantic-token.lx-infix,
+.semantic-token.lx-prefix { color: #deb465; }
+.semantic-token.lx-delimiter,
+.semantic-token.lx-punctuation { color: #94a3b2; }
+.semantic-token.lx-name,
+.semantic-token.lx-identifier { color: #c6cbd0; }
+.semantic-token.binding-not-published.lx-comment,
+.semantic-token.binding-not-published.lx-line-comment,
+.semantic-token.binding-not-published.lx-block-comment { text-decoration: none; }

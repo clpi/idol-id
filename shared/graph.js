@@ -131,10 +131,7 @@
         if (!from || !to) continue;
         const d = curve(from, to);
         const group = svg("g", { class: `graph-edge edge-${edge.presentation.status}`, "data-edge-id": edge.id, role: "button", tabindex: "0", "aria-label": `${edge.presentation.label}: ${edge.from} to ${edge.to}` });
-        group.append(
-          svg("path", { d, class: "graph-edge-line", "marker-end": "url(#graph-arrow-published)" }),
-          svg("path", { d, class: "graph-edge-hit" }),
-        );
+        group.append(svg("path", { d, class: "graph-edge-line", "marker-end": "url(#graph-arrow-published)" }), svg("path", { d, class: "graph-edge-hit" }));
         const exact = svg("text", { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 7, class: "graph-edge-label", "text-anchor": "middle" });
         exact.textContent = edge.presentation.label;
         group.appendChild(exact);
@@ -169,7 +166,7 @@
     }
 
     select(id, reveal = false) { return this.selectNode(id, reveal); }
-    selectNode(id, reveal = false, notify = true) {
+    selectNode(id, reveal = false, notify = reveal) {
       const node = this.byId.get(String(id));
       if (!node) return null;
       this.selectedNode = String(id);
@@ -183,7 +180,7 @@
       }
       return projected;
     }
-    selectEdge(id, reveal = false, notify = true) {
+    selectEdge(id, reveal = false, notify = reveal) {
       const edge = this.edgeById.get(String(id));
       if (!edge) return null;
       this.selectedEdge = String(id);

@@ -5,14 +5,9 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Semantic Observatory uses the exact semantic bundle and synchronized source, graph, and rail surfaces", async () => {
-  const [html, source, graph, index, css] = await Promise.all([
-    read("apps/graph/index.html"),
-    read("shared/semantic-source.js"),
-    read("shared/graph.js"),
-    read("shared/semantic-index.js"),
-    read("shared/observatory.css"),
+  const [html, source, graph, index, css, syntax] = await Promise.all([
+    read("apps/graph/index.html"), read("shared/semantic-source.js"), read("shared/graph.js"), read("shared/semantic-index.js"), read("shared/observatory.css"), read("shared/observatory-syntax.css"),
   ]);
-
   assert.match(html, /type="module"/);
   assert.match(html, /semantic-bundle\.js/);
   assert.match(html, /semantic-source\.js/);
@@ -30,27 +25,27 @@ test("Semantic Observatory uses the exact semantic bundle and synchronized sourc
   assert.match(source, /class SemanticSourceView/);
   assert.match(source, /role="button"/);
   assert.match(source, /keydown/);
+  assert.match(source, /observatory-syntax\.css/);
   assert.match(graph, /class GraphView/);
   assert.match(graph, /selectEdge/);
   assert.match(graph, /setLens/);
   assert.match(graph, /setHighlights/);
+  assert.match(graph, /selectNode\(id, reveal = false, notify = reveal\)/);
+  assert.match(graph, /selectEdge\(id, reveal = false, notify = reveal\)/);
   assert.doesNotMatch(graph, /Math\.random/);
   assert.doesNotMatch(graph, /repulsion|O\(n²\)|synthetic:\s*true/);
   for (const word of ["definitions", "references", "worlds", "projections", "derivations", "realizations"]) assert.match(index, new RegExp(word));
 
   assert.match(css, /font-family:\s*var\(--sans\)/);
   assert.match(css, /font-family:\s*var\(--mono\)/);
+  for (const lexical of ["lx-comment", "lx-string", "lx-number", "lx-operator", "lx-delimiter"]) assert.match(syntax, new RegExp(`\\.${lexical}`));
   assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /min-height:\s*44px/);
 });
 
 test("Observatory never presents same spelling, paths, or names as definitions or semantic references", async () => {
-  const [html, index, source] = await Promise.all([
-    read("apps/graph/index.html"),
-    read("shared/semantic-index.js"),
-    read("shared/semantic-source.js"),
-  ]);
+  const [html, index, source] = await Promise.all([read("apps/graph/index.html"), read("shared/semantic-index.js"), read("shared/semantic-source.js")]);
   assert.match(html, /same spelling[^<]*lexical/i);
   assert.match(html, /published occurrences/i);
   assert.doesNotMatch(index, /findByName|nearest|fuzzy.*identity|sameSpelling.*reference/i);
