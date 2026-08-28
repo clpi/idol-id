@@ -1,7 +1,7 @@
 # Idol bootstrap-seed installer for Windows.
 # Builds the exact pinned source authority; does not claim self-hosting.
 $ErrorActionPreference = "Stop"
-$authority = if ($env:IDOL_AUTHORITY) { $env:IDOL_AUTHORITY } else { "f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99" }
+$authority = if ($env:IDOL_AUTHORITY) { $env:IDOL_AUTHORITY } else { "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8" }
 $canonicalRepository = "https://github.com/clpi/idol.git"
 if ($env:IDOL_REPOSITORY -and $env:IDOL_REPOSITORY -ne $canonicalRepository) {
   throw "idol install: IDOL_REPOSITORY overrides are not admitted; installer provenance is pinned to clpi/idol"
