@@ -1,0 +1,114 @@
+name: r16 hermes runtime inspect
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-hermes-runtime-inspect.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
+  DEPLOY_KEY_ARTIFACT_ID: "9696748865"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open sealed bundle
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts /tmp/r16key
+          python -m pip install -q cryptography
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$DEPLOY_KEY_ARTIFACT_ID/zip" -o /tmp/key.zip
+          unzip -q /tmp/key.zip -d /tmp/r16key
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+          p=json.loads(Path('/tmp/r16key/r16-deploy-private.enc.json').read_text())
+          k=HKDF(algorithm=hashes.SHA256(),length=32,salt=base64.b64decode(p['salt']),info=p['info'].encode()).derive(os.environ['CLOUDFLARE_API_TOKEN'].encode())
+          pem=AESGCM(k).decrypt(base64.b64decode(p['nonce']),base64.b64decode(p['ciphertext']),p['aad'].encode())
+          private=serialization.load_pem_private_key(pem,password=None)
+          e=json.loads(Path('ops/r16-provider-bundle.rsa.json').read_text())
+          dk=private.decrypt(base64.b64decode(e['encrypted_key']),padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=None))
+          plain=AESGCM(dk).decrypt(base64.b64decode(e['nonce']),base64.b64decode(e['ciphertext']),e['aad'].encode())
+          assert hashlib.sha256(plain).hexdigest()==e['payload_sha256']
+          Path('/tmp/r16-provider-bundle.json').write_bytes(plain)
+          Path('/tmp/r16-provider-bundle.json').chmod(0o600)
+          PY
+          rm -rf /tmp/r16key /tmp/key.zip
+
+      - name: Capture authenticated Hermes runtime client
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          account="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          r16="$account/cfd_tunnel/$R16_TUNNEL_ID"
+          zone_id="$(curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=pecunies.com&status=active'|jq -er '.result[0].id')"
+          dns_base="https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records"
+          original="$(curl -fsS "${auth[@]}" "$r16/configurations"|jq -e '.result.config')"
+          host="r16-hermes-${RUN_ID}.pecunies.com"
+          dns_id=''
+          cleanup(){ set +e; rm -f /tmp/r16-provider-bundle.json /tmp/hermes.cookies; curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson config "$original" '{config:$config}')" "$r16/configurations" >/dev/null; [ -z "$dns_id" ] || curl -sS -X DELETE "${auth[@]}" "$dns_base/$dns_id" >/dev/null; }
+          trap cleanup EXIT
+          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --arg name "$host" --arg content "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')" "$dns_base")"
+          dns_id="$(jq -er '.result.id'<<<"$created")"
+          for _ in $(seq 1 45); do dig +short @1.1.1.1 "$host"|grep -q .&&break;sleep 2;done
+          cfg="$(jq --arg h "$host" '.ingress as $i|.ingress=(($i[0:-1])+[{hostname:$h,service:"http://localhost:8787"}]+[$i[-1]])'<<<"$original")"
+          curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "$(jq -nc --argjson config "$cfg" '{config:$config}')" "$r16/configurations"|jq -e '.success==true'>/dev/null
+          sleep 10
+          password="$(jq -r '.hermes_password' /tmp/r16-provider-bundle.json)"
+          curl -fsS -c /tmp/hermes.cookies -H 'Content-Type: application/json' --data "$(jq -nc --arg password "$password" '{password:$password}')" "https://$host/api/auth/login"|jq -e '.ok==true'>/dev/null
+          curl -fsSL -b /tmp/hermes.cookies "https://$host/" -o artifacts/root.html
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html=Path('artifacts/root.html').read_text(errors='replace')
+          assets=[]
+          for pat in (r'<script[^>]+src=["\']([^"\']+)',r'<link[^>]+href=["\']([^"\']+)'):
+              assets.extend(re.findall(pat,html,re.I))
+          Path('artifacts/assets.txt').write_text('\n'.join(dict.fromkeys(assets))+'\n')
+          PY
+          while IFS= read -r asset; do
+            [ -n "$asset" ] || continue
+            case "$asset" in http*) url="$asset";; /*) url="https://$host$asset";; *) url="https://$host/$asset";; esac
+            name="$(printf '%s' "$asset"|sed 's#[^A-Za-z0-9._-]#_#g')"
+            curl -fsSL -b /tmp/hermes.cookies "$url" -o "artifacts/$name" || true
+          done < artifacts/assets.txt
+          grep -RIEo '.{0,120}(/api/[^"'"'"' )]+|new WebSocket\([^)]*|wss?://[^"'"'"' ]+|terminal[^"'"'"' ]*|pty[^"'"'"' ]*|exec[^"'"'"' ]*).{0,180}' artifacts/ > artifacts/protocol-hints.txt || true
+          sed -E 's/(token|secret|password|key)[^,}\n]{0,100}/\1:<redacted>/Ig' artifacts/protocol-hints.txt > artifacts/protocol-hints-redacted.txt
+          rm -f artifacts/protocol-hints.txt
+          echo "assets captured: $(wc -l < artifacts/assets.txt)"
+          head -80 artifacts/protocol-hints-redacted.txt || true
+
+      - name: Upload runtime client evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-hermes-runtime-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
