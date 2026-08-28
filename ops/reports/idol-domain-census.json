@@ -1,0 +1,1930 @@
+{
+  "schema": "idol.domain.census.v1",
+  "observed_at": "2026-08-28T16:47:10Z",
+  "zone": "idol.id",
+  "zone_id": "4c299fda8b7413aeb296f13ca9a256da",
+  "dns": [
+    {
+      "id": "0339f5456c90a24876edd1246de75464",
+      "name": "api.idol.id",
+      "type": "CNAME",
+      "content": "d59a05e2-e86b-454b-9cca-3b66ba40bf19.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "ab52bd3d13ff72f9bb5799abd80a03cb",
+      "name": "claw.idol.id",
+      "type": "CNAME",
+      "content": "ca26286a-3fbc-4f5d-9d04-72dc8d715903.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": "OpenClaw Control UI on cursor via cloudflared",
+      "tags": []
+    },
+    {
+      "id": "5d25aea11ba57cb3766b70f0cd2b1dec",
+      "name": "docs.idol.id",
+      "type": "CNAME",
+      "content": "78fc1179-a77a-45a0-80b5-b09608aad6cb.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "d7935200c493f322951ac2abd9407f63",
+      "name": "graph.idol.id",
+      "type": "CNAME",
+      "content": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "e155f5a01efb09199de9cf7a61c656a2",
+      "name": "hermes.idol.id",
+      "type": "CNAME",
+      "content": "ca26286a-3fbc-4f5d-9d04-72dc8d715903.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "61c6f76e403e23ffdc249aa6c49131f8",
+      "name": "idol.id",
+      "type": "CNAME",
+      "content": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "bd32d7096a2fe06390c3c4095b859c1b",
+      "name": "lib.idol.id",
+      "type": "CNAME",
+      "content": "4c8781a3-9450-4697-a40e-b0e214856df2.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "12dfb9649df76f6bad54f335708f0df8",
+      "name": "r16.idol.id",
+      "type": "CNAME",
+      "content": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "df4c66f2fbdf4fb47f3b9c74feb04c3d",
+      "name": "r8a.idol.id",
+      "type": "CNAME",
+      "content": "702ff463-a6f4-401a-b9d5-b61e66b2a387.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "ece7fde4e24d885e684d1e428240b6d8",
+      "name": "r8b.idol.id",
+      "type": "CNAME",
+      "content": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "5f19af568bf14af6d562687f8885165b",
+      "name": "ssh-r16.idol.id",
+      "type": "CNAME",
+      "content": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "85420a878255b429abf49c01d3e3f3b4",
+      "name": "www.idol.id",
+      "type": "CNAME",
+      "content": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c.cfargotunnel.com",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "8af75f2819a2f6de7996ac4bbb0b4af7",
+      "name": "_gh-idolorg-e.idol.id",
+      "type": "TXT",
+      "content": "\"26184b3754\"",
+      "proxied": false,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "caa5be434ef4044822ec7d51cd6b49f3",
+      "name": "platform.idol.id",
+      "type": "AAAA",
+      "content": "100::",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    },
+    {
+      "id": "5ae3447f290486f0ae1c3f8e52188c37",
+      "name": "worlds.idol.id",
+      "type": "AAAA",
+      "content": "100::",
+      "proxied": true,
+      "ttl": 1,
+      "comment": null,
+      "tags": []
+    }
+  ],
+  "worker_routes": [
+    {
+      "id": "17a96761ffff43f797b0f1a86d37e8d3",
+      "pattern": "graph.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "e03902141f8446f8b05f59635c109110",
+      "pattern": "docs.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "9735375733934b779d32b95d55914aaa",
+      "pattern": "api.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "7bad58668e0c4b4995ed944dbdf04ca9",
+      "pattern": "www.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "a1a2fab93a6e49b7b3f2e2e3a7fe757a",
+      "pattern": "r8b.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "7119e136d8f940bfac20209d5b803f22",
+      "pattern": "lib.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "ada1dc06fabe47d184bc420bc9f1441a",
+      "pattern": "r16.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "f40076c826984b43965178a535499888",
+      "pattern": "r8a.idol.id/*",
+      "script": "idol-id"
+    },
+    {
+      "id": "adb30444e801428d9a7ea1b3bd0e8a49",
+      "pattern": "idol.id/*",
+      "script": "idol-id"
+    }
+  ],
+  "pages_projects": [],
+  "access_apps": [
+    {
+      "id": "32bc1cf1-ff7e-49fd-a642-fc5227db3a05",
+      "name": "Idol Platform Browser Identity",
+      "domain": "platform.idol.id/ide*",
+      "type": "self_hosted",
+      "app_launcher_visible": false
+    },
+    {
+      "id": "ca36eb31-ca74-42ab-aabf-ad4d708381a2",
+      "name": "Idol Repository Observatory",
+      "domain": "platform.idol.id/repo*",
+      "type": "self_hosted",
+      "app_launcher_visible": false
+    },
+    {
+      "id": "ca37b8e7-3ec9-46e0-bbee-ed925ef1cea0",
+      "name": "r16 Hermes SSH",
+      "domain": "ssh-r16.pecunies.com",
+      "type": "ssh",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "d9bcd3b0-4221-4cc7-acb9-3fd95427c721",
+      "name": "r16 idol SSH",
+      "domain": "ssh-r16.idol.id",
+      "type": "ssh",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "6e94dee5-9998-4c14-8a5e-0b9553bcc944",
+      "name": "des-steps - Cloudflare Workers",
+      "domain": "des-steps.mtrl.workers.dev",
+      "type": "self_hosted",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "37bb2e06-fcd9-4666-8a77-68b437c6e8e6",
+      "name": "Warp Login App",
+      "domain": "duets.cloudflareaccess.com/warp",
+      "type": "warp",
+      "app_launcher_visible": null
+    },
+    {
+      "id": "2d47daec-58e5-47e2-8c11-e1c57a627ea3",
+      "name": "Proxy endpoint app - interface",
+      "domain": "y8ouay11p8.proxy.cloudflare-gateway.com",
+      "type": "proxy_endpoint",
+      "app_launcher_visible": null
+    },
+    {
+      "id": "2a8d2be6-310d-4766-a8ab-2b936d95911b",
+      "name": "Koyeb",
+      "domain": "https://koyeb.com",
+      "type": "bookmark",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "d913264e-2b60-4301-9869-ddc8508614c1",
+      "name": "Microsoft Azure",
+      "domain": "duets.cloudflareaccess.com/cdn-cgi/access/sso/oidc/12a254df68c9d76065c276247c37c4303090e47eaabde4ae6236450657ff9a92",
+      "type": "saas",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "e5373039-3d29-4dd4-9c92-65aeba364ce6",
+      "name": "r16",
+      "domain": "r16.pecunies.com",
+      "type": "ssh",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "f9a619b3-dcdd-4312-ae1d-4e6d489879fb",
+      "name": "Wordpress",
+      "domain": "devisa.cloudflareaccess.com/cdn-cgi/access/sso/saml/76f7aaee3008492dbd1df3cdc85afec7bfc077948d7c386b3a83cdec6250257d",
+      "type": "saas",
+      "app_launcher_visible": true
+    },
+    {
+      "id": "96be17bd-9789-4714-8d3d-a113384336f4",
+      "name": "mcp",
+      "domain": "mcp.dib.im",
+      "type": "mcp_portal",
+      "app_launcher_visible": null
+    },
+    {
+      "id": "f4a9f43a-4a3a-4542-9284-ff2bb87f7fa5",
+      "name": "Knowledge Graph Memory Server",
+      "domain": null,
+      "type": "mcp",
+      "app_launcher_visible": null
+    },
+    {
+      "id": "4766a4f2-9273-47d3-a931-ae674e189710",
+      "name": "CLIP MCP",
+      "domain": null,
+      "type": "mcp",
+      "app_launcher_visible": null
+    },
+    {
+      "id": "5c7aa40b-e7b3-4ef0-adf8-2b01212e3ac1",
+      "name": "Wordpress",
+      "domain": "mtrl.cloudflareaccess.com/cdn-cgi/access/sso/saml/1a4fa2cc31049e89a6763e0e2191a3554a7aa1cc140207bcf9266dbc572bcd99",
+      "type": "saas",
+      "app_launcher_visible": true
+    }
+  ],
+  "tunnels": [
+    {
+      "id": "d59a05e2-e86b-454b-9cca-3b66ba40bf19",
+      "name": "api",
+      "status": "down",
+      "created_at": "2026-08-20T03:49:32.835997Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "6319f8d4-5336-4c13-86f8-8e40b1b14df3",
+      "name": "arm",
+      "status": "healthy",
+      "created_at": "2025-12-18T03:25:23.211945Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "c8633792-895f-41e3-ad15-87bdc1f32d16",
+      "name": "brk",
+      "status": "healthy",
+      "created_at": "2025-12-21T03:23:47.528770Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "e3947a1c-7610-41ac-837b-f7fa00d4210a",
+      "name": "ccs",
+      "status": "inactive",
+      "created_at": "2025-12-21T03:06:13.512705Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "532d9080-e8c4-4227-88e9-6163566ff488",
+      "name": "cid",
+      "status": "healthy",
+      "created_at": "2025-12-21T03:22:03.350350Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "name": "claw",
+      "status": "healthy",
+      "created_at": "2026-08-27T17:59:22.970665Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "c69c9212-1f55-4974-8bfa-6f234f3adf17",
+      "name": "cli",
+      "status": "down",
+      "created_at": "2025-12-21T03:48:32.798491Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "452546c4-5adf-490e-8899-ed4c8cda6c66",
+      "name": "cru",
+      "status": "inactive",
+      "created_at": "2026-05-13T02:34:01.130600Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "8c330aa1-4708-4469-b6ab-e522acc25cb8",
+      "name": "csd",
+      "status": "down",
+      "created_at": "2025-12-21T03:13:36.821555Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "5db2a9cf-224b-48cb-a609-05e22956b121",
+      "name": "csv",
+      "status": "healthy",
+      "created_at": "2025-12-21T03:12:08.981718Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "78fc1179-a77a-45a0-80b5-b09608aad6cb",
+      "name": "docs",
+      "status": "healthy",
+      "created_at": "2026-08-20T07:29:14.890363Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "1c7789bd-8066-460e-bd41-4804b885d45e",
+      "name": "fas",
+      "status": "down",
+      "created_at": "2025-12-21T11:44:24.871601Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "7fb5c88a-38cf-4790-af96-ce6d584bc618",
+      "name": "gci",
+      "status": "inactive",
+      "created_at": "2026-05-31T05:48:11.138498Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "74ad1541-3d03-477c-9b38-8d68f6222780",
+      "name": "hermes",
+      "status": "down",
+      "created_at": "2026-08-26T04:55:46.986263Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "0a3bdc0f-3880-4ebb-b63a-54ec4c230a99",
+      "name": "iro",
+      "status": "healthy",
+      "created_at": "2025-12-21T03:15:07.403372Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "4c8781a3-9450-4697-a40e-b0e214856df2",
+      "name": "lib",
+      "status": "healthy",
+      "created_at": "2026-08-20T03:49:33.874058Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "03f2c162-032c-4a57-b0f7-a9da56ec02cd",
+      "name": "lie",
+      "status": "down",
+      "created_at": "2026-06-01T10:02:14.927901Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "11f16ff3-29c1-417d-8144-f1fcf4a26e3d",
+      "name": "mb",
+      "status": "down",
+      "created_at": "2025-12-21T23:27:17.597272Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "9b528613-d443-4031-babe-c1148bba1571",
+      "name": "mm",
+      "status": "down",
+      "created_at": "2025-12-21T16:41:01.633818Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "638eec8b-3cc9-4bf7-9891-24c169a471a7",
+      "name": "mm-web",
+      "status": "healthy",
+      "created_at": "2026-08-20T18:08:40.960322Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "29a3a713-bee6-4433-83ea-ddc0b80ce35f",
+      "name": "orb",
+      "status": "inactive",
+      "created_at": "2025-12-21T02:50:51.902646Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "9b9379cc-0de9-4296-8bc4-dba3a9b0bb97",
+      "name": "pec",
+      "status": "healthy",
+      "created_at": "2026-05-13T02:39:15.247363Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "4112d9d4-707c-40e1-926b-2a057857678d",
+      "name": "per",
+      "status": "healthy",
+      "created_at": "2026-05-13T02:35:17.994572Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "1e54b0ae-005a-424e-b1d6-5868dbee6389",
+      "name": "r16",
+      "status": "healthy",
+      "created_at": "2026-05-13T02:31:04.470902Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1",
+      "name": "r16-new",
+      "status": "healthy",
+      "created_at": "2026-08-21T12:50:38.863893Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "47161def-4414-430e-b9a4-7538ffc0d5c5",
+      "name": "r3",
+      "status": "down",
+      "created_at": "2026-05-13T02:30:20.115510Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "702ff463-a6f4-401a-b9d5-b61e66b2a387",
+      "name": "r8a-web",
+      "status": "down",
+      "created_at": "2026-08-20T03:25:15.927413Z",
+      "deleted_at": null,
+      "connection_count": 0
+    },
+    {
+      "id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "name": "r8b-web",
+      "status": "healthy",
+      "created_at": "2026-08-20T03:27:06.250127Z",
+      "deleted_at": null,
+      "connection_count": 4
+    },
+    {
+      "id": "d014193e-dd58-4eb2-8bff-00582f7fffb1",
+      "name": "rnb",
+      "status": "healthy",
+      "created_at": "2025-12-21T03:03:00.169226Z",
+      "deleted_at": null,
+      "connection_count": 4
+    }
+  ],
+  "tunnel_ingress": [
+    {
+      "tunnel_id": "d59a05e2-e86b-454b-9cca-3b66ba40bf19",
+      "tunnel_name": "api",
+      "tunnel_status": "down",
+      "hostname": "d59a05e2-e86b-454b-9cca-3b66ba40bf19.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d59a05e2-e86b-454b-9cca-3b66ba40bf19",
+      "tunnel_name": "api",
+      "tunnel_status": "down",
+      "hostname": "api.idol.id",
+      "path": null,
+      "service": "http://localhost:8081",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d59a05e2-e86b-454b-9cca-3b66ba40bf19",
+      "tunnel_name": "api",
+      "tunnel_status": "down",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "6319f8d4-5336-4c13-86f8-8e40b1b14df3",
+      "tunnel_name": "arm",
+      "tunnel_status": "healthy",
+      "hostname": "arm.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "6319f8d4-5336-4c13-86f8-8e40b1b14df3",
+      "tunnel_name": "arm",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/mcp",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/mcp/*",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/consent",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/consent/*",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/authorize",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/authorize/*",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/token",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/register",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/revoke",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": "/.well-known/*",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "hermes.idol.id",
+      "path": "/mcp",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "hermes.idol.id",
+      "path": "/mcp/*",
+      "service": "http://127.0.0.1:18889",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "claw.idol.id",
+      "path": null,
+      "service": "http://127.0.0.1:18789",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": "hermes.idol.id",
+      "path": null,
+      "service": "http://127.0.0.1:8787",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "ca26286a-3fbc-4f5d-9d04-72dc8d715903",
+      "tunnel_name": "claw",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "5db2a9cf-224b-48cb-a609-05e22956b121",
+      "tunnel_name": "csv",
+      "tunnel_status": "healthy",
+      "hostname": "csv.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "5db2a9cf-224b-48cb-a609-05e22956b121",
+      "tunnel_name": "csv",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "78fc1179-a77a-45a0-80b5-b09608aad6cb",
+      "tunnel_name": "docs",
+      "tunnel_status": "healthy",
+      "hostname": "78fc1179-a77a-45a0-80b5-b09608aad6cb.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "78fc1179-a77a-45a0-80b5-b09608aad6cb",
+      "tunnel_name": "docs",
+      "tunnel_status": "healthy",
+      "hostname": "docs.idol.id",
+      "path": null,
+      "service": "http://localhost:8084",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "78fc1179-a77a-45a0-80b5-b09608aad6cb",
+      "tunnel_name": "docs",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "1c7789bd-8066-460e-bd41-4804b885d45e",
+      "tunnel_name": "fas",
+      "tunnel_status": "down",
+      "hostname": "fas.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "1c7789bd-8066-460e-bd41-4804b885d45e",
+      "tunnel_name": "fas",
+      "tunnel_status": "down",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "74ad1541-3d03-477c-9b38-8d68f6222780",
+      "tunnel_name": "hermes",
+      "tunnel_status": "down",
+      "hostname": "hermes.idol.id",
+      "path": null,
+      "service": "http://127.0.0.1:8787",
+      "origin_request": {
+        "noTLSVerify": true
+      }
+    },
+    {
+      "tunnel_id": "74ad1541-3d03-477c-9b38-8d68f6222780",
+      "tunnel_name": "hermes",
+      "tunnel_status": "down",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "0a3bdc0f-3880-4ebb-b63a-54ec4c230a99",
+      "tunnel_name": "iro",
+      "tunnel_status": "healthy",
+      "hostname": "iro.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "0a3bdc0f-3880-4ebb-b63a-54ec4c230a99",
+      "tunnel_name": "iro",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "4c8781a3-9450-4697-a40e-b0e214856df2",
+      "tunnel_name": "lib",
+      "tunnel_status": "healthy",
+      "hostname": "4c8781a3-9450-4697-a40e-b0e214856df2.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "4c8781a3-9450-4697-a40e-b0e214856df2",
+      "tunnel_name": "lib",
+      "tunnel_status": "healthy",
+      "hostname": "lib.idol.id",
+      "path": null,
+      "service": "http://localhost:8082",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "4c8781a3-9450-4697-a40e-b0e214856df2",
+      "tunnel_name": "lib",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "11f16ff3-29c1-417d-8144-f1fcf4a26e3d",
+      "tunnel_name": "mb",
+      "tunnel_status": "down",
+      "hostname": "mb.clp.im",
+      "path": null,
+      "service": "http://localhost",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "11f16ff3-29c1-417d-8144-f1fcf4a26e3d",
+      "tunnel_name": "mb",
+      "tunnel_status": "down",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "638eec8b-3cc9-4bf7-9891-24c169a471a7",
+      "tunnel_name": "mm-web",
+      "tunnel_status": "healthy",
+      "hostname": "638eec8b-3cc9-4bf7-9891-24c169a471a7.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "638eec8b-3cc9-4bf7-9891-24c169a471a7",
+      "tunnel_name": "mm-web",
+      "tunnel_status": "healthy",
+      "hostname": "mm.idol.id",
+      "path": null,
+      "service": "http://localhost:8080",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "638eec8b-3cc9-4bf7-9891-24c169a471a7",
+      "tunnel_name": "mm-web",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "1e54b0ae-005a-424e-b1d6-5868dbee6389",
+      "tunnel_name": "r16",
+      "tunnel_status": "healthy",
+      "hostname": "r16.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "1e54b0ae-005a-424e-b1d6-5868dbee6389",
+      "tunnel_name": "r16",
+      "tunnel_status": "healthy",
+      "hostname": "r16.pecunies.com",
+      "path": null,
+      "service": "ssh://100.94.22.4:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "1e54b0ae-005a-424e-b1d6-5868dbee6389",
+      "tunnel_name": "r16",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1",
+      "tunnel_name": "r16-new",
+      "tunnel_status": "healthy",
+      "hostname": "r16.idol.id",
+      "path": null,
+      "service": "http://localhost:8080",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1",
+      "tunnel_name": "r16-new",
+      "tunnel_status": "healthy",
+      "hostname": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1",
+      "tunnel_name": "r16-new",
+      "tunnel_status": "healthy",
+      "hostname": "ssh-r16.idol.id",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1",
+      "tunnel_name": "r16-new",
+      "tunnel_status": "healthy",
+      "hostname": "ssh-r16.pecunies.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "f43607fc-f26b-4fdc-b3b0-85f1bfc006e1",
+      "tunnel_name": "r16-new",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "47161def-4414-430e-b9a4-7538ffc0d5c5",
+      "tunnel_name": "r3",
+      "tunnel_status": "down",
+      "hostname": "r3.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "47161def-4414-430e-b9a4-7538ffc0d5c5",
+      "tunnel_name": "r3",
+      "tunnel_status": "down",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "702ff463-a6f4-401a-b9d5-b61e66b2a387",
+      "tunnel_name": "r8a-web",
+      "tunnel_status": "down",
+      "hostname": "r8a.idol.id",
+      "path": null,
+      "service": "http://localhost:8080",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "702ff463-a6f4-401a-b9d5-b61e66b2a387",
+      "tunnel_name": "r8a-web",
+      "tunnel_status": "down",
+      "hostname": "702ff463-a6f4-401a-b9d5-b61e66b2a387.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "702ff463-a6f4-401a-b9d5-b61e66b2a387",
+      "tunnel_name": "r8a-web",
+      "tunnel_status": "down",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c.cfargotunnel.com",
+      "path": null,
+      "service": "ssh://localhost:22",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": "r8b.idol.id",
+      "path": null,
+      "service": "http://localhost:8080",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": "graph.idol.id",
+      "path": null,
+      "service": "http://localhost:8080",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": "lib.idol.id",
+      "path": null,
+      "service": "http://localhost:8082",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": "idol.id",
+      "path": null,
+      "service": "http://localhost:8086",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": "www.idol.id",
+      "path": null,
+      "service": "http://localhost:8086",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d1c44b58-9f0c-461f-afb2-7dcbfb1b113c",
+      "tunnel_name": "r8b-web",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d014193e-dd58-4eb2-8bff-00582f7fffb1",
+      "tunnel_name": "rnb",
+      "tunnel_status": "healthy",
+      "hostname": "rnb.clp.im",
+      "path": null,
+      "service": "http://localhost:9090",
+      "origin_request": {}
+    },
+    {
+      "tunnel_id": "d014193e-dd58-4eb2-8bff-00582f7fffb1",
+      "tunnel_name": "rnb",
+      "tunnel_status": "healthy",
+      "hostname": null,
+      "path": null,
+      "service": "http_status:404",
+      "origin_request": {}
+    }
+  ],
+  "http": [
+    {
+      "host": "_gh-idolorg-e.idol.id",
+      "path": "/",
+      "http": 0,
+      "final_url": "https://_gh-idolorg-e.idol.id/",
+      "content_type": "0",
+      "redirects": 0,
+      "bytes": 0.063642,
+      "seconds": 0,
+      "remote_ip": "https://_gh-idolorg-e.idol.id/",
+      "ssl_verify_result": 1,
+      "title": "",
+      "body_sha256": "",
+      "body_prefix": ""
+    },
+    {
+      "host": "_gh-idolorg-e.idol.id",
+      "path": "/health",
+      "http": 0,
+      "final_url": "https://_gh-idolorg-e.idol.id/health",
+      "content_type": "0",
+      "redirects": 0,
+      "bytes": 0.015396,
+      "seconds": 0,
+      "remote_ip": "https://_gh-idolorg-e.idol.id/health",
+      "ssl_verify_result": 1,
+      "title": "",
+      "body_sha256": "",
+      "body_prefix": ""
+    },
+    {
+      "host": "_gh-idolorg-e.idol.id",
+      "path": "/api/health",
+      "http": 0,
+      "final_url": "https://_gh-idolorg-e.idol.id/api/health",
+      "content_type": "0",
+      "redirects": 0,
+      "bytes": 0.015384,
+      "seconds": 0,
+      "remote_ip": "https://_gh-idolorg-e.idol.id/api/health",
+      "ssl_verify_result": 1,
+      "title": "",
+      "body_sha256": "",
+      "body_prefix": ""
+    },
+    {
+      "host": "_gh-idolorg-e.idol.id",
+      "path": "/__idol/health",
+      "http": 0,
+      "final_url": "https://_gh-idolorg-e.idol.id/__idol/health",
+      "content_type": "0",
+      "redirects": 0,
+      "bytes": 0.031491,
+      "seconds": 0,
+      "remote_ip": "https://_gh-idolorg-e.idol.id/__idol/health",
+      "ssl_verify_result": 1,
+      "title": "",
+      "body_sha256": "",
+      "body_prefix": ""
+    },
+    {
+      "host": "api.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://api.idol.id/apps/api/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 6917,
+      "seconds": 0.151323,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "API — idol.id",
+      "body_sha256": "f9f33601b56e044aa57e394bcef4fe0ed90fda8c8ba237ec173cc1aac3211b64",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>API — idol.id</title> <link rel=\"stylesheet\" h"
+    },
+    {
+      "host": "api.idol.id",
+      "path": "/health",
+      "http": 530,
+      "final_url": "https://api.idol.id/health",
+      "content_type": "text/html; charset=UTF-8",
+      "redirects": 0,
+      "bytes": 7625,
+      "seconds": 0.097466,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Cloudflare Tunnel error | api.idol.id | Cloudflare",
+      "body_sha256": "38912921329b6667fe7c42c2986909661604f7a3838172e9b120c7c9927856b7",
+      "body_prefix": "<!doctype html> <!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 7]> <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 8]> <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]--> <!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![e"
+    },
+    {
+      "host": "api.idol.id",
+      "path": "/api/health",
+      "http": 530,
+      "final_url": "https://api.idol.id/api/health",
+      "content_type": "text/html; charset=UTF-8",
+      "redirects": 0,
+      "bytes": 7625,
+      "seconds": 0.095237,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Cloudflare Tunnel error | api.idol.id | Cloudflare",
+      "body_sha256": "f9ee3e19a797d1d2f4252dcd498bef0b32d3191a4ab4d7e2383510670ec3bff3",
+      "body_prefix": "<!doctype html> <!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 7]> <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 8]> <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]--> <!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![e"
+    },
+    {
+      "host": "api.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://api.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 309,
+      "seconds": 0.072765,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "98fe0488547b9ab638232e281c35558fe4f5e7e35c86760d23fd5a0b74f5d7af",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"api\",\"surfac"
+    },
+    {
+      "host": "docs.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://docs.idol.id/apps/docs/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 10766,
+      "seconds": 0.091703,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "Docs — idol.id",
+      "body_sha256": "6a0d7e767bc51429af6604cb95f8866e83b3004221d32e56a5e27ffd50657e52",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>Docs — idol.id</title> <link rel=\"stylesheet\" "
+    },
+    {
+      "host": "docs.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://docs.idol.id/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 125,
+      "seconds": 0.302592,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "119d572d2f7e211a088f63b6f8b0a9a5663d319dece31d3dafdd42b9f78a7ace",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"docs\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "docs.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://docs.idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 41,
+      "seconds": 0.127074,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "docs.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://docs.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 311,
+      "seconds": 0.046806,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "3dd3f70f3a61180551622de4797bac1ee6d46ba1ac882e1c0d7ad65b07ec7c63",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"docs\",\"surfa"
+    },
+    {
+      "host": "graph.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://graph.idol.id/apps/graph/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 16323,
+      "seconds": 0.185425,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "Semantic Observatory — idol.id",
+      "body_sha256": "c5a0b4812577e0c1a34dc38067fce26f3c3a361aa82d271b53e76386247b3a9f",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>Semantic Observatory — idol.id</title> <link r"
+    },
+    {
+      "host": "graph.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://graph.idol.id/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 126,
+      "seconds": 0.444970,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "715814e76367147871b558683dc9b18a96a100ab9d20b0c571f52f0e3a7d9572",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"graph\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "graph.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://graph.idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 41,
+      "seconds": 0.292395,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "graph.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://graph.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 313,
+      "seconds": 0.111306,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "ba57e3a9d78f931b7e7ee05f51d48d3c2b41c5932896f98671ec0c98c514d1f6",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"graph\",\"surf"
+    },
+    {
+      "host": "idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://idol.id/apps/site/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 15267,
+      "seconds": 0.193228,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Idsem — semantic identity, exact facts, lawful realization",
+      "body_sha256": "652bba90f3e09fa5920804fab1e655373f420851f8525f57425fa3823160b14e",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"> <title>Idsem — semantic identity, e"
+    },
+    {
+      "host": "idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://idol.id/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 125,
+      "seconds": 0.298237,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0427ff1608f6c62ab3e39a4240b3327e651ef04c0959feb9bac1a25b4280d06c",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"site\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 41,
+      "seconds": 0.351598,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 311,
+      "seconds": 0.046797,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "9d6f80ad6926a1043de1ffab3ee13a7dcfbebccca33448f43b6e4addc8cfb121",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"site\",\"surfa"
+    },
+    {
+      "host": "lib.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://lib.idol.id/apps/lib/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 31758,
+      "seconds": 0.131562,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "Registry — idol.id",
+      "body_sha256": "32a77fc18135be74b7ee29184dc71fc7a2989b03354036af3da22d0fa9261297",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"> <title>Registry — idol.id</title> <"
+    },
+    {
+      "host": "lib.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://lib.idol.id/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 124,
+      "seconds": 0.307908,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "b25501fed6130d5dbc54ccb4a6f9b8f0ca33c5b68f817a5e15fadb5e38567c08",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"lib\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "lib.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://lib.idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 41,
+      "seconds": 0.280135,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "lib.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://lib.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 309,
+      "seconds": 0.054753,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "063b8d7430c7ab09dfa6f196f3ed2a72eaf743afb7d7aaef9782f9a14370499c",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"lib\",\"surfac"
+    },
+    {
+      "host": "platform.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://platform.idol.id/apps/platform/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 32350,
+      "seconds": 0.108355,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "Platform — idol.id",
+      "body_sha256": "ba006f8159529387a19c034e0ee715147736d41009cecf2509273f4204c29ea4",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"> <title>Platform — idol.id</title> <"
+    },
+    {
+      "host": "platform.idol.id",
+      "path": "/health",
+      "http": 404,
+      "final_url": "https://platform.idol.id/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 75,
+      "seconds": 0.060895,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "dd9d2dd4e3715fcb097883bbc2e2132e905d651d7418d16fc3943cd61021950e",
+      "body_prefix": "{\"error\":\"dynamic origin unavailable on this surface\",\"surface\":\"platform\"}"
+    },
+    {
+      "host": "platform.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://platform.idol.id/api/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 75,
+      "seconds": 0.044952,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "dd9d2dd4e3715fcb097883bbc2e2132e905d651d7418d16fc3943cd61021950e",
+      "body_prefix": "{\"error\":\"dynamic origin unavailable on this surface\",\"surface\":\"platform\"}"
+    },
+    {
+      "host": "platform.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://platform.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 319,
+      "seconds": 0.067643,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "b1214567ae3436448015b8ebb6665ca3f70455ed6cf70956650f85f5ea3cff68",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"platform\",\"s"
+    },
+    {
+      "host": "r16.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://r16.idol.id/apps/graph/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 16323,
+      "seconds": 0.090670,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Semantic Observatory — idol.id",
+      "body_sha256": "c5a0b4812577e0c1a34dc38067fce26f3c3a361aa82d271b53e76386247b3a9f",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>Semantic Observatory — idol.id</title> <link r"
+    },
+    {
+      "host": "r16.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://r16.idol.id/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 126,
+      "seconds": 0.270022,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "715814e76367147871b558683dc9b18a96a100ab9d20b0c571f52f0e3a7d9572",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"graph\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "r16.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://r16.idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 41,
+      "seconds": 0.286132,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "r16.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://r16.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 311,
+      "seconds": 0.096532,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "7eca91c8491ba7f3d1e943f58998e7747508608c6e448cbcd2beffb674cf0d02",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"graph\",\"surf"
+    },
+    {
+      "host": "r8a.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://r8a.idol.id/apps/graph/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 16323,
+      "seconds": 0.073663,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Semantic Observatory — idol.id",
+      "body_sha256": "c5a0b4812577e0c1a34dc38067fce26f3c3a361aa82d271b53e76386247b3a9f",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>Semantic Observatory — idol.id</title> <link r"
+    },
+    {
+      "host": "r8a.idol.id",
+      "path": "/health",
+      "http": 530,
+      "final_url": "https://r8a.idol.id/health",
+      "content_type": "text/html; charset=UTF-8",
+      "redirects": 0,
+      "bytes": 7625,
+      "seconds": 0.043746,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Cloudflare Tunnel error | r8a.idol.id | Cloudflare",
+      "body_sha256": "165439e29aa24d898f37b6385dc54b0cc2730c74296575f726971f70fa0cabdc",
+      "body_prefix": "<!doctype html> <!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 7]> <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 8]> <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]--> <!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![e"
+    },
+    {
+      "host": "r8a.idol.id",
+      "path": "/api/health",
+      "http": 530,
+      "final_url": "https://r8a.idol.id/api/health",
+      "content_type": "text/html; charset=UTF-8",
+      "redirects": 0,
+      "bytes": 7625,
+      "seconds": 0.048222,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Cloudflare Tunnel error | r8a.idol.id | Cloudflare",
+      "body_sha256": "d0e8153f6b0a372fa7014c1edc57168be673ef390975c5ed8a3fe345c90ca6d9",
+      "body_prefix": "<!doctype html> <!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 7]> <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 8]> <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]--> <!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![e"
+    },
+    {
+      "host": "r8a.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://r8a.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 311,
+      "seconds": 0.038622,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "94953365e092bd6205879872b9713697eaedcee5c55fd6d6dcf2631242d65b5d",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"graph\",\"surf"
+    },
+    {
+      "host": "r8b.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://r8b.idol.id/apps/graph/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 16323,
+      "seconds": 0.147962,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "Semantic Observatory — idol.id",
+      "body_sha256": "c5a0b4812577e0c1a34dc38067fce26f3c3a361aa82d271b53e76386247b3a9f",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>Semantic Observatory — idol.id</title> <link r"
+    },
+    {
+      "host": "r8b.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://r8b.idol.id/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 126,
+      "seconds": 0.272441,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "715814e76367147871b558683dc9b18a96a100ab9d20b0c571f52f0e3a7d9572",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"graph\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "r8b.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://r8b.idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 0,
+      "bytes": 41,
+      "seconds": 0.127243,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "r8b.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://r8b.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 311,
+      "seconds": 0.035968,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "d6dfe0c50648dd31fee7758c3ed41489843188cf508f833920d1f3408bff4533",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"graph\",\"surf"
+    },
+    {
+      "host": "ssh-r16.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://duets.cloudflareaccess.com/cdn-cgi/access/login/ssh-r16.idol.id?kid=8294a77cbcdf4c5103110e4fc437ccb520f5cfca5cd517b82beb25074b54b8d0&meta=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjVjMzhiNDk3ZGI5NGE0NjI5YzFjNTYwYmZiMWY1MzU5ZGY2YjlmMGRlMTExZDc5MzA5ZDI1MDc0ZGEyYTZlN2YifQ.eyJ0eXBlIjoibWV0YSIsImF1ZCI6IjgyOTRhNzdjYmNkZjRjNTEwMzExMGU0ZmM0MzdjY2I1MjBmNWNmY2E1Y2Q1MTdiODJiZWIyNTA3NGI1NGI4ZDAiLCJob3N0bmFtZSI6InNzaC1yMTYuaWRvbC5pZCIsInJlZGlyZWN0X3VybCI6Ii8iLCJzZXJ2aWNlX3Rva2VuX3N0YXR1cyI6ZmFsc2UsImlzX3dhcnAiOmZhbHNlLCJpc19nYXRld2F5IjpmYWxzZSwiZXhwIjoxNzg3OTM1OTI3LCJuYmYiOjE3ODc5MzU2MjcsImlhdCI6MTc4NzkzNTYyNywiYXV0aF9zdGF0dXMiOiJOT05FIiwibXRsc19hdXRoIjp7ImNlcnRfaXNzdWVyX2RuIjoiIiwiY2VydF9zZXJpYWwiOiIiLCJjZXJ0X2lzc3Vlcl9za2kiOiIiLCJjZXJ0X3ByZXNlbnRlZCI6ZmFsc2UsImNvbW1vbl9uYW1lIjoiIiwiYXV0aF9zdGF0dXMiOiJOT05FIn0sInJlYWxfY291bnRyeSI6IlVTIiwiYXBwX3Nlc3Npb25faGFzaCI6IjZmNGZkZDUyMTY0ZjE1NWM4ZDkyZmY5ZjhlMmU3ZTc4OTcwZDQ1YWRjM2E1NDc3YTQyOWYyNmI5NDZiZmUxNWEifQ.pv7_CGC2E-xbIhzdWWHvfWcVPfK4aCadxqz0PdCucFKwjgQ53sRUGKJH9mff5i03RU9mNVzYTdhfQqRZkdz3XBETLBMkKqjKRmti9RHZNMxaXrR_918EeCnIEuJJm9e7xpUPgkC5JYaWYusuvGm9QW7y2jDDcLgoZhsQoZzHyV91Cl5VzIJsf31n0k9FjLIM2i_L4K3YN0Z53piDaesr08j29DIEzCsbHEHBFipZIwH2jA4R0pAWfeULU_zL5N5Hp3HKr4VQtJ9Lr3dV8ddfpqM_qlPnfsOm12M1tsD8MEZXCVQQuDe6eqc4lXafmm7vXruzgbzxNkstFCSobPzl2A&redirect_url=%2F",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 46327,
+      "seconds": 0.554612,
+      "remote_ip": "104.19.195.29",
+      "ssl_verify_result": 20,
+      "title": "Sign in ・ Cloudflare Access",
+      "body_sha256": "3aaba3c0c2f6da91e7b5e4203697ad4aff2430ea1ae14f42ffe7a32b02e890cc",
+      "body_prefix": "<!DOCTYPE html> <html> <head> <title>Sign in ・ Cloudflare Access</title> <meta charset=\"utf-8\" /> <meta name=\"robots\" content=\"noindex\" /> <meta name=\"viewport\" content=\"initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width\" /> <link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/"
+    },
+    {
+      "host": "ssh-r16.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://duets.cloudflareaccess.com/cdn-cgi/access/login/ssh-r16.idol.id?kid=8294a77cbcdf4c5103110e4fc437ccb520f5cfca5cd517b82beb25074b54b8d0&meta=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjVjMzhiNDk3ZGI5NGE0NjI5YzFjNTYwYmZiMWY1MzU5ZGY2YjlmMGRlMTExZDc5MzA5ZDI1MDc0ZGEyYTZlN2YifQ.eyJ0eXBlIjoibWV0YSIsImF1ZCI6IjgyOTRhNzdjYmNkZjRjNTEwMzExMGU0ZmM0MzdjY2I1MjBmNWNmY2E1Y2Q1MTdiODJiZWIyNTA3NGI1NGI4ZDAiLCJob3N0bmFtZSI6InNzaC1yMTYuaWRvbC5pZCIsInJlZGlyZWN0X3VybCI6Ii9oZWFsdGgiLCJzZXJ2aWNlX3Rva2VuX3N0YXR1cyI6ZmFsc2UsImlzX3dhcnAiOmZhbHNlLCJpc19nYXRld2F5IjpmYWxzZSwiZXhwIjoxNzg3OTM1OTI4LCJuYmYiOjE3ODc5MzU2MjgsImlhdCI6MTc4NzkzNTYyOCwiYXV0aF9zdGF0dXMiOiJOT05FIiwibXRsc19hdXRoIjp7ImNlcnRfaXNzdWVyX2RuIjoiIiwiY2VydF9zZXJpYWwiOiIiLCJjZXJ0X2lzc3Vlcl9za2kiOiIiLCJjZXJ0X3ByZXNlbnRlZCI6ZmFsc2UsImNvbW1vbl9uYW1lIjoiIiwiYXV0aF9zdGF0dXMiOiJOT05FIn0sInJlYWxfY291bnRyeSI6IlVTIiwiYXBwX3Nlc3Npb25faGFzaCI6IjFkNDEwNjMyYTA3NDA3ZDQ4MWNlMTczZmU3ZDJjOGRhMGUyZmI1ZGU4OWRmNDVlYzI2NDFiZjI4OGU0YmUzOWIifQ.XxZnjQoiXfbkp-hwd5P-rgJzPaw7GmuRtso_5k_98NpSmNwNyg7PuULBZQeDKiL5O3ipWeHIfRDIew7iaZNC-7vMoSRbmyoF4o0nxsR6jKcTvguxeCsS3sU79UegRdLCnhjEemn27l6UQeHTvAzN06YmAorIJQy6AuNxHt_N2nRI2_uZial9rBq6bh0CWVx_YUpTtq6oMkPzHNA0kTcb_qKSX4bsmDjITllTbgE6m8NsD4KX4cYjmlQbbXBaKp5URv-r1-smf82LBMs-x6Ar2xg5AqzxT9LAccNBq9lFX-4SSwVzGuXxqLjDHI7gYOIvL9XWFaLDJQjLUKPpWd-MSg&redirect_url=%2Fhealth",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 46376,
+      "seconds": 0.127150,
+      "remote_ip": "104.19.195.29",
+      "ssl_verify_result": 20,
+      "title": "Sign in ・ Cloudflare Access",
+      "body_sha256": "4a295c57962a10fbd54f93ee75edc0eb52440ce3196d7cd8a6b5f1459ae0651e",
+      "body_prefix": "<!DOCTYPE html> <html> <head> <title>Sign in ・ Cloudflare Access</title> <meta charset=\"utf-8\" /> <meta name=\"robots\" content=\"noindex\" /> <meta name=\"viewport\" content=\"initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width\" /> <link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/"
+    },
+    {
+      "host": "ssh-r16.idol.id",
+      "path": "/api/health",
+      "http": 200,
+      "final_url": "https://duets.cloudflareaccess.com/cdn-cgi/access/login/ssh-r16.idol.id?kid=8294a77cbcdf4c5103110e4fc437ccb520f5cfca5cd517b82beb25074b54b8d0&meta=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjVjMzhiNDk3ZGI5NGE0NjI5YzFjNTYwYmZiMWY1MzU5ZGY2YjlmMGRlMTExZDc5MzA5ZDI1MDc0ZGEyYTZlN2YifQ.eyJ0eXBlIjoibWV0YSIsImF1ZCI6IjgyOTRhNzdjYmNkZjRjNTEwMzExMGU0ZmM0MzdjY2I1MjBmNWNmY2E1Y2Q1MTdiODJiZWIyNTA3NGI1NGI4ZDAiLCJob3N0bmFtZSI6InNzaC1yMTYuaWRvbC5pZCIsInJlZGlyZWN0X3VybCI6Ii9hcGkvaGVhbHRoIiwic2VydmljZV90b2tlbl9zdGF0dXMiOmZhbHNlLCJpc193YXJwIjpmYWxzZSwiaXNfZ2F0ZXdheSI6ZmFsc2UsImV4cCI6MTc4NzkzNTkyOCwibmJmIjoxNzg3OTM1NjI4LCJpYXQiOjE3ODc5MzU2MjgsImF1dGhfc3RhdHVzIjoiTk9ORSIsIm10bHNfYXV0aCI6eyJjZXJ0X2lzc3Vlcl9kbiI6IiIsImNlcnRfc2VyaWFsIjoiIiwiY2VydF9pc3N1ZXJfc2tpIjoiIiwiY2VydF9wcmVzZW50ZWQiOmZhbHNlLCJjb21tb25fbmFtZSI6IiIsImF1dGhfc3RhdHVzIjoiTk9ORSJ9LCJyZWFsX2NvdW50cnkiOiJVUyIsImFwcF9zZXNzaW9uX2hhc2giOiI1ZjllYWJhNzdjMjg5ZDllZDU3YjhkYWRjMjk4OWRlM2ZiY2ZkNjg2YWI5YTM0MDhmNGM0NTA4ZWZmMTU1ZDgxIn0.kFqjm1nK8J_LlJ_kDAODuXX4pzkQ5SoRNlaCFd6pn4EgRZxLgedF3JvBlzwaQkriUr__GAlHw1V8eO68UUJqUfmQKpkSmWrw5pd7Zxz9H8i4ryzYbYafStkfa24F97PQNwMrJbBXbOg0bsrJ0l6c41wTvCorPwWFo09q934tD_eFnt7QHP52V4YKUis9l-GICtRmZZI39kJ9XtGsSb20SvQix37DcnJsNQNy7KPidpr1IMl8WNLQ9vPsihjcxj8ZN3T2hDu4Che0pxwwNSGK8yensqP2VHyWZCLU4mdQP_5dmAnSPuQD8QC3CiOQVEygAs16_tErjr42urqHd9vCFA&redirect_url=%2Fapi%2Fhealth",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 46422,
+      "seconds": 0.119807,
+      "remote_ip": "104.19.195.29",
+      "ssl_verify_result": 20,
+      "title": "Sign in ・ Cloudflare Access",
+      "body_sha256": "7930bcc2646f9b11a083fe698ace48fb83d7453a9957dbf41817d301a12a0c7b",
+      "body_prefix": "<!DOCTYPE html> <html> <head> <title>Sign in ・ Cloudflare Access</title> <meta charset=\"utf-8\" /> <meta name=\"robots\" content=\"noindex\" /> <meta name=\"viewport\" content=\"initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width\" /> <link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/"
+    },
+    {
+      "host": "ssh-r16.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://duets.cloudflareaccess.com/cdn-cgi/access/login/ssh-r16.idol.id?kid=8294a77cbcdf4c5103110e4fc437ccb520f5cfca5cd517b82beb25074b54b8d0&meta=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjVjMzhiNDk3ZGI5NGE0NjI5YzFjNTYwYmZiMWY1MzU5ZGY2YjlmMGRlMTExZDc5MzA5ZDI1MDc0ZGEyYTZlN2YifQ.eyJ0eXBlIjoibWV0YSIsImF1ZCI6IjgyOTRhNzdjYmNkZjRjNTEwMzExMGU0ZmM0MzdjY2I1MjBmNWNmY2E1Y2Q1MTdiODJiZWIyNTA3NGI1NGI4ZDAiLCJob3N0bmFtZSI6InNzaC1yMTYuaWRvbC5pZCIsInJlZGlyZWN0X3VybCI6Ii9fX2lkb2wvaGVhbHRoIiwic2VydmljZV90b2tlbl9zdGF0dXMiOmZhbHNlLCJpc193YXJwIjpmYWxzZSwiaXNfZ2F0ZXdheSI6ZmFsc2UsImV4cCI6MTc4NzkzNTkyOCwibmJmIjoxNzg3OTM1NjI4LCJpYXQiOjE3ODc5MzU2MjgsImF1dGhfc3RhdHVzIjoiTk9ORSIsIm10bHNfYXV0aCI6eyJjZXJ0X2lzc3Vlcl9kbiI6IiIsImNlcnRfc2VyaWFsIjoiIiwiY2VydF9pc3N1ZXJfc2tpIjoiIiwiY2VydF9wcmVzZW50ZWQiOmZhbHNlLCJjb21tb25fbmFtZSI6IiIsImF1dGhfc3RhdHVzIjoiTk9ORSJ9LCJyZWFsX2NvdW50cnkiOiJVUyIsImFwcF9zZXNzaW9uX2hhc2giOiI1ZTYxYzExN2Q1NWMxOGYzMjMzYTVjMzRkZWE3ODdkNWI2NjVlNzgzOWU5YTFhNWM1OTBlNDZmZDk0NWM4ZjcyIn0.fZri4wqAsHabLrTAX3eRbgkKEZdIwCgQoeSbkIF1s-E7V4r4WGWkIJ9tcO9uoj7ZEVjmppamncWbMMmDPFUEpZ_mt3WhsVVSYyjZXOH2-7sJBaW0mF5-TH9T1AtAW5tIFl7r3CvTvVwV3HwvjmVMxH2KvL6tZ9h-1kocKSKBu055F-WDGuJuclSWtL_e4YbjgcrMM4rWOu-GRVZ6tqKnjTZgTN_xkdOcPYqF7wOaIl2ESpnBFmeedGeXrvKRYErX9-gAN3Dm7lHJjWciJpcVBbaadg55I_HjYkg5RPHKE_2ArDwwlpImsHJJbDo1W_EAzYDXjWIMjV8eWrAPnC2iyQ&redirect_url=%2F__idol%2Fhealth",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 46446,
+      "seconds": 0.106622,
+      "remote_ip": "104.19.195.29",
+      "ssl_verify_result": 20,
+      "title": "Sign in ・ Cloudflare Access",
+      "body_sha256": "b6fa45536ace8d538d94a275f1d0e2d0d31ab9c48ec89c428d614a0c5cd2506b",
+      "body_prefix": "<!DOCTYPE html> <html> <head> <title>Sign in ・ Cloudflare Access</title> <meta charset=\"utf-8\" /> <meta name=\"robots\" content=\"noindex\" /> <meta name=\"viewport\" content=\"initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width\" /> <link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/"
+    },
+    {
+      "host": "worlds.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://worlds.idol.id/apps/worlds/",
+      "content_type": "text/html",
+      "redirects": 1,
+      "bytes": 39352,
+      "seconds": 0.109165,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "World Atlas — idol.id",
+      "body_sha256": "01b3ab458f9286b218a5dbb9d8dc2399fc0d18e41230ac67c0d5d8718add0afd",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"> <title>World Atlas — idol.id</title"
+    },
+    {
+      "host": "worlds.idol.id",
+      "path": "/health",
+      "http": 404,
+      "final_url": "https://worlds.idol.id/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 73,
+      "seconds": 0.034175,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "e0ee4c9e4ec5df9db810086dd307ebe371979b3f2b6cc8cad27bc5d7dbdbb10e",
+      "body_prefix": "{\"error\":\"dynamic origin unavailable on this surface\",\"surface\":\"worlds\"}"
+    },
+    {
+      "host": "worlds.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://worlds.idol.id/api/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 73,
+      "seconds": 0.031170,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "e0ee4c9e4ec5df9db810086dd307ebe371979b3f2b6cc8cad27bc5d7dbdbb10e",
+      "body_prefix": "{\"error\":\"dynamic origin unavailable on this surface\",\"surface\":\"worlds\"}"
+    },
+    {
+      "host": "worlds.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://worlds.idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 0,
+      "bytes": 315,
+      "seconds": 0.047145,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "2e4d4e9b942646cdd95bd4a8c787e78fa3ab74353751d4a6baef0220f6929027",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"worlds\",\"sur"
+    },
+    {
+      "host": "www.idol.id",
+      "path": "/",
+      "http": 200,
+      "final_url": "https://idol.id/apps/site/",
+      "content_type": "text/html",
+      "redirects": 2,
+      "bytes": 15267,
+      "seconds": 0.117602,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "Idsem — semantic identity, exact facts, lawful realization",
+      "body_sha256": "652bba90f3e09fa5920804fab1e655373f420851f8525f57425fa3823160b14e",
+      "body_prefix": "<!DOCTYPE html> <html lang=\"en\"> <head> <!-- idol runtime --> <script src=\"/shared/web.js\" defer></script> <script src=\"/shared/wasm.js\" defer></script> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"> <title>Idsem — semantic identity, e"
+    },
+    {
+      "host": "www.idol.id",
+      "path": "/health",
+      "http": 200,
+      "final_url": "https://idol.id/health",
+      "content_type": "application/json",
+      "redirects": 1,
+      "bytes": 125,
+      "seconds": 0.163931,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0427ff1608f6c62ab3e39a4240b3327e651ef04c0959feb9bac1a25b4280d06c",
+      "body_prefix": "{\"status\": \"healthy\", \"app\": \"site\", \"instance\": \"\", \"idol\": \"/home/clp/idol-id/idol-bin\", \"idol_ok\": true, \"registry\": \"r2\"}"
+    },
+    {
+      "host": "www.idol.id",
+      "path": "/api/health",
+      "http": 404,
+      "final_url": "https://idol.id/api/health",
+      "content_type": "application/json",
+      "redirects": 1,
+      "bytes": 41,
+      "seconds": 0.315784,
+      "remote_ip": "104.21.87.4",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "0eee32eccb89aa95099d55a57738c465d62a5352ed22465a16ec38a2719db913",
+      "body_prefix": "{\"error\": \"unknown endpoint /api/health\"}"
+    },
+    {
+      "host": "www.idol.id",
+      "path": "/__idol/health",
+      "http": 200,
+      "final_url": "https://idol.id/__idol/health",
+      "content_type": "application/json; charset=utf-8",
+      "redirects": 1,
+      "bytes": 311,
+      "seconds": 0.075480,
+      "remote_ip": "172.67.139.26",
+      "ssl_verify_result": 20,
+      "title": "",
+      "body_sha256": "9d6f80ad6926a1043de1ffab3ee13a7dcfbebccca33448f43b6e4addc8cfb121",
+      "body_prefix": "{\"status\":\"healthy\",\"edge\":true,\"commit\":\"a224fef40b3a68b5f5d10a831d94ebf185ee55ed\",\"authority\":\"cb2199dff026c1b2d3fbd0caa04d6d323370a9e8\",\"native_authority\":\"ad438a856daa8786e77ac9f033d38deb9e8f5c29\",\"source_law\":\"95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b\",\"app\":\"site\",\"surfa"
+    }
+  ],
+  "repo_hostnames": [
+    "2Fplatform.idol.id",
+    "api.idol.id",
+    "claw.idol.id",
+    "docs.idol.id",
+    "graph.idol.id",
+    "hermes.idol.id",
+    "idol.id",
+    "lib.idol.id",
+    "platform.idol.id",
+    "r16.idol.id",
+    "r8a.idol.id",
+    "r8b.idol.id",
+    "worlds.idol.id",
+    "www.idol.id"
+  ],
+  "exclusions": [
+    "hermes.idol.id",
+    "claw.idol.id"
+  ]
+}
