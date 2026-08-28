@@ -1,0 +1,52 @@
+name: Hermes session field probe
+
+on:
+  push:
+    branches: [ops/hermes-ha-control-20260828]
+    paths:
+      - .github/workflows/hermes-session-field-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CONTROL_BUNDLE: U2FsdGVkX195qP/xncpRb35AOtW6UYj7v2GnvTnljIJ4Y/TxyaFwm3B4aupBEar3PN+3Qq/VwMbKIEmUaV1eKg==
+    steps:
+      - name: Probe session fields without inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -f /tmp/control.json /tmp/cookies /tmp/login.json /tmp/body.json /tmp/out.json' EXIT
+          export PASS="$(printf '%s' "idol-hermes-ha-control-v1${CLOUDFLARE_API_TOKEN}" | sha256sum | awk '{print $1}')"
+          printf '%s' "$CONTROL_BUNDLE" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -a -A -pass env:PASS >/tmp/control.json
+          WEBUI_PASSWORD="$(jq -er '.webui_password' /tmp/control.json)"; echo "::add-mask::$WEBUI_PASSWORD"
+          BASE=https://hermes.idol.id
+          curl -fsS -c /tmp/cookies -b /tmp/cookies -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg p "$WEBUI_PASSWORD" '{password:$p}')" "$BASE/api/auth/login" >/tmp/login.json
+
+          probe(){
+            name="$1"; payload="$2"
+            printf '%s' "$payload" >/tmp/body.json
+            code="$(curl -sS --max-time 20 -o /tmp/out.json -w '%{http_code}' -b /tmp/cookies \
+              -H 'Content-Type: application/json' --data-binary @/tmp/body.json "$BASE/api/session/new")"
+            echo "$name http=$code"
+            jq '{error,session:(.session|if type=="object" then {session_id,workspace,model,model_provider,profile} else . end)}' /tmp/out.json || true
+            sid="$(jq -r '.session.session_id // empty' /tmp/out.json)"
+            if [[ -n "$sid" ]]; then
+              curl -fsS -b /tmp/cookies -H 'Content-Type: application/json' \
+                --data "$(jq -nc --arg sid "$sid" '{session_id:$sid}')" "$BASE/api/session/delete" >/dev/null
+            fi
+          }
+          probe default '{}'
+          probe minimax '{"model":"MiniMax-M2.7","model_provider":"minimax"}'
+          probe mac_workspace '{"workspace":"/Users/clp"}'
+          probe minimax_default_workspace '{"model":"MiniMax-M2.7","model_provider":"minimax","workspace":"/home/box/workspace"}'
+          echo 'No inference was performed.'
