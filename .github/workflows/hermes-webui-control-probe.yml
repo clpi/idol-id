@@ -1,0 +1,67 @@
+name: Hermes WebUI encrypted control probe
+
+on:
+  push:
+    branches: [ops/hermes-ha-control-20260828]
+    paths:
+      - .github/workflows/hermes-webui-control-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CONTROL_BUNDLE: U2FsdGVkX195qP/xncpRb35AOtW6UYj7v2GnvTnljIJ4Y/TxyaFwm3B4aupBEar3PN+3Qq/VwMbKIEmUaV1eKg==
+    steps:
+      - name: Login and exercise session lifecycle only
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cleanup(){ rm -f /tmp/control.json /tmp/cookies /tmp/login.json /tmp/new.json /tmp/delete.json; }
+          trap cleanup EXIT
+
+          export PASS="$(printf '%s' "idol-hermes-ha-control-v1${CLOUDFLARE_API_TOKEN}" | sha256sum | awk '{print $1}')"
+          printf '%s' "$CONTROL_BUNDLE" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -a -A -pass env:PASS > /tmp/control.json
+          WEBUI_PASSWORD="$(jq -er '.webui_password' /tmp/control.json)"
+          echo "::add-mask::$WEBUI_PASSWORD"
+          test -n "$WEBUI_PASSWORD"
+
+          BASE=https://hermes.idol.id
+          curl -fsS --retry 3 --retry-all-errors --max-time 15 \
+            -c /tmp/cookies -b /tmp/cookies \
+            -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg p "$WEBUI_PASSWORD" '{password:$p}')" \
+            "$BASE/api/auth/login" > /tmp/login.json
+          jq -e '.ok == true' /tmp/login.json >/dev/null
+          echo 'login=ok'
+
+          auth="$(curl -fsS --max-time 10 -b /tmp/cookies "$BASE/api/auth/status")"
+          echo "$auth" | jq '{authenticated, password_enabled, passkeys_enabled}'
+
+          sessions="$(curl -fsS --max-time 10 -b /tmp/cookies "$BASE/api/sessions")"
+          echo "$sessions" | jq '{top_level_keys:(keys|sort), session_count:((.sessions // [])|length)}'
+
+          set +e
+          curl -sS --max-time 20 -w '%{http_code}' -o /tmp/new.json \
+            -b /tmp/cookies -H 'Content-Type: application/json' --data '{}' \
+            "$BASE/api/session/new" > /tmp/new.code
+          rc=$?
+          set -e
+          code="$(cat /tmp/new.code)"
+          echo "session_new_http=$code curl_rc=$rc"
+          jq '{top_level_keys:(keys|sort), error, session:(.session|if type=="object" then {session_id,title,workspace,model,model_provider,profile} else . end)}' /tmp/new.json || true
+          [[ "$rc" -eq 0 && "$code" -ge 200 && "$code" -lt 300 ]]
+          SID="$(jq -er '.session.session_id' /tmp/new.json)"
+
+          curl -fsS --max-time 10 -b /tmp/cookies \
+            -H 'Content-Type: application/json' --data "$(jq -nc --arg sid "$SID" '{session_id:$sid}')" \
+            "$BASE/api/session/delete" > /tmp/delete.json
+          echo "delete_ok=$(jq -r '.ok // .success // false' /tmp/delete.json)"
+          echo 'No model inference or terminal tool was invoked.'
