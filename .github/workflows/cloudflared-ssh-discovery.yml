@@ -1,0 +1,32 @@
+name: Cloudflared SSH discovery
+
+on:
+  push:
+    branches: [ops/cloudflared-ssh-discovery-20260828]
+    paths:
+      - .github/workflows/cloudflared-ssh-discovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download fixed cloudflared and print public help only
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -LfsS \
+            https://github.com/cloudflare/cloudflared/releases/download/2026.5.2/cloudflared-linux-amd64 \
+            -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared --version
+          echo '=== access ssh ==='
+          /tmp/cloudflared access ssh --help 2>&1 | sed -n '1,260p'
+          echo '=== access tcp ==='
+          /tmp/cloudflared access tcp --help 2>&1 | sed -n '1,260p'
+          echo '=== access curl ==='
+          /tmp/cloudflared access curl --help 2>&1 | sed -n '1,260p'
