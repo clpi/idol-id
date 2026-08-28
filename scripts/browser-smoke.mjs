@@ -244,6 +244,41 @@ async function desktopFlow(cdp, exceptions) {
   return result;
 }
 
+async function waitForProcessExit(child, timeout) {
+  if (child.exitCode !== null || child.signalCode !== null) return true;
+  return new Promise((resolveExit) => {
+    let timer;
+    const finish = (exited) => {
+      clearTimeout(timer);
+      child.off("close", onClose);
+      child.off("error", onError);
+      resolveExit(exited);
+    };
+    const onClose = () => finish(true);
+    const onError = () => finish(false);
+    child.once("close", onClose);
+    child.once("error", onError);
+    if (child.exitCode !== null || child.signalCode !== null) return finish(true);
+    timer = setTimeout(() => finish(false), timeout);
+  });
+}
+
+async function terminateChrome(chrome, cdp) {
+  try { await cdp?.close(); } catch {}
+  if (chrome.exitCode !== null || chrome.signalCode !== null) return;
+  chrome.kill("SIGTERM");
+  if (await waitForProcessExit(chrome, 5000)) return;
+  chrome.kill("SIGKILL");
+  if (!(await waitForProcessExit(chrome, 2000))) throw new Error("Chrome did not exit after SIGKILL");
+}
+
+async function closeServer(server) {
+  if (!server.listening) return;
+  await new Promise((resolveClose, reject) => {
+    server.close((error) => error ? reject(error) : resolveClose());
+  });
+}
+
 async function main() {
   await rm(artifacts, { recursive: true, force: true });
   await mkdir(artifacts, { recursive: true });
@@ -270,10 +305,11 @@ async function main() {
     await writeFile(join(artifacts, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
     console.log(`browser smoke passed: ${report.chrome}`);
   } finally {
-    try { await cdp?.close(); } catch {}
-    chrome.kill("SIGTERM");
-    server.close();
-    await rm(profile, { recursive: true, force: true });
+    let cleanupError;
+    try { await terminateChrome(chrome, cdp); } catch (error) { cleanupError = error; }
+    try { await closeServer(server); } catch (error) { cleanupError ||= error; }
+    try { await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (error) { cleanupError ||= error; }
+    if (cleanupError) throw cleanupError;
   }
 }
 
