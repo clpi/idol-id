@@ -37,7 +37,7 @@ test("Platform and build projections describe preview authority without executio
   assert.match(entry, /repository:transform/);
   assert.match(entry, /Nothing executes/);
   assert.match(build, /derived-world-preview-only/);
-  assert.match(build, /world_publication:false/);
+  assert.match(build, /world_publication\s*:\s*false/);
   assert.match(docs, /Derived-world transformation previews/);
   assert.match(docs, /repository:transform/);
   assert.match(docs, /not-granted/);
