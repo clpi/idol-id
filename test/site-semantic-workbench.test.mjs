@@ -88,7 +88,7 @@ test("playground uses compiler-published graph records and refuses browser-owned
   assert.match(playground, /\.setGraph\(/);
   assert.match(playground, /onSelectNode/);
   assert.match(playground, /onSelectEdge/);
-  assert.match(playground, /semantic identity not published/i);
+  assert.match(playground, /semantic identity (?:is )?not published/i);
   assert.doesNotMatch(playground, /application:weight|relation:weight|edge:weight/, "homepage code must not hard-code example semantic identities");
   assert.doesNotMatch(playground, /find\([^\n]*name|match\([^\n]*name/i, "homepage must not reconstruct graph identity from names");
 });
