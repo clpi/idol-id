@@ -1,0 +1,66 @@
+name: Cloudflare Hermes HA census
+
+on:
+  push:
+    branches: [ops/hermes-ha-control-20260828]
+    paths:
+      - .github/workflows/cloudflare-hermes-ha-census.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+    steps:
+      - name: Inspect DNS, named tunnels, connectors, ingress and Access apps
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cleanup(){ rm -f /tmp/zones.json /tmp/dns.json /tmp/tunnels.json /tmp/connections.json /tmp/config.json /tmp/apps.json; }
+          trap cleanup EXIT
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          api=https://api.cloudflare.com/client/v4
+
+          curl -fsS "${auth[@]}" "$api/zones?name=idol.id&status=active" >/tmp/zones.json
+          ZONE_ID="$(jq -er '.result[0].id' /tmp/zones.json)"
+          echo "zone_active=yes"
+
+          curl -fsS "${auth[@]}" "$api/zones/$ZONE_ID/dns_records?per_page=500" >/tmp/dns.json
+          jq -r '.result[] | select(.name=="hermes.idol.id" or .name=="claw.idol.id" or .name=="r16.idol.id") | [.name,.type,.content,(.proxied|tostring),(.ttl|tostring)] | @tsv' /tmp/dns.json \
+            | while IFS=$'\t' read -r name type content proxied ttl; do
+                case "$content" in
+                  *.cfargotunnel.com) target_kind=cloudflare_tunnel ;;
+                  *) target_kind=other ;;
+                esac
+                printf 'dns name=%s type=%s target_kind=%s target=%s proxied=%s ttl=%s\n' "$name" "$type" "$target_kind" "$content" "$proxied" "$ttl"
+              done
+
+          curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/cfd_tunnel?is_deleted=false&per_page=100" >/tmp/tunnels.json
+          jq -r '.result[] | [.id,.name,.status,(.created_at//""),(.connections|length|tostring)] | @tsv' /tmp/tunnels.json \
+            | while IFS=$'\t' read -r id name status created connections; do
+                printf 'tunnel id=%s name=%s status=%s connection_summary_count=%s created=%s\n' "$id" "$name" "$status" "$connections" "$created"
+                curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$id/connections" >/tmp/connections.json || echo '{"result":[]}' >/tmp/connections.json
+                jq -r --arg id "$id" '.result[]? | [$id,(.id//""),(.colo_name//""),(.is_pending_reconnect|tostring),(.opened_at//""),(.origin_ip//"")] | @tsv' /tmp/connections.json \
+                  | while IFS=$'\t' read -r tid cid colo pending opened origin; do
+                      printf 'connector tunnel=%s colo=%s pending_reconnect=%s opened=%s origin_present=%s\n' "$tid" "$colo" "$pending" "$opened" "$([[ -n "$origin" ]] && echo yes || echo no)"
+                    done
+                curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$id/configurations" >/tmp/config.json || echo '{"result":{}}' >/tmp/config.json
+                jq -r --arg id "$id" '.result.config.ingress[]? | [$id,(.hostname//"default"),(.service//"absent"),((.originRequest//{})|keys|join(","))] | @tsv' /tmp/config.json \
+                  | while IFS=$'\t' read -r tid host service origin_keys; do
+                      printf 'ingress tunnel=%s hostname=%s service=%s origin_request_keys=%s\n' "$tid" "$host" "$service" "$origin_keys"
+                    done
+              done
+
+          curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/access/apps?per_page=100" >/tmp/apps.json || echo '{"result":[]}' >/tmp/apps.json
+          jq -r '.result[]? | select((.domain//"")|test("(^|\\.)idol\\.id$")) | [.name,(.domain//""),(.type//""),(.session_duration//"")] | @tsv' /tmp/apps.json \
+            | while IFS=$'\t' read -r name domain type duration; do
+                printf 'access_app name=%s domain=%s type=%s session_duration=%s\n' "$name" "$domain" "$type" "$duration"
+              done
