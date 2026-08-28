@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildSnapshot, parseRegistryProjection } from "../scripts/snapshot-worlds.mjs";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import {
+  buildSnapshot,
+  parseRegistryProjection,
+  retainSnapshot,
+  validateSnapshot,
+} from "../scripts/snapshot-worlds.mjs";
 
 const source = "https://registry.example/api/worlds";
 const raw = `{
@@ -37,4 +45,38 @@ test("identical registry facts create byte-identical snapshot documents", () => 
   assert.deepEqual(first, second);
   assert.equal(first.captured_at, "2026-08-25T12:00:00Z");
   assert.equal(`${JSON.stringify(first, null, 2)}\n`, `${JSON.stringify(second, null, 2)}\n`);
+});
+
+test("retained snapshot preserves exact published evidence without claiming a new revision", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "idsem-worlds-"));
+  const target = join(directory, "worlds.json");
+  try {
+    const document = buildSnapshot(parseRegistryProjection(raw).worlds, source);
+    await writeFile(target, `${JSON.stringify(document, null, 2)}\n`);
+    const retained = await retainSnapshot({ source, target });
+    assert.deepEqual(retained, document);
+    assert.equal(retained.captured_at, "2026-08-25T12:00:00Z");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("retained snapshot rejects another source instead of laundering its provenance", () => {
+  const document = buildSnapshot(parseRegistryProjection(raw).worlds, source);
+  assert.throws(
+    () => validateSnapshot(document, "https://other.example/api/worlds"),
+    /source differs/,
+  );
+});
+
+test("retained snapshot rejects missing source revision", () => {
+  const document = buildSnapshot(parseRegistryProjection(raw).worlds, source);
+  document.captured_at = "";
+  assert.throws(() => validateSnapshot(document, source), /no source revision/);
+});
+
+test("retained snapshot rejects malformed world evidence", () => {
+  const document = buildSnapshot(parseRegistryProjection(raw).worlds, source);
+  document.worlds[0].name = "";
+  assert.throws(() => validateSnapshot(document, source), /has no name/);
 });

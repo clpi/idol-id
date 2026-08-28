@@ -3,7 +3,7 @@
 # it is not a claim that a self-hosted production compiler release exists.
 set -eu
 
-IDOL_AUTHORITY="${IDOL_AUTHORITY:-f1dfa2c36e1f495f97bd9282b3f93e4cbc812d99}"
+IDOL_AUTHORITY="${IDOL_AUTHORITY:-cb2199dff026c1b2d3fbd0caa04d6d323370a9e8}"
 CANONICAL_IDOL_REPOSITORY="https://github.com/clpi/idol.git"
 IDOL_PREFIX="${IDOL_PREFIX:-${HOME}/.local}"
 
