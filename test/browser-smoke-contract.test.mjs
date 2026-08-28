@@ -44,3 +44,10 @@ test("browser smoke closes Chrome before deleting its profile", async () => {
   assert.ok(terminate < remove, "Chrome must fully exit before its profile is removed");
   assert.match(teardown, /maxRetries:\s*[1-9]/, "profile cleanup must tolerate late filesystem release");
 });
+
+test("browser smoke publishes the immutable build authority in its native fixture", async () => {
+  const smoke = await read("scripts/browser-smoke.mjs");
+  assert.doesNotMatch(smoke, /browser-smoke-authority/, "a fake authority makes the exact Observatory refuse the response");
+  assert.match(smoke, /runtime\/authority\.json/, "the smoke fixture must read the immutable built authority asset");
+  assert.match(smoke, /authority:\s*browserAuthority/, "the native fixture must publish the exact authority it read");
+});
