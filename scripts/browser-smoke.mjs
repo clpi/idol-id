@@ -6,6 +6,14 @@ import { extname, join, normalize, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const root = resolve("dist");
+const authorityAsset = JSON.parse(await readFile(join(root, "runtime/authority.json"), "utf8"));
+const browserAuthority = Object.freeze({
+  repository: String(authorityAsset?.language?.repository || ""),
+  commit: String(authorityAsset?.language?.commit || ""),
+});
+if (!browserAuthority.repository || !/^[0-9a-f]{40}$/.test(browserAuthority.commit)) {
+  throw new Error("invalid immutable browser smoke authority");
+}
 const artifacts = resolve(".artifacts/browser-smoke");
 const port = Number(process.env.IDOL_BROWSER_SMOKE_PORT || 41739);
 const debugPort = Number(process.env.IDOL_BROWSER_DEBUG_PORT || 9229);
@@ -95,7 +103,7 @@ function analyzeFixture(source) {
     { id: "edge:mass:result", from: "application:mass", to: "value:mass", role: "result" },
   ];
   return {
-    authority: { repository: "clpi/idol", commit: "browser-smoke-authority" },
+    authority: browserAuthority,
     tokens,
     graph: {
       schema: "idol.graph.browser-smoke.v1",
@@ -137,7 +145,7 @@ async function staticResponse(response, pathname) {
 async function requestHandler(request, response) {
   const url = new URL(request.url, origin);
   if (request.method === "GET" && url.pathname === "/config.js") {
-    const body = Buffer.from(`window.IDOL=Object.freeze({app:"graph",surface:"graph",origin:true,authority:"browser-smoke-authority"});\n`);
+    const body = Buffer.from(`window.IDOL=Object.freeze({app:"graph",surface:"graph",origin:true,authority:${JSON.stringify(browserAuthority.commit)}});\n`);
     response.writeHead(200, { "content-type": "application/javascript; charset=utf-8", "content-length": body.length, "cache-control": "no-store" });
     response.end(body);
     return;
