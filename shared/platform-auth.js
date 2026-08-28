@@ -5,6 +5,9 @@ const TOKEN_PATTERN = /^idol_pat_([A-Za-z0-9_-]{12,})\.([A-Za-z0-9_-]{32,})$/;
 
 export const PLATFORM_SCOPES = Object.freeze([
   "analysis:read",
+  "live:read",
+  "live:write",
+  "mcp:connect",
   "profile:read",
   "registry:read",
   "repository:observe",
@@ -14,6 +17,7 @@ export const PLATFORM_SCOPES = Object.freeze([
   "universe:read",
   "universe:write",
   "world:read",
+  "world:write",
 ]);
 
 const encoder = new TextEncoder();

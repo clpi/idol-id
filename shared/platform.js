@@ -57,6 +57,13 @@ function randomIdentifier(randomBytes, length = 12) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
+function requiredScopeList(value) {
+  if (value === null || value === undefined) return Object.freeze([]);
+  const list = Array.isArray(value) ? value : [value];
+  const normalized = [...new Set(list.map((scope) => String(scope).trim()).filter(Boolean))].sort();
+  return Object.freeze(normalized);
+}
+
 export function createPlatformService({
   repository,
   now = () => new Date().toISOString(),
@@ -152,7 +159,7 @@ export function createPlatformService({
     return publicToken(token);
   }
 
-  async function authenticateApiToken(rawToken, requiredScope = null) {
+  async function authenticateApiToken(rawToken, requiredScopesInput = null) {
     let parsed;
     try {
       parsed = parseApiToken(rawToken);
@@ -166,7 +173,9 @@ export function createPlatformService({
     if (record.revoked_at) throw new PlatformError("API_TOKEN_REVOKED", "API token revoked", 401);
     if (instant(record.expires_at).getTime() <= nowDate().getTime()) throw new PlatformError("API_TOKEN_EXPIRED", "API token expired", 401);
     const scopes = Array.isArray(record.scopes) ? record.scopes : JSON.parse(record.scopes || "[]");
-    if (requiredScope && !scopes.includes(requiredScope)) throw new PlatformError("API_TOKEN_SCOPE_REFUSED", `API token lacks scope ${requiredScope}`, 403);
+    const requiredScopes = requiredScopeList(requiredScopesInput);
+    const missing = requiredScopes.find((scope) => !scopes.includes(scope));
+    if (missing) throw new PlatformError("API_TOKEN_SCOPE_REFUSED", `API token lacks scope ${missing}`, 403);
     const owner = await repository.getProfile(record.subject);
     if (!owner) throw new PlatformError("API_TOKEN_OWNER_MISSING", "API token owner unavailable", 401);
     const usedAt = nowIso();
@@ -175,7 +184,7 @@ export function createPlatformService({
       { subject: record.subject, email: owner.email },
       "token.used",
       record.id,
-      { scope: requiredScope || null, used_at: usedAt },
+      { scope: requiredScopes.length === 1 ? requiredScopes[0] : null, scopes: [...requiredScopes], used_at: usedAt },
     );
     return Object.freeze({
       kind: "api-token",

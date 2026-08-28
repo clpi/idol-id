@@ -11,6 +11,8 @@ export const hostMap = Object.freeze({
   "graph.idol.id": { app: "graph", surface: "graph", origin: true },
   "worlds.idol.id": { app: "lib", surface: "lib", origin: false, redirect: "https://lib.idol.id" },
   "platform.idol.id": { app: "platform", surface: "platform", origin: false },
+  "live.idol.id": { app: "live", surface: "live", origin: false },
+  "mcp.idol.id": { app: "mcp", surface: "mcp", origin: false },
   "r8a.idol.id": { app: "graph", surface: "r8a", origin: true },
   "r8b.idol.id": { app: "graph", surface: "r8b", origin: true },
   "r16.idol.id": { app: "graph", surface: "r16", origin: true },
@@ -125,6 +127,8 @@ function localSurface(surface) {
   if (["worlds", "atlas"].includes(surface)) return { app: "worlds", surface: "worlds", origin: false };
   if (surface === "platform") return { app: "platform", surface: "platform", origin: false };
   if (surface === "ide") return { app: "ide", surface: "ide", origin: false };
+  if (surface === "live") return { app: "live", surface: "live", origin: false };
+  if (surface === "mcp") return { app: "mcp", surface: "mcp", origin: false };
   return { app: "site", surface: "site", origin: true };
 }
 function decodePathPart(value) {
