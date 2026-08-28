@@ -71,7 +71,9 @@ jobs:
       - name: Validate Worker bundle
         run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
       - name: Browser interaction and responsive semantic QA
-        run: node scripts/browser-smoke.mjs
+        run: |
+          node scripts/browser-smoke.mjs
+          node scripts/live-mcp-browser-smoke.mjs
       - name: Upload browser interaction evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -106,7 +108,7 @@ jobs:
         env:
           IDOL_WORLD_SNAPSHOT_RETAIN: "1"
         run: node scripts/snapshot-worlds.mjs
-      - name: Provision D1 and Platform Access identity boundary
+      - name: Provision D1 and Platform plus Live Access identity boundaries
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
@@ -137,18 +139,27 @@ jobs:
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
           ## idol.id deployed and converged
-          One immutable Worker version serves root, www redirect, docs, lib, api, graph, worlds, platform, r8a, r8b and r16.
+          One immutable Worker version serves root, www redirect, docs, lib, api, graph, worlds, platform, Live, hosted MCP, r8a, r8b and r16.
 
           Authority:
           - `/__idol/version`, `/__idol/health`, browser config, installers and runtime manifests project one immutable authority document
           - post-deploy verification checks the exact web commit, Idol authority, idol-native authority and source-law edition on every configured hostname
           - no Wasm artifact is admitted from path existence alone
+          - Live owns collaboration truth only; semantic authority, dispatcher authority and world-authority grant remain false
           - world projection freshness is explicit: live snapshot when reachable, otherwise the checked-in snapshot is retained only after schema, source, revision and world validation
 
           Distribution:
           - curl -fsSL https://idol.id/install | sh
           - irm https://idol.id/install.ps1 | iex
           - exact pinned Zig bootstrap seed; self-hosted release remains false
+
+          Live and hosted MCP:
+          - live.idol.id is Cloudflare Access protected and subject-owned
+          - one append-only causal history and one causally closed accepted frontier per project
+          - relation identities remain operations; structural graph roles are derived
+          - Universe View binding is a projection reference with authority grant none
+          - mcp.idol.id/mcp is stateless Streamable HTTP authenticated by digest-only scoped Platform keys
+          - mobile and desktop Chrome gates cover Live and MCP interactions without horizontal overflow
 
           Repository Observatory:
           - platform.idol.id/repo and /repo/{observation,scaffold,transformation}/:id are Access protected

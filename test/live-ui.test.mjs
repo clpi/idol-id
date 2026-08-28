@@ -10,19 +10,19 @@ test("Live UI is an interactive exact-record workbench, not decorative graph the
     read("shared/live-app.js"),
     read("shared/live-app.css"),
   ]);
-  for (const id of ["live-project-form", "node-form", "application-form", "event-form", "frontier-form", "world-view-form"]) {
+  for (const id of ["live-project-form", "live-node-form", "live-application-form", "live-event-form", "live-frontier-form", "live-world-form"]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
-  for (const view of ["catalog", "graph", "history", "facts"]) assert.match(html, new RegExp(`data-mobile-view="${view}"`));
+  for (const view of ["projects", "graph", "history", "facts"]) assert.match(html, new RegExp(`data-mobile-view="${view}"`));
   assert.doesNotMatch(html + script, /Math\.random\(/);
   assert.doesNotMatch(html, /<canvas\b/i);
-  assert.match(script, /\/v1\/live\/browser\/projects/);
+  assert.match(script, /const API = "\/v1\/live\/browser"/);
   assert.match(script, /application\.relation/);
   assert.match(script, /edge\.role/);
   assert.match(script, /edge\.source/);
   assert.match(script, /edge\.target/);
-  assert.match(script, /semantic identity not published/i);
-  assert.match(script, /authority grant none/i);
+  assert.match(script, /semantic id[\s\S]*?not published/i);
+  assert.match(script, /none granted by this view/i);
   assert.match(script, /addEventListener\("keydown"/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /min-height:\s*44px/);
@@ -62,18 +62,14 @@ test("shared chrome and immutable-build adapters expose Live and hosted MCP with
 });
 
 test("required real-Chrome gate covers Live and MCP on mobile and desktop", async () => {
-  const [wrapper, smoke] = await Promise.all([
-    read("scripts/browser-smoke.mjs"),
-    read("scripts/live-mcp-browser-smoke.mjs"),
-  ]);
-  const source = `${wrapper}\n${smoke}`;
-  assert.match(source, /live-mobile\.png/);
-  assert.match(source, /live-desktop\.png/);
-  assert.match(source, /mcp-mobile\.png/);
-  assert.match(source, /mcp-desktop\.png/);
-  assert.match(source, /390, 844/);
-  assert.match(source, /1440, 900/);
-  assert.match(source, /scrollWidth/);
-  assert.match(source, /height\s*<\s*44|height<44/);
-  assert.match(source, /Runtime\.exceptionThrown/);
+  const smoke = await read("scripts/live-mcp-browser-smoke.mjs");
+  assert.match(smoke, /live-mobile\.png/);
+  assert.match(smoke, /live-desktop\.png/);
+  assert.match(smoke, /mcp-mobile\.png/);
+  assert.match(smoke, /mcp-desktop\.png/);
+  assert.match(smoke, /390, 844/);
+  assert.match(smoke, /1440, 900/);
+  assert.match(smoke, /scrollWidth/);
+  assert.match(smoke, /height\s*<\s*44|height<44/);
+  assert.match(smoke, /Runtime\.exceptionThrown/);
 });
