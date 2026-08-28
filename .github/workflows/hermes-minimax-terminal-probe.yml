@@ -1,0 +1,143 @@
+name: Hermes MiniMax terminal control probe
+
+on:
+  push:
+    branches: [ops/hermes-ha-control-20260828]
+    paths:
+      - .github/workflows/hermes-minimax-terminal-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CONTROL_BUNDLE: U2FsdGVkX195qP/xncpRb35AOtW6UYj7v2GnvTnljIJ4Y/TxyaFwm3B4aupBEar3PN+3Qq/VwMbKIEmUaV1eKg==
+    steps:
+      - name: Run an exact read-only command through MiniMax
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cleanup(){
+            set +e
+            if [[ -n "${SID:-}" ]]; then
+              curl -fsS --max-time 10 -b /tmp/cookies -H 'Content-Type: application/json' \
+                --data "$(jq -nc --arg sid "$SID" '{session_id:$sid}')" \
+                "$BASE/api/session/delete" >/dev/null 2>&1 || true
+            fi
+            rm -f /tmp/control.json /tmp/cookies /tmp/login.json /tmp/new.json \
+              /tmp/probe.sh /tmp/upload.json /tmp/start.json /tmp/stream.log
+          }
+          trap cleanup EXIT
+
+          export PASS="$(printf '%s' "idol-hermes-ha-control-v1${CLOUDFLARE_API_TOKEN}" | sha256sum | awk '{print $1}')"
+          printf '%s' "$CONTROL_BUNDLE" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -a -A -pass env:PASS > /tmp/control.json
+          WEBUI_PASSWORD="$(jq -er '.webui_password' /tmp/control.json)"
+          echo "::add-mask::$WEBUI_PASSWORD"
+          BASE=https://hermes.idol.id
+
+          curl -fsS --retry 3 --retry-all-errors --max-time 15 \
+            -c /tmp/cookies -b /tmp/cookies -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg p "$WEBUI_PASSWORD" '{password:$p}')" \
+            "$BASE/api/auth/login" > /tmp/login.json
+          jq -e '.ok == true' /tmp/login.json >/dev/null
+
+          curl -fsS --max-time 20 -b /tmp/cookies -H 'Content-Type: application/json' \
+            --data '{"workspace":"/Users/clp","model":"MiniMax-M2.7","model_provider":"minimax"}' \
+            "$BASE/api/session/new" > /tmp/new.json
+          SID="$(jq -er '.session.session_id' /tmp/new.json)"
+          echo "session_created=yes model=$(jq -r '.session.model' /tmp/new.json) provider=$(jq -r '.session.model_provider' /tmp/new.json)"
+
+          cat > /tmp/probe.sh <<'PROBE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          printf 'IDOL_HA_CONTROL_OK host=%s user=%s arch=%s\n' "$(hostname)" "$(id -un)" "$(uname -m)"
+          test -s "$HOME/.hermes/.env"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          value=''
+          for raw in (Path.home()/'.hermes/.env').read_text(errors='replace').splitlines():
+              line=raw.strip()
+              if line.startswith('export '): line=line[7:].strip()
+              if line.startswith('MINIMAX_API_KEY='):
+                  value=line.split('=',1)[1].strip().strip('"').strip("'")
+          print('MINIMAX_TOKEN_PLAN_PRESENT=' + ('yes' if value.startswith('sk-cp-') else 'no'))
+          PY
+          PROBE
+          chmod 700 /tmp/probe.sh
+
+          curl -fsS --max-time 20 -b /tmp/cookies \
+            -F "session_id=$SID" -F 'file=@/tmp/probe.sh;filename=idol-ha-control-probe.sh' \
+            "$BASE/api/upload" > /tmp/upload.json
+          SCRIPT_PATH="$(jq -er '.path' /tmp/upload.json)"
+          echo "uploaded=yes path_basename=$(basename "$SCRIPT_PATH")"
+
+          PROMPT="Use the terminal tool exactly once. Run exactly: bash '$SCRIPT_PATH'. Do not run any other command, do not inspect any file yourself, and return the command stdout verbatim."
+          curl -fsS --max-time 30 -b /tmp/cookies -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg sid "$SID" --arg m "$PROMPT" '{session_id:$sid,message:$m,model:"MiniMax-M2.7",model_provider:"minimax",workspace:"/Users/clp"}')" \
+            "$BASE/api/chat/start" > /tmp/start.json
+          STREAM_ID="$(jq -er '.stream_id' /tmp/start.json)"
+          echo "stream_started=yes"
+
+          curl -fsS -N --max-time 180 -b /tmp/cookies \
+            "$BASE/api/chat/stream?stream_id=$(printf '%s' "$STREAM_ID" | jq -sRr @uri)" > /tmp/stream.log &
+          STREAM_PID=$!
+
+          approved=0
+          for _ in $(seq 1 180); do
+            if ! kill -0 "$STREAM_PID" 2>/dev/null; then break; fi
+            pending="$(curl -fsS --max-time 5 -b /tmp/cookies "$BASE/api/approval/pending?session_id=$(printf '%s' "$SID" | jq -sRr @uri)" 2>/dev/null || echo '{}')"
+            command="$(printf '%s' "$pending" | jq -r '.pending.command // empty' 2>/dev/null || true)"
+            if [[ -n "$command" ]]; then
+              expected1="bash '$SCRIPT_PATH'"
+              expected2="bash $SCRIPT_PATH"
+              if [[ "$command" != "$expected1" && "$command" != "$expected2" ]]; then
+                echo "Unexpected command requested; denying without printing it."
+                curl -fsS --max-time 5 -b /tmp/cookies -H 'Content-Type: application/json' \
+                  --data "$(jq -nc --arg sid "$SID" '{session_id:$sid,choice:"deny"}')" \
+                  "$BASE/api/approval/respond" >/dev/null || true
+                exit 1
+              fi
+              curl -fsS --max-time 5 -b /tmp/cookies -H 'Content-Type: application/json' \
+                --data "$(jq -nc --arg sid "$SID" '{session_id:$sid,choice:"once"}')" \
+                "$BASE/api/approval/respond" >/dev/null
+              approved=1
+              echo "exact_command_approved_once=yes"
+            fi
+            sleep 1
+          done
+          wait "$STREAM_PID" || true
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re,sys
+          text=Path('/tmp/stream.log').read_text(errors='replace')
+          events=[]
+          for line in text.splitlines():
+              if not line.startswith('data:'): continue
+              raw=line[5:].strip()
+              try: events.append(json.loads(raw))
+              except Exception: pass
+          safe=[]
+          for event in events:
+              if isinstance(event,dict):
+                  for key in ('text','message','content','preview'):
+                      value=event.get(key)
+                      if isinstance(value,str): safe.append(value)
+          out='\n'.join(safe)
+          out=re.sub(r'sk-[A-Za-z0-9._-]{8,}','[secret]',out)
+          print(out[-5000:])
+          required=('IDOL_HA_CONTROL_OK','MINIMAX_TOKEN_PLAN_PRESENT=yes')
+          missing=[x for x in required if x not in out]
+          if missing:
+              print('missing_markers='+','.join(missing),file=sys.stderr)
+              raise SystemExit(1)
+          PY
+          echo "terminal_control_verified=yes approval_needed=$approved"
