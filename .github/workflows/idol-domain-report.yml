@@ -1,0 +1,196 @@
+name: Idol domain report
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-domain-report.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: idol-domain-report
+  cancel-in-progress: true
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  ZONE_NAME: idol.id
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/idol-domain-repair-20260828
+
+      - name: Build sanitized live inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          api=https://api.cloudflare.com/client/v4
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p ops/reports
+
+          get() {
+            local url="$1" dst="$2"
+            if curl -fsS --retry 3 --retry-all-errors --max-time 30 "${auth[@]}" "$url" > "$dst" \
+              && jq -e '.success == true' "$dst" >/dev/null; then
+              return 0
+            fi
+            printf '{"success":false,"result":[]}' > "$dst"
+            return 1
+          }
+
+          get "$api/zones?name=$ZONE_NAME&status=active&per_page=50" "$tmp/zone.json"
+          ZONE_ID="$(jq -er '.result[0].id' "$tmp/zone.json")"
+          get "$api/zones/$ZONE_ID/dns_records?per_page=5000" "$tmp/dns.json"
+          get "$api/zones/$ZONE_ID/workers/routes?per_page=5000" "$tmp/routes.json" || true
+          get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100" "$tmp/pages.json" || true
+          get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps?per_page=500" "$tmp/access.json" || true
+          get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel?is_deleted=false&per_page=100" "$tmp/tunnels.json"
+
+          jq -r '.result[].name' "$tmp/dns.json" \
+            | awk 'NF && $0 !~ /^\*/ && $0 != "hermes.idol.id" && $0 != "claw.idol.id"' \
+            | sort -u > "$tmp/hosts"
+          printf '%s\n' "$ZONE_NAME" >> "$tmp/hosts"
+          sort -u -o "$tmp/hosts" "$tmp/hosts"
+
+          printf '[]' > "$tmp/tunnel-ingress.json"
+          while IFS=$'\t' read -r tid tname tstatus; do
+            [[ -n "$tid" ]] || continue
+            cfg="$tmp/tunnel-$tid.json"
+            get "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$tid/configurations" "$cfg" || true
+            jq --arg id "$tid" --arg name "$tname" --arg status "$tstatus" \
+              '[.result.config.ingress[]? | {tunnel_id:$id,tunnel_name:$name,tunnel_status:$status,hostname:(.hostname // null),path:(.path // null),service:(.service // null),origin_request:(.originRequest // {})}]' \
+              "$cfg" > "$tmp/one.json"
+            jq -s '.[0] + .[1]' "$tmp/tunnel-ingress.json" "$tmp/one.json" > "$tmp/merged.json"
+            mv "$tmp/merged.json" "$tmp/tunnel-ingress.json"
+          done < <(jq -r '.result[] | [.id,.name,.status] | @tsv' "$tmp/tunnels.json")
+
+          printf '[]' > "$tmp/http.json"
+          while IFS= read -r host; do
+            [[ -n "$host" ]] || continue
+            for path in / /health /api/health /__idol/health; do
+              body="$tmp/body"; hdr="$tmp/hdr"
+              rm -f "$body" "$hdr"
+              meta="$(curl -ksS -L --connect-timeout 7 --max-time 25 --retry 1 \
+                -D "$hdr" -o "$body" \
+                -w '%{http_code}\t%{url_effective}\t%{content_type}\t%{num_redirects}\t%{size_download}\t%{time_total}\t%{remote_ip}\t%{ssl_verify_result}' \
+                "https://$host$path" 2>/dev/null || printf '000\thttps://%s%s\t\t0\t0\t0\t\t1' "$host" "$path")"
+              IFS=$'\t' read -r code final ctype redirects bytes seconds remote ssl <<< "$meta"
+              title=""; sha=""; prefix=""
+              if [[ -f "$body" ]]; then
+                sha="$(sha256sum "$body" | awk '{print $1}')"
+                readarray -t parsed < <(python3 - "$body" <<'PY'
+          import html,json,re,sys
+          from pathlib import Path
+          raw=Path(sys.argv[1]).read_bytes()
+          text=raw[:1000000].decode('utf-8','replace')
+          m=re.search(r'<title[^>]*>(.*?)</title>',text,re.I|re.S)
+          title=re.sub(r'\s+',' ',html.unescape(m.group(1))).strip()[:200] if m else ''
+          prefix=re.sub(r'\s+',' ',text[:500]).strip()[:300]
+          print(title)
+          print(prefix)
+          PY
+          )
+                title="${parsed[0]:-}"; prefix="${parsed[1]:-}"
+              fi
+              jq -n \
+                --arg host "$host" --arg path "$path" --arg code "$code" --arg final "$final" \
+                --arg type "$ctype" --arg redirects "$redirects" --arg bytes "$bytes" --arg seconds "$seconds" \
+                --arg remote_ip "$remote" --arg ssl_verify_result "$ssl" --arg title "$title" --arg sha "$sha" --arg prefix "$prefix" \
+                '{host:$host,path:$path,http:($code|tonumber? // 0),final_url:$final,content_type:$type,redirects:($redirects|tonumber? // 0),bytes:($bytes|tonumber? // 0),seconds:($seconds|tonumber? // 0),remote_ip:$remote_ip,ssl_verify_result:($ssl_verify_result|tonumber? // 1),title:$title,body_sha256:$sha,body_prefix:$prefix}' \
+                > "$tmp/one-http.json"
+              jq -s '.[0] + [.[1]]' "$tmp/http.json" "$tmp/one-http.json" > "$tmp/http-merged.json"
+              mv "$tmp/http-merged.json" "$tmp/http.json"
+            done
+          done < "$tmp/hosts"
+
+          git grep -IhoE '([A-Za-z0-9*_-]+\.)*idol\.id' -- ':!ops/reports/*' ':!.github/workflows/idol-domain-report.yml' \
+            | sort -u | jq -Rsc 'split("\n") | map(select(length>0))' > "$tmp/repo-hosts.json" || printf '[]' > "$tmp/repo-hosts.json"
+
+          jq -n \
+            --arg observed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg zone "$ZONE_NAME" --arg zone_id "$ZONE_ID" \
+            --slurpfile dns "$tmp/dns.json" --slurpfile routes "$tmp/routes.json" \
+            --slurpfile pages "$tmp/pages.json" --slurpfile access "$tmp/access.json" \
+            --slurpfile tunnels "$tmp/tunnels.json" --slurpfile ingress "$tmp/tunnel-ingress.json" \
+            --slurpfile http "$tmp/http.json" --slurpfile repo_hosts "$tmp/repo-hosts.json" \
+            '{schema:"idol.domain.census.v1",observed_at:$observed_at,zone:$zone,zone_id:$zone_id,
+              dns:($dns[0].result // [] | map({id,name,type,content,proxied,ttl,comment,tags})),
+              worker_routes:($routes[0].result // [] | map({id,pattern,script})),
+              pages_projects:($pages[0].result // [] | map({name,subdomain,domains,production_branch,latest_deployment:(.latest_deployment|if . then {id,url,environment,created_on} else null end)})),
+              access_apps:($access[0].result // [] | map({id,name,domain,type,app_launcher_visible})),
+              tunnels:($tunnels[0].result // [] | map({id,name,status,created_at,deleted_at,connection_count:(.connections|length)})),
+              tunnel_ingress:$ingress[0],http:$http[0],repo_hostnames:$repo_hosts[0],
+              exclusions:["hermes.idol.id","claw.idol.id"]}' \
+            > ops/reports/idol-domain-census.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('ops/reports/idol-domain-census.json').read_text())
+          excluded=set(d['exclusions'])
+          dns=sorted((x for x in d['dns'] if x['name'] not in excluded),key=lambda x:(x['name'],x['type']))
+          root={x['host']:x for x in d['http'] if x['path']=='/'}
+          lines=[
+              '# Idol domain census', '',
+              f"Observed: `{d['observed_at']}`", '',
+              'Hermes and Claw are intentionally excluded from this repair pass.', '',
+              '## Public surfaces', '',
+              '| Host | DNS | Proxied | Root HTTP | Final URL | Content type | Title |',
+              '|---|---|---:|---:|---|---|---|',
+          ]
+          for rec in dns:
+              h=rec['name']; probe=root.get(h,{})
+              title=str(probe.get('title','')).replace('|','\\|')
+              lines.append(f"| `{h}` | `{rec['type']} {rec['content']}` | {rec['proxied']} | {probe.get('http',0)} | `{probe.get('final_url','')}` | `{probe.get('content_type','')}` | {title} |")
+          if d['zone'] not in {x['name'] for x in dns}:
+              probe=root.get(d['zone'],{})
+              lines.append(f"| `{d['zone']}` | *(apex missing from filtered DNS)* |  | {probe.get('http',0)} | `{probe.get('final_url','')}` | `{probe.get('content_type','')}` | {probe.get('title','')} |")
+          lines += ['', '## Cloudflare tunnel ingress', '', '| Tunnel | Status | Hostname | Service |', '|---|---|---|---|']
+          for x in sorted(d['tunnel_ingress'],key=lambda x:(x.get('hostname') or '',x.get('tunnel_name') or '')):
+              if x.get('hostname') in excluded: continue
+              lines.append(f"| `{x.get('tunnel_name','')}` | `{x.get('tunnel_status','')}` | `{x.get('hostname') or '<catch-all>'}` | `{x.get('service','')}` |")
+          lines += ['', '## Workers routes', '']
+          lines += [f"- `{x.get('pattern')}` → `{x.get('script')}`" for x in d['worker_routes']] or ['- None']
+          lines += ['', '## Pages projects', '']
+          lines += [f"- `{x.get('name')}`: domains `{', '.join(x.get('domains') or [])}`; latest `{(x.get('latest_deployment') or {}).get('url','')}`" for x in d['pages_projects']] or ['- None']
+          lines += ['', '## Access applications', '']
+          lines += [f"- `{x.get('domain')}` ({x.get('type')}) — {x.get('name')}" for x in d['access_apps'] if x.get('domain') not in excluded] or ['- None']
+          lines += ['', '## Repository-referenced hostnames', '']
+          lines += [f"- `{x}`" for x in d['repo_hostnames'] if x not in excluded] or ['- None']
+          lines += ['', '## Immediate failure candidates', '']
+          bad=[]
+          for host,probe in sorted(root.items()):
+              if host in excluded: continue
+              code=probe.get('http',0)
+              if code==0 or code>=400 or probe.get('ssl_verify_result',1)!=0:
+                  bad.append(f"- `{host}`: HTTP {code}, SSL verify {probe.get('ssl_verify_result')}, final `{probe.get('final_url','')}`")
+          lines += bad or ['- None detected by the root-path transport probe.']
+          Path('ops/reports/idol-domain-census.md').write_text('\n'.join(lines)+'\n')
+          PY
+
+      - name: Commit sanitized report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'idol-domain-bot'
+          git config user.email 'idol-domain-bot@users.noreply.github.com'
+          git add ops/reports/idol-domain-census.json ops/reports/idol-domain-census.md
+          if git diff --cached --quiet; then
+            echo 'report_unchanged=yes'
+          else
+            git commit -m 'ops: record live non-agent Idol domain census'
+            git push origin HEAD:ops/idol-domain-repair-20260828
+          fi
