@@ -84,9 +84,9 @@ function createMobilePanel(app, toggle) {
   panel.className = "nav-panel";
   panel.id = "idol-nav-panel";
   panel.hidden = true;
-  panel.setAttribute("aria-label", "Idsem navigation");
+  panel.setAttribute("aria-label", "Idol navigation");
   panel.innerHTML = `
-    <nav class="nav-panel-primary" aria-label="Idsem products">
+    <nav class="nav-panel-primary" aria-label="Idol products">
       ${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}
     </nav>
     <div class="nav-panel-context" aria-label="Contextual projections">
@@ -102,7 +102,7 @@ function createMobilePanel(app, toggle) {
     panel.classList.toggle("open", open);
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Close Idsem navigation" : "Open Idsem navigation");
+    toggle.setAttribute("aria-label", open ? "Close Idol navigation" : "Open Idol navigation");
     document.documentElement.classList.toggle("nav-open", open);
     if (!changed) return;
     if (open) {
@@ -150,11 +150,11 @@ function boot(app, opts) {
     return node;
   })();
   bar.innerHTML = `
-    <div class="brand"><span class="dot"></span><a href="https://idol.id/" style="border:0;color:inherit">IDSEM</a></div>
+    <div class="brand"><span class="dot"></span><a href="https://idol.id/" style="border:0;color:inherit">IDOL</a></div>
     <div class="crumbs" id="crumbs"></div>
     <div class="spacer"></div>
-    <nav class="nav nav-desktop" aria-label="Idsem products">${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}</nav>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="idol-nav-panel" aria-label="Open Idsem navigation"><span aria-hidden="true">menu</span></button>`;
+    <nav class="nav nav-desktop" aria-label="Idol products">${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}</nav>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="idol-nav-panel" aria-label="Open Idol navigation"><span aria-hidden="true">menu</span></button>`;
   const navigation = createMobilePanel(app, bar.querySelector(".nav-toggle"));
 
   const statusbar = document.querySelector(".statusbar");
