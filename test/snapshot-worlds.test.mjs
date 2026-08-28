@@ -48,7 +48,7 @@ test("identical registry facts create byte-identical snapshot documents", () => 
 });
 
 test("retained snapshot preserves exact published evidence without claiming a new revision", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "idsem-worlds-"));
+  const directory = await mkdtemp(join(tmpdir(), "idol-worlds-"));
   const target = join(directory, "worlds.json");
   try {
     const document = buildSnapshot(parseRegistryProjection(raw).worlds, source);
