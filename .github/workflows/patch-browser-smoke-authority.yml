@@ -1,0 +1,86 @@
+name: patch browser smoke authority
+
+on:
+  push:
+    branches: [feat/exact-semantic-observatory-20260828]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: patch-browser-smoke-authority
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/exact-semantic-observatory-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Bind QA fixture to immutable authority and add regression contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          smoke_path = Path('scripts/browser-smoke.mjs')
+          smoke = smoke_path.read_text()
+          replacements = [
+              (
+                  'function analyzeFixture(source) {',
+                  'function analyzeFixture(source, authority) {',
+              ),
+              (
+                  '    authority: { repository: "clpi/idol", commit: "browser-smoke-authority" },',
+                  '    authority,',
+              ),
+              (
+                  'async function requestHandler(request, response) {',
+                  '''let cachedAuthority;\nasync function exactAuthority() {\n  if (cachedAuthority) return cachedAuthority;\n  const document = JSON.parse(await readFile(join(root, "runtime/authority.json"), "utf8"));\n  const language = document?.language;\n  if (!language || typeof language !== "object" || !String(language.commit || "").trim()) {\n    throw new Error("browser smoke authority asset is invalid");\n  }\n  cachedAuthority = Object.freeze({ ...language, commit: String(language.commit) });\n  return cachedAuthority;\n}\n\nasync function requestHandler(request, response) {''',
+              ),
+              (
+                  '  if (request.method === "GET" && url.pathname === "/config.js") {\n    const body = Buffer.from(`window.IDOL=Object.freeze({app:"graph",surface:"graph",origin:true,authority:"browser-smoke-authority"});\\n`);',
+                  '  if (request.method === "GET" && url.pathname === "/config.js") {\n    const authority = await exactAuthority();\n    const body = Buffer.from(`window.IDOL=Object.freeze({app:"graph",surface:"graph",origin:true,authority:${JSON.stringify(authority.commit)}});\\n`);',
+              ),
+              (
+                  '    if (url.pathname === "/api/analyze") json(response, analyzeFixture(String(input.source || "")));',
+                  '    if (url.pathname === "/api/analyze") json(response, analyzeFixture(String(input.source || ""), await exactAuthority()));',
+              ),
+          ]
+          for old, new in replacements:
+              count = smoke.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one browser-smoke replacement, found {count}: {old[:96]!r}')
+              smoke = smoke.replace(old, new, 1)
+          smoke_path.write_text(smoke)
+
+          contract_path = Path('test/browser-smoke-contract.test.mjs')
+          contract = contract_path.read_text()
+          marker = 'browser smoke derives fixture authority from the immutable build asset'
+          if marker in contract:
+              raise SystemExit('browser authority regression contract already exists')
+          contract += '''\n\ntest("browser smoke derives fixture authority from the immutable build asset", async () => {\n  const smoke = await read("scripts/browser-smoke.mjs");\n  assert.match(smoke, /runtime\\/authority\\.json/);\n  assert.match(smoke, /analyzeFixture\\(String\\(input\\.source \\|\\| ""\\), await exactAuthority\\(\\)\\)/);\n  assert.doesNotMatch(smoke, /commit:\\s*"browser-smoke-authority"/);\n});\n'''
+          contract_path.write_text(contract)
+
+          Path('.github/workflows/patch-browser-smoke-authority.yml').unlink()
+          PY
+      - name: Verify targeted and complete contracts
+        run: |
+          node --check scripts/browser-smoke.mjs
+          node --test test/browser-smoke-contract.test.mjs
+          npm run check
+      - name: Commit exact repair and remove patch workflow
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/browser-smoke.mjs test/browser-smoke-contract.test.mjs .github/workflows/patch-browser-smoke-authority.yml
+          git commit -m "fix: bind browser QA to immutable authority"
+          git push origin HEAD:feat/exact-semantic-observatory-20260828
