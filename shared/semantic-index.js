@@ -91,8 +91,8 @@ export function buildSemanticIndex(bundle) {
       tokenIds.set(token.token_id, token);
     }
     append(spelling, token.value, token);
-    if (token.semantic_id !== null) append(semanticOccurrences, token.semantic_id, token);
-    for (const id of token.graph_ids || EMPTY) append(semanticOccurrences, id, token);
+    const occurrenceIds = new Set([...(token.semantic_id === null ? [] : [token.semantic_id]), ...(token.graph_ids || EMPTY)]);
+    for (const id of occurrenceIds) append(semanticOccurrences, id, token);
   }
 
   const api = {
