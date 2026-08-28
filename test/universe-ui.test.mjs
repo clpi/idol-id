@@ -4,10 +4,11 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Universe workspace is packaged for authenticated Platform and public Worlds routes", async () => {
-  const [html, app, worker, build, shell] = await Promise.all([
+test("Universe workspace is packaged for authenticated Platform and public Lib routes", async () => {
+  const [html, app, adapter, worker, build, shell] = await Promise.all([
     read("apps/universe/index.html"),
     read("shared/universe-app.js"),
+    read("shared/universe-canonical.js"),
     read("worker/entry.js"),
     read("scripts/build.mjs"),
     read("shared/shell.js"),
@@ -20,24 +21,32 @@ test("Universe workspace is packaged for authenticated Platform and public World
   assert.match(app, /\/v1\/universe\/browser\/views/);
   assert.match(app, /const PUBLIC_VIEWS = "\/v1\/universe\/public"/);
   assert.match(app, /\$\{PUBLIC_VIEWS\}\/\$\{encodeURIComponent\(id\)\}/);
-  assert.match(worker, /info\.surface === "platform" \|\| info\.surface === "worlds"/);
+  assert.match(worker, /info\.surface === "platform" \|\| info\.surface === "lib"/);
   assert.match(worker, /\/apps\/universe\/index\.html/);
   assert.match(build, /"universe"/);
   assert.match(build, /platform-universe-entry\.js/);
+  assert.match(build, /universe-canonical\.js/);
+  assert.match(adapter, /location\.hostname === "lib\.idol\.id"/);
+  assert.match(adapter, /worlds\.idol\.id/);
+  assert.match(adapter, /lib\.idol\.id/);
   assert.doesNotMatch(shell, /id:\s*"universe"/);
+  assert.doesNotMatch(shell, /id:\s*"worlds"/);
   assert.match(shell, /public universe views/i);
   assert.match(shell, /manage universe views/i);
 });
 
-test("local public Universe mode follows the routing query and canonical config object", async () => {
-  const [app, worker] = await Promise.all([
+test("local public Universe mode follows the routing query and canonical Lib adapter", async () => {
+  const [app, adapter, worker] = await Promise.all([
     read("shared/universe-app.js"),
+    read("shared/universe-canonical.js"),
     read("worker/entry.js"),
   ]);
   assert.doesNotMatch(app, /IDOL_CONFIG/);
   assert.match(app, /new URLSearchParams\(location\.search\)\.get\("mode"\) === "public"/);
-  assert.match(app, /window\.IDOL\?\.(?:app|surface) === "worlds"/);
+  assert.match(adapter, /searchParams\.set\("mode", "public"\)/);
+  assert.match(adapter, /canonicalOrigin = "https:\/\/lib\.idol\.id"/);
   assert.match(worker, /url\.searchParams\.get\("mode"\) === "public"/);
+  assert.match(worker, /app: "lib", surface: "lib"/);
 });
 
 test("Universe UI is mobile-first, touch-accessible, and typography-safe", async () => {
