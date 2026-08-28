@@ -181,7 +181,7 @@ function newestDecisionByEvent(frontier) {
 }
 function frontierProjection(events, frontier) {
   const latest = newestDecisionByEvent(frontier);
-  const admitted = [...latest.values()].filter((decision) => decision.state === "admitted").map((decision) => decision.event_id).sort();
+  const admitted = events.filter((event) => latest.get(event.id)?.state === "admitted").map((event) => event.id);
   const admittedSet = new Set(admitted);
   let causallyClosed = true;
   for (const event of events) {
