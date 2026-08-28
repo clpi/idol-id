@@ -28,6 +28,7 @@ test("global chrome keeps Lib and Worlds distinct while Universe is contextual",
   assert.doesNotMatch(shell, /id:\s*"universe"/);
   assert.match(shell, /https:\/\/worlds\.idol\.id\/universe/);
   assert.match(shell, /https:\/\/platform\.idol\.id\/universe/);
+  assert.match(shell, /https:\/\/platform\.idol\.id\/repo/);
   assert.match(shell, /class="nav-toggle"/);
   assert.match(shell, /aria-expanded="false"/);
   assert.match(shell, /aria-controls="idol-nav-panel"/);
