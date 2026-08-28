@@ -1,0 +1,23 @@
+name: Browser authority regression RED
+
+on:
+  push:
+    branches: [feat/exact-semantic-observatory-20260828]
+    paths:
+      - .github/workflows/browser-authority-red.yml
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/exact-semantic-observatory-20260828
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --test test/browser-smoke-contract.test.mjs
