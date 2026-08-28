@@ -29,6 +29,15 @@ test("verified builds execute a real Chrome semantic-interaction gate", async ()
   assert.match(smoke, /observatory-desktop\.png/);
 });
 
+test("browser smoke selects the exact sample its semantic fixture validates", async () => {
+  const smoke = await read("scripts/browser-smoke.mjs");
+  assert.match(smoke, /const SMOKE_EXAMPLE_ID\s*=\s*"declaration-specialization"/);
+  assert.match(smoke, /document\.querySelector\("#sample"\)/);
+  assert.match(smoke, /select\.value\s*=\s*SMOKE_EXAMPLE_ID/);
+  assert.match(smoke, /dispatchEvent\(new Event\("change"/);
+  assert.match(smoke, /select\.value\s*===\s*SMOKE_EXAMPLE_ID/);
+});
+
 test("browser smoke closes Chrome before deleting its profile", async () => {
   const smoke = await read("scripts/browser-smoke.mjs");
   const finallyStart = smoke.lastIndexOf("} finally {");
