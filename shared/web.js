@@ -12,19 +12,16 @@
     queue.clear();
     for (const run of work) run();
   }
-
   function schedule(run) {
     queue.add(run);
     if (depth > 0 || scheduled) return;
     scheduled = true;
     queueMicrotask(flush);
   }
-
   function batch(fn) {
     depth += 1;
-    try {
-      return fn();
-    } finally {
+    try { return fn(); }
+    finally {
       depth -= 1;
       if (depth === 0 && queue.size && !scheduled) {
         scheduled = true;
@@ -32,16 +29,12 @@
       }
     }
   }
-
   function state(initial) {
     let value = initial;
     const readers = new Set();
     return Object.freeze({
       get() {
-        if (active) {
-          readers.add(active);
-          active.sources.add(readers);
-        }
+        if (active) { readers.add(active); active.sources.add(readers); }
         return value;
       },
       set(next) {
@@ -50,9 +43,7 @@
         for (const reader of readers) schedule(reader.run);
         return value;
       },
-      update(change) {
-        return this.set(change(value));
-      },
+      update(change) { return this.set(change(value)); },
       subscribe(reader) {
         const observer = typeof reader === "function" ? { run: reader, sources: new Set() } : reader;
         readers.add(observer);
@@ -60,7 +51,6 @@
       },
     });
   }
-
   function effect(fn) {
     const observer = {
       sources: new Set(),
@@ -71,11 +61,7 @@
         observer.sources.clear();
         const previous = active;
         active = observer;
-        try {
-          fn();
-        } finally {
-          active = previous;
-        }
+        try { fn(); } finally { active = previous; }
       },
       dispose() {
         observer.disposed = true;
@@ -86,13 +72,11 @@
     observer.run();
     return observer.dispose;
   }
-
   function derive(fn) {
     const output = state(undefined);
     effect(() => output.set(fn()));
     return output;
   }
-
   function text(node, read) {
     return effect(() => {
       const value = typeof read === "function" ? read() : read.get();
@@ -100,7 +84,6 @@
       if (node.textContent !== next) node.textContent = next;
     });
   }
-
   function attr(node, name, read) {
     return effect(() => {
       const value = typeof read === "function" ? read() : read.get();
@@ -108,26 +91,15 @@
       else if (node.getAttribute(name) !== String(value)) node.setAttribute(name, String(value));
     });
   }
-
   function on(node, event, listener, options) {
     node.addEventListener(event, listener, options);
     return () => node.removeEventListener(event, listener, options);
   }
-
   function mount(root, render) {
     const disposers = [];
-    const api = {
-      root,
-      use(dispose) {
-        if (typeof dispose === "function") disposers.push(dispose);
-        return dispose;
-      },
-    };
+    const api = { root, use(dispose) { if (typeof dispose === "function") disposers.push(dispose); return dispose; } };
     render(api);
-    return () => {
-      while (disposers.length) disposers.pop()();
-      root.replaceChildren();
-    };
+    return () => { while (disposers.length) disposers.pop()(); root.replaceChildren(); };
   }
 
   window.IdolWeb = Object.freeze({
@@ -142,4 +114,19 @@
     on,
     mount,
   });
+
+  function loadProjection(path) {
+    if (document.querySelector(`script[data-idol-product-projection="${path}"]`)) return;
+    const script = document.createElement("script");
+    script.src = path;
+    script.defer = true;
+    script.dataset.idolProductProjection = path;
+    document.head.appendChild(script);
+  }
+  const host = location.hostname;
+  if (host === "idol.id" || host === "www.idol.id") loadProjection("/shared/site-product-convergence.js");
+  if (host === "lib.idol.id") {
+    loadProjection("/shared/lib-canonical.js");
+    loadProjection("/shared/product-canonical.js");
+  }
 })();

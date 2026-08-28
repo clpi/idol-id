@@ -1,330 +1,264 @@
-/* ============================================================================
-   graph.js — semantic graph renderer for sim-v0 exports (v6 … v14)
-   Vanilla SVG. Verlet force layout, pan/zoom, relation filter, selection.
-   ========================================================================== */
-(function (global) {
-"use strict";
+/* Deterministic presentation of compiler-published graph records.
+   Canonical edges are never reconstructed from names or application records. */
+(function graphSurface(global) {
+  "use strict";
+  const SVG = "http://www.w3.org/2000/svg";
+  const graphModel = import("/shared/graph-model.js");
+  const shapes = Object.freeze({ application: "ring", relation: "diamond", value: "circle", descriptor: "lozenge", world: "halo", witness: "hex", projection: "square", derivation: "square", realization: "square" });
 
-const KIND_R = {
-  module: 13, func: 8, param: 4.5, local: 5.5, value: 3.5, call: 6.5,
-  world: 10, table: 8, enum: 8, pack: 7,
-};
-
-const REL_STYLE = {
-  binding:    { cls: "gedge rel-binding",    dash: "" },
-  projection: { cls: "gedge rel-projection", dash: "" },
-  member:     { cls: "gedge rel-member",     dash: "3 3" },
-  operand:    { cls: "gedge rel-operand",    dash: "1 4" },
-  subject:    { cls: "gedge rel-subject",    dash: "" },
-};
-
-class GraphView {
-  constructor(mount, opts) {
-    opts = opts || {};
-    this.mount = typeof mount === "string" ? document.querySelector(mount) : mount;
-    this.mount.classList.add("graphview");
-    this.opts = opts;
-    this.nodes = [];
-    this.edges = [];
-    this.off = { rel: new Set() };
-    this.sel = null;
-    this.scale = 1;
-    this.tx = 0; this.ty = 0;
-
-    const NS = "http://www.w3.org/2000/svg";
-    this.svg = document.createElementNS(NS, "svg");
-    this.gRoot = document.createElementNS(NS, "g");
-    this.gEdges = document.createElementNS(NS, "g");
-    this.gNodes = document.createElementNS(NS, "g");
-    this.gRoot.appendChild(this.gEdges);
-    this.gRoot.appendChild(this.gNodes);
-    this.svg.appendChild(this.gRoot);
-    this.mount.appendChild(this.svg);
-
-    // HUD
-    const hud = document.createElement("div");
-    hud.className = "gv-hud";
-    hud.innerHTML =
-      `<button data-z="in" title="zoom in">+</button>` +
-      `<button data-z="out" title="zoom out">−</button>` +
-      `<button data-z="fit" title="fit">fit</button>` +
-      `<button data-z="relayout" title="relayout">↻</button>`;
-    hud.addEventListener("click", (e) => {
-      const b = e.target.closest("button"); if (!b) return;
-      const z = b.dataset.z;
-      if (z === "in") this.zoomBy(1.3);
-      else if (z === "out") this.zoomBy(1 / 1.3);
-      else if (z === "fit") this.fit();
-      else if (z === "relayout") { this.seed(); this.run(360); }
-    });
-    this.mount.appendChild(hud);
-
-    this.legend = document.createElement("div");
-    this.legend.className = "gv-legend";
-    this.mount.appendChild(this.legend);
-
-    this._pointer();
-    this._wheel();
-    this.resizeObserver = new ResizeObserver(() => this.fitIfFirst());
-    this.resizeObserver.observe(this.mount);
-    this._fitted = false;
+  function svg(name, attributes = {}) {
+    const node = document.createElementNS(SVG, name);
+    for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
+    return node;
+  }
+  function label(node) { return String(node.name ?? node.label ?? node.kind ?? node.id); }
+  function kind(node) { return String(node.kind ?? node.category ?? "not-published"); }
+  function pathFor(shape, radius = 14) {
+    if (shape === "diamond") return `M 0 ${-radius} L ${radius} 0 L 0 ${radius} L ${-radius} 0 Z`;
+    if (shape === "lozenge") return `M ${-radius * 1.35} 0 Q ${-radius} ${-radius} 0 ${-radius} Q ${radius} ${-radius} ${radius * 1.35} 0 Q ${radius} ${radius} 0 ${radius} Q ${-radius} ${radius} ${-radius * 1.35} 0 Z`;
+    if (shape === "hex") return `M ${-radius * .86} ${-radius} L ${radius * .86} ${-radius} L ${radius * 1.25} 0 L ${radius * .86} ${radius} L ${-radius * .86} ${radius} L ${-radius * 1.25} 0 Z`;
+    return `M ${-radius} ${-radius} H ${radius} V ${radius} H ${-radius} Z`;
+  }
+  function curve(from, to) {
+    const bend = Math.max(42, Math.abs(to.x - from.x) * .48);
+    return `M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${to.x - bend} ${to.y}, ${to.x} ${to.y}`;
   }
 
-  /* ---------------------------------------------------------- data load */
+  class GraphView {
+    constructor(mount, options = {}) {
+      this.mount = typeof mount === "string" ? document.querySelector(mount) : mount;
+      if (!this.mount) throw new Error("graph mount is required");
+      this.options = options;
+      this.raw = { nodes: [], edges: [], applications: [] };
+      this.model = null;
+      this.byId = new Map();
+      this.edgeById = new Map();
+      this.positions = new Map();
+      this.nodeElements = new Map();
+      this.edgeElements = new Map();
+      this.selectedNode = null;
+      this.selectedEdge = null;
+      this.highlightNodes = new Set();
+      this.highlightEdges = new Set();
+      this.lens = "canonical";
+      this.firstFit = true;
+      this.scale = 1;
+      this.translate = { x: 0, y: 0 };
+      this.drag = null;
 
-  setGraph(g) {
-    this.graph = g || { nodes: [], edges: [] };
-    const nodes = (this.graph.nodes || []).map((n) => ({
-      id: n.id, kind: n.kind, name: n.name || n.kind || ("#" + n.id),
-      line: n.line, col: n.col, raw: n,
-    }));
-    const ids = new Set(nodes.map((n) => n.id));
-    const edges = (this.graph.edges || [])
-      .filter((e) => ids.has(e.from) && ids.has(e.to))
-      .map((e) => ({ ...e, rel: e.relation || "member" }));
-    // applications become subject→relation edges when not already present
-    for (const a of this.graph.applications || []) {
-      if (ids.has(a.application) && a.relation !== undefined && ids.has(a.relation)) {
-        edges.push({ from: a.application, to: a.relation, rel: "binding", synthetic: true });
+      this.root = document.createElement("div");
+      this.root.className = "graph-view";
+      this.root.dataset.lens = this.lens;
+      this.svg = svg("svg", { class: "graph-svg", role: "application", "aria-label": "Compiler-published semantic graph", tabindex: "0" });
+      const defs = svg("defs");
+      const marker = svg("marker", { id: "graph-arrow-published", markerWidth: "8", markerHeight: "8", refX: "7", refY: "4", orient: "auto", markerUnits: "strokeWidth" });
+      marker.appendChild(svg("path", { d: "M 0 0 L 8 4 L 0 8 Z", class: "graph-arrow" }));
+      defs.appendChild(marker);
+      this.viewport = svg("g", { class: "graph-viewport" });
+      this.edgeLayer = svg("g", { class: "graph-edges" });
+      this.nodeLayer = svg("g", { class: "graph-nodes" });
+      this.viewport.append(this.edgeLayer, this.nodeLayer);
+      this.svg.append(defs, this.viewport);
+      this.empty = document.createElement("div");
+      this.empty.className = "graph-empty";
+      this.empty.textContent = "No compiler-published graph is available.";
+      this.root.append(this.svg, this.empty);
+      this.mount.replaceChildren(this.root);
+      this.#bindViewport();
+    }
+
+    #bindViewport() {
+      this.svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        this.zoomBy(event.deltaY < 0 ? 1.12 : .89, { x: event.offsetX, y: event.offsetY });
+      }, { passive: false });
+      this.svg.addEventListener("pointerdown", (event) => {
+        if (event.target.closest?.("[data-node-id],[data-edge-id]")) return;
+        this.drag = { x: event.clientX, y: event.clientY, origin: { ...this.translate } };
+        this.svg.setPointerCapture?.(event.pointerId);
+      });
+      this.svg.addEventListener("pointermove", (event) => {
+        if (!this.drag) return;
+        this.translate.x = this.drag.origin.x + event.clientX - this.drag.x;
+        this.translate.y = this.drag.origin.y + event.clientY - this.drag.y;
+        this.#transform();
+      });
+      const stop = () => { this.drag = null; };
+      this.svg.addEventListener("pointerup", stop);
+      this.svg.addEventListener("pointercancel", stop);
+      this.svg.addEventListener("keydown", (event) => {
+        if (event.key === "+" || event.key === "=") { event.preventDefault(); this.zoomBy(1.15); }
+        else if (event.key === "-") { event.preventDefault(); this.zoomBy(.87); }
+        else if (event.key === "0") { event.preventDefault(); this.fit(); }
+      });
+    }
+
+    setGraph(graph) {
+      this.raw = graph && Array.isArray(graph.nodes) ? graph : { nodes: [], edges: [], applications: [] };
+      this.byId = new Map((this.raw.nodes || []).map((node) => [String(node.id), node]));
+      this.empty.hidden = this.byId.size > 0;
+      return graphModel.then(({ publishedGraphModel, deterministicLayout }) => {
+        this.model = publishedGraphModel(this.raw);
+        this.byId = this.model.nodeById;
+        this.edgeById = this.model.edgeById;
+        this.positions = deterministicLayout(this.model, {
+          width: Math.max(720, this.mount.clientWidth || 960),
+          height: Math.max(460, this.mount.clientHeight || 620),
+        });
+        this.#render();
+        if (this.firstFit) this.fit();
+        return this.model;
+      }).catch((error) => {
+        this.model = null;
+        this.empty.hidden = false;
+        this.empty.textContent = `Graph projection refused: ${error.message}`;
+        this.edgeLayer.replaceChildren();
+        this.nodeLayer.replaceChildren();
+        throw error;
+      });
+    }
+
+    #render() {
+      this.nodeElements.clear();
+      this.edgeElements.clear();
+      this.edgeLayer.replaceChildren();
+      this.nodeLayer.replaceChildren();
+      if (!this.model) return;
+
+      for (const edge of this.model.edges) {
+        const from = this.positions.get(edge.from);
+        const to = this.positions.get(edge.to);
+        if (!from || !to) continue;
+        const d = curve(from, to);
+        const group = svg("g", { class: `graph-edge edge-${edge.presentation.status}`, "data-edge-id": edge.id, role: "button", tabindex: "0", "aria-label": `${edge.presentation.label}: ${edge.from} to ${edge.to}` });
+        group.append(
+          svg("path", { d, class: "graph-edge-line", "marker-end": "url(#graph-arrow-published)" }),
+          svg("path", { d, class: "graph-edge-hit" }),
+        );
+        const exact = svg("text", { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 7, class: "graph-edge-label", "text-anchor": "middle" });
+        exact.textContent = edge.presentation.label;
+        group.appendChild(exact);
+        group.addEventListener("click", (event) => { event.stopPropagation(); this.selectEdge(edge.id, true); });
+        group.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this.selectEdge(edge.id, true); } });
+        this.edgeElements.set(edge.id, group);
+        this.edgeLayer.appendChild(group);
+      }
+
+      for (const node of this.model.nodes) {
+        const point = this.positions.get(node.id);
+        if (!point) continue;
+        const category = kind(node);
+        const shape = shapes[category] || "circle";
+        const group = svg("g", { class: `graph-node kind-${category.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()} shape-${shape}`, transform: `translate(${point.x} ${point.y})`, "data-node-id": node.id, role: "button", tabindex: "0", "aria-label": `${label(node)}, ${category}, ${node.id}` });
+        if (["circle", "ring", "halo"].includes(shape)) {
+          if (shape === "halo") group.appendChild(svg("circle", { r: "24", class: "graph-node-halo" }));
+          group.appendChild(svg("circle", { r: shape === "ring" ? "15" : "13", class: "graph-node-shape" }));
+          if (shape === "ring") group.appendChild(svg("circle", { r: "7", class: "graph-node-inner" }));
+        } else group.appendChild(svg("path", { d: pathFor(shape), class: "graph-node-shape" }));
+        const face = svg("text", { x: "0", y: "31", class: "graph-node-label", "text-anchor": "middle" });
+        face.textContent = label(node).slice(0, 34);
+        const identity = svg("text", { x: "0", y: "43", class: "graph-node-id", "text-anchor": "middle" });
+        identity.textContent = node.id.length > 38 ? `${node.id.slice(0, 35)}…` : node.id;
+        group.append(face, identity);
+        group.addEventListener("click", (event) => { event.stopPropagation(); this.selectNode(node.id, true); });
+        group.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this.selectNode(node.id, true); } });
+        this.nodeElements.set(node.id, group);
+        this.nodeLayer.appendChild(group);
+      }
+      this.#paint();
+    }
+
+    select(id, reveal = false) { return this.selectNode(id, reveal); }
+    selectNode(id, reveal = false, notify = true) {
+      const node = this.byId.get(String(id));
+      if (!node) return null;
+      this.selectedNode = String(id);
+      this.selectedEdge = null;
+      this.#paint();
+      if (reveal) this.#revealNode(this.selectedNode);
+      const projected = { ...node, raw: node };
+      if (notify) {
+        this.options.onSelect?.(projected);
+        this.options.onSelectNode?.(projected);
+      }
+      return projected;
+    }
+    selectEdge(id, reveal = false, notify = true) {
+      const edge = this.edgeById.get(String(id));
+      if (!edge) return null;
+      this.selectedEdge = String(id);
+      this.selectedNode = null;
+      this.#paint();
+      if (reveal) this.edgeElements.get(this.selectedEdge)?.focus?.();
+      if (notify) this.options.onSelectEdge?.(edge);
+      return edge;
+    }
+    setLens(lens = "canonical") { this.lens = String(lens); this.root.dataset.lens = this.lens; this.#paint(); }
+    setHighlights(value = {}) {
+      const nodes = Array.isArray(value) ? value : (value.nodes || []);
+      const edges = Array.isArray(value) ? [] : (value.edges || []);
+      this.highlightNodes = new Set(nodes.map(String));
+      this.highlightEdges = new Set(edges.map(String));
+      this.#paint();
+    }
+    #paint() {
+      for (const [id, node] of this.nodeElements) {
+        const selected = id === this.selectedNode;
+        const related = this.highlightNodes.has(id);
+        node.classList.toggle("selected", selected);
+        node.classList.toggle("related", related);
+        node.classList.toggle("dimmed", this.highlightNodes.size > 0 && !related && !selected);
+        node.setAttribute("aria-pressed", String(selected));
+      }
+      for (const [id, edge] of this.edgeElements) {
+        const selected = id === this.selectedEdge;
+        const related = this.highlightEdges.has(id);
+        edge.classList.toggle("selected", selected);
+        edge.classList.toggle("related", related);
+        edge.classList.toggle("dimmed", this.highlightEdges.size > 0 && !related && !selected);
+        edge.setAttribute("aria-pressed", String(selected));
       }
     }
-    this.nodes = nodes;
-    this.edges = edges;
-    this.byId = new Map(nodes.map((n) => [n.id, n]));
-    this._fitted = false;
-    this.seed();
-    this.buildDom();
-    this.buildLegend();
-    this.run(500);
-    this.fitIfFirst();
+    #revealNode(id) {
+      const point = this.positions.get(id);
+      if (!point) return;
+      const rect = this.svg.getBoundingClientRect();
+      this.translate.x = rect.width / 2 - point.x * this.scale;
+      this.translate.y = rect.height / 2 - point.y * this.scale;
+      this.#transform();
+      this.nodeElements.get(id)?.focus?.();
+    }
+    zoomBy(factor, center = null) {
+      const next = Math.min(4, Math.max(.18, this.scale * factor));
+      const rect = this.svg.getBoundingClientRect();
+      const anchor = center || { x: rect.width / 2, y: rect.height / 2 };
+      const graphX = (anchor.x - this.translate.x) / this.scale;
+      const graphY = (anchor.y - this.translate.y) / this.scale;
+      this.scale = next;
+      this.translate.x = anchor.x - graphX * next;
+      this.translate.y = anchor.y - graphY * next;
+      this.#transform();
+    }
+    fit() {
+      const rect = this.svg.getBoundingClientRect();
+      if (!this.positions.size || !rect.width || !rect.height) return;
+      const points = [...this.positions.values()];
+      const minX = Math.min(...points.map((point) => point.x)) - 70;
+      const maxX = Math.max(...points.map((point) => point.x)) + 70;
+      const minY = Math.min(...points.map((point) => point.y)) - 70;
+      const maxY = Math.max(...points.map((point) => point.y)) + 70;
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+      this.scale = Math.min(1.45, Math.max(.18, Math.min(rect.width / width, rect.height / height) * .9));
+      this.translate.x = (rect.width - width * this.scale) / 2 - minX * this.scale;
+      this.translate.y = (rect.height - height * this.scale) / 2 - minY * this.scale;
+      this.firstFit = false;
+      this.#transform();
+    }
+    fitIfFirst() { if (this.firstFit) this.fit(); }
+    #transform() { this.viewport.setAttribute("transform", `translate(${this.translate.x} ${this.translate.y}) scale(${this.scale})`); }
+    destroy() { this.mount.replaceChildren(); this.nodeElements.clear(); this.edgeElements.clear(); this.byId.clear(); this.edgeById.clear(); }
   }
 
-  seed() {
-    // ring by scope cluster: nodes without scope on outer ring, scoped in arcs
-    const R = Math.max(140, 18 * Math.sqrt(this.nodes.length + 1));
-    const groups = new Map();
-    for (const n of this.nodes) {
-      const k = n.raw.scope !== undefined ? n.raw.scope : "__";
-      if (!groups.has(k)) groups.set(k, []);
-      groups.get(k).push(n);
-    }
-    const gk = [...groups.keys()];
-    gk.forEach((k, gi) => {
-      const g = groups.get(k);
-      const ga = (gi / Math.max(1, gk.length)) * Math.PI * 2;
-      const gr = k === "__" ? 0 : R;
-      g.forEach((n, i) => {
-        const a = ga + (i / Math.max(1, g.length)) * Math.PI * 0.6;
-        n.x = this.mount.clientWidth / 2 + gr * Math.cos(a) + (Math.random() - 0.5) * 30;
-        n.y = this.mount.clientHeight / 2 + gr * Math.sin(a) + (Math.random() - 0.5) * 30;
-        n.vx = 0; n.vy = 0;
-      });
-    });
-  }
-
-  buildDom() {
-    const NS = "http://www.w3.org/2000/svg";
-    this.gEdges.innerHTML = "";
-    this.gNodes.innerHTML = "";
-    this.eEls = new Map();
-    this.nEls = new Map();
-
-    for (const e of this.edges) {
-      const p = document.createElementNS(NS, "path");
-      const st = REL_STYLE[e.rel] || REL_STYLE.member;
-      p.setAttribute("class", st.cls);
-      if (st.dash) p.setAttribute("stroke-dasharray", st.dash);
-      this.gEdges.appendChild(p);
-      this.eEls.set(e, p);
-    }
-    for (const n of this.nodes) {
-      const gEl = document.createElementNS(NS, "g");
-      gEl.setAttribute("class", "gnode");
-      const c = document.createElementNS(NS, "circle");
-      c.setAttribute("r", (KIND_R[n.kind] || 5));
-      const t = document.createElementNS(NS, "text");
-      t.textContent = n.name.length > 18 ? n.name.slice(0, 17) + "…" : n.name;
-      const isModule = n.kind === "module";
-      if (isModule) t.setAttribute("y", 4);
-      else t.setAttribute("x", (KIND_R[n.kind] || 5) + 5), t.setAttribute("y", 3);
-      gEl.appendChild(c); gEl.appendChild(t);
-      gEl.addEventListener("click", (ev) => { ev.stopPropagation(); this.select(n.id, true); });
-      gEl.addEventListener("dblclick", () => this.opts.onOpen && this.opts.onOpen(n));
-      this.gNodes.appendChild(gEl);
-      this.nEls.set(n.id, gEl);
-    }
-  }
-
-  buildLegend() {
-    const rels = [...new Set(this.edges.map((e) => e.rel))];
-    this.legend.innerHTML = "";
-    for (const r of rels) {
-      const st = REL_STYLE[r] || REL_STYLE.member;
-      const li = document.createElement("div");
-      li.className = "li" + (this.off.rel.has(r) ? " off" : "");
-      li.innerHTML = `<span class="swatch" style="border-color:${r === "subject" ? "var(--signal)" : "currentColor"};border-top-style:${st.dash ? "dashed" : "solid"}"></span>${r}`;
-      li.addEventListener("click", () => {
-        if (this.off.rel.has(r)) this.off.rel.delete(r); else this.off.rel.add(r);
-        li.classList.toggle("off");
-      });
-      this.legend.appendChild(li);
-    }
-  }
-
-  /* ------------------------------------------------------------- layout */
-
-  run(steps) {
-    if (this._raf) cancelAnimationFrame(this._raf);
-    let n = 0;
-    const tick = () => {
-      for (let s = 0; s < 2; s++) this.step();
-      this.draw();
-      if (++n < steps) this._raf = requestAnimationFrame(tick);
-    };
-    this._raf = requestAnimationFrame(tick);
-  }
-
-  step() {
-    const N = this.nodes;
-    // springs
-    for (const e of this.edges) {
-      const a = this.byId.get(e.from), b = this.byId.get(e.to);
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-      const rest = 70;
-      const f = (d - rest) * 0.012;
-      const fx = (dx / d) * f, fy = (dy / d) * f;
-      a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
-    }
-    // repulsion (O(n²) fine for ≤ ~600 nodes)
-    for (let i = 0; i < N.length; i++) {
-      for (let j = i + 1; j < N.length; j++) {
-        const a = N[i], b = N[j];
-        const dx = b.x - a.x, dy = b.y - a.y;
-        const d2 = dx * dx + dy * dy || 0.01;
-        const d = Math.sqrt(d2);
-        const f = 2600 / d2;
-        const fx = (dx / d) * f, fy = (dy / d) * f;
-        a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
-      }
-    }
-    // integrate
-    for (const nd of N) {
-      nd.vx *= 0.82; nd.vy *= 0.82;
-      nd.x += Math.max(-14, Math.min(14, nd.vx));
-      nd.y += Math.max(-14, Math.min(14, nd.vy));
-    }
-  }
-
-  draw() {
-    for (const [e, p] of this.eEls) {
-      const a = this.byId.get(e.from), b = this.byId.get(e.to);
-      if (this.off.rel.has(e.rel)) { p.setAttribute("d", ""); continue; }
-      const mx = (a.x + b.x) / 2 + (b.y - a.y) * 0.08;
-      const my = (a.y + b.y) / 2 - (b.x - a.x) * 0.08;
-      p.setAttribute("d", `M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`);
-      p.style.display = this.sel && (this.sel === e.from || this.sel === e.to)
-        ? "" : (this.sel ? "" : "");
-    }
-    for (const [id, gEl] of this.nEls) {
-      const nd = this.byId.get(id);
-      gEl.setAttribute("transform", `translate(${nd.x},${nd.y})`);
-    }
-    this.gRoot.setAttribute("transform",
-      `translate(${this.tx},${this.ty}) scale(${this.scale})`);
-  }
-
-  /* ----------------------------------------------------------- viewport */
-
-  zoomBy(f, cx, cy) {
-    const r = this.mount.getBoundingClientRect();
-    cx = cx === undefined ? r.width / 2 : cx;
-    cy = cy === undefined ? r.height / 2 : cy;
-    const ns = Math.max(0.15, Math.min(4, this.scale * f));
-    this.tx = cx - ((cx - this.tx) / this.scale) * ns;
-    this.ty = cy - ((cy - this.ty) / this.scale) * ns;
-    this.scale = ns;
-    this.draw();
-  }
-
-  fit() {
-    if (!this.nodes.length) return;
-    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    for (const n of this.nodes) {
-      x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
-      x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y);
-    }
-    const r = this.mount.getBoundingClientRect();
-    const pad = 46;
-    const s = Math.min((r.width - pad * 2) / (x1 - x0 + 1), (r.height - pad * 2) / (y1 - y0 + 1), 1.6);
-    this.scale = Math.max(0.15, s);
-    this.tx = r.width / 2 - ((x0 + x1) / 2) * this.scale;
-    this.ty = r.height / 2 - ((y0 + y1) / 2) * this.scale;
-    this.draw();
-    this._fitted = true;
-  }
-
-  fitIfFirst() {
-    if (!this._fitted && this.nodes.length) this.fit();
-  }
-
-  _wheel() {
-    this.mount.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      const r = this.mount.getBoundingClientRect();
-      this.zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
-    }, { passive: false });
-  }
-
-  _pointer() {
-    let drag = null;
-    this.svg.addEventListener("mousedown", (e) => {
-      drag = { x: e.clientX, y: e.clientY, tx: this.tx, ty: this.ty, moved: false };
-      this.svg.classList.add("panning");
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!drag) return;
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-      this.tx = drag.tx + dx; this.ty = drag.ty + dy;
-      this.draw();
-    });
-    window.addEventListener("mouseup", () => { drag = null; this.svg.classList.remove("panning"); });
-    this.svg.addEventListener("click", (e) => {
-      if (e.target === this.svg && this.sel) this.select(null);
-    });
-  }
-
-  /* ---------------------------------------------------------- selection */
-
-  select(id, andCenter) {
-    this.sel = id;
-    for (const [nid, gEl] of this.nEls) {
-      gEl.classList.toggle("sel", nid === id);
-      gEl.classList.toggle("dim", id !== null && nid !== id &&
-        !this._adjacent(nid, id));
-    }
-    for (const [e, p] of this.eEls) {
-      p.classList.toggle("hl", id !== null && (e.from === id || e.to === id));
-    }
-    if (id !== null && andCenter) {
-      const nd = this.byId.get(id);
-      const r = this.mount.getBoundingClientRect();
-      this.tx = r.width / 2 - nd.x * this.scale;
-      this.ty = r.height / 2 - nd.y * this.scale;
-      this.draw();
-    }
-    this.opts.onSelect && this.opts.onSelect(id === null ? null : this.byId.get(id));
-  }
-
-  _adjacent(a, b) {
-    for (const e of this.edges) {
-      if ((e.from === a && e.to === b) || (e.from === b && e.to === a)) return true;
-    }
-    return false;
-  }
-}
-
-global.GraphView = GraphView;
-
+  global.GraphView = GraphView;
 })(window);

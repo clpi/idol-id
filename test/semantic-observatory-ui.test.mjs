@@ -18,15 +18,9 @@ test("Semantic Observatory uses the exact semantic bundle and synchronized sourc
   assert.match(html, /semantic-source\.js/);
   assert.match(html, /semantic-index\.js/);
   assert.match(html, /graph\.js/);
-  assert.match(html, /class="observatory/);
+  assert.match(html, /class="app observatory/);
   assert.match(html, /id="semantic-rail"/);
-  assert.match(html, /data-lens="identity"/);
-  assert.match(html, /data-lens="edges"/);
-  assert.match(html, /data-lens="occurrences"/);
-  assert.match(html, /data-lens="worlds"/);
-  assert.match(html, /data-lens="projection"/);
-  assert.match(html, /data-lens="witness"/);
-  assert.match(html, /data-lens="realization"/);
+  for (const lens of ["identity", "edges", "occurrences", "worlds", "projection", "witness", "realization"]) assert.match(html, new RegExp(`data-lens="${lens}"`));
   assert.match(html, /semantic identity not published/i);
   assert.match(html, /definition not published/i);
   assert.match(html, /world witness not published/i);
@@ -42,12 +36,7 @@ test("Semantic Observatory uses the exact semantic bundle and synchronized sourc
   assert.match(graph, /setHighlights/);
   assert.doesNotMatch(graph, /Math\.random/);
   assert.doesNotMatch(graph, /repulsion|O\(n²\)|synthetic:\s*true/);
-  assert.match(index, /definitions/);
-  assert.match(index, /references/);
-  assert.match(index, /worlds/);
-  assert.match(index, /projections/);
-  assert.match(index, /derivations/);
-  assert.match(index, /realizations/);
+  for (const word of ["definitions", "references", "worlds", "projections", "derivations", "realizations"]) assert.match(index, new RegExp(word));
 
   assert.match(css, /font-family:\s*var\(--sans\)/);
   assert.match(css, /font-family:\s*var\(--mono\)/);
@@ -69,24 +58,17 @@ test("Observatory never presents same spelling, paths, or names as definitions o
 });
 
 test("canonical graph rendering never fabricates application edges", async () => {
-  const graph = await read("shared/graph.js");
+  const [graph, model] = await Promise.all([read("shared/graph.js"), read("shared/graph-model.js")]);
   assert.doesNotMatch(graph, /applications become/);
   assert.doesNotMatch(graph, /edges\.push\([^\n]*synthetic/);
   assert.match(graph, /publishedGraphModel/);
-  assert.match(graph, /application_records/);
+  assert.match(model, /application_records/);
 });
 
 test("mobile Observatory exposes full-width source, graph, and facts modes without horizontal document overflow", async () => {
-  const [html, css] = await Promise.all([
-    read("apps/graph/index.html"),
-    read("shared/observatory.css"),
-  ]);
-  assert.match(html, /data-mobile-mode="source"/);
-  assert.match(html, /data-mobile-mode="graph"/);
-  assert.match(html, /data-mobile-mode="facts"/);
+  const [html, css] = await Promise.all([read("apps/graph/index.html"), read("shared/observatory.css")]);
+  for (const mode of ["source", "graph", "facts"]) assert.match(html, new RegExp(`data-mobile-mode="${mode}"`));
   assert.match(html, /class="observatory-mobile-nav"/);
   assert.match(css, /overflow-x:\s*hidden/);
-  assert.match(css, /\.observatory\[data-mobile-mode="source"\]/);
-  assert.match(css, /\.observatory\[data-mobile-mode="graph"\]/);
-  assert.match(css, /\.observatory\[data-mobile-mode="facts"\]/);
+  for (const mode of ["source", "graph", "facts"]) assert.match(css, new RegExp(`\\.observatory\\[data-mobile-mode="${mode}"\\]`));
 });

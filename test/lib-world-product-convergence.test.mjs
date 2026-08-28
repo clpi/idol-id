@@ -19,9 +19,7 @@ function envWithAssets() {
     ASSETS: {
       async fetch(request) {
         const found = files.get(new URL(request.url).pathname);
-        return found
-          ? new Response(found[1], { headers: { "content-type": found[0] } })
-          : new Response("missing", { status: 404 });
+        return found ? new Response(found[1], { headers: { "content-type": found[0] } }) : new Response("missing", { status: 404 });
       },
     },
   };
@@ -29,16 +27,8 @@ function envWithAssets() {
 
 test("Lib owns the public admitted-world registry and Worlds preserves compatibility as an alias", async () => {
   assert.deepEqual(resolveHost("lib.idol.id"), { app: "lib", surface: "lib", origin: true });
-  assert.deepEqual(resolveHost("worlds.idol.id"), {
-    app: "lib",
-    surface: "lib",
-    origin: false,
-    redirect: "https://lib.idol.id",
-  });
-
-  const response = await handle(new Request("https://worlds.idol.id/world/std?lens=projection", {
-    headers: { "sec-fetch-mode": "navigate" },
-  }), envWithAssets());
+  assert.deepEqual(resolveHost("worlds.idol.id"), { app: "lib", surface: "lib", origin: false, redirect: "https://lib.idol.id" });
+  const response = await handle(new Request("https://worlds.idol.id/world/std?lens=projection", { headers: { "sec-fetch-mode": "navigate" } }), envWithAssets());
   assert.equal(response.status, 308);
   assert.equal(response.headers.get("location"), "https://lib.idol.id/world/std?lens=projection");
 });
@@ -95,15 +85,18 @@ test("runtime product model keeps world identity separate from package coordinat
   assert.equal(model.graph.reverse_traversal, "derived-index");
 });
 
-test("Lib defaults to published worlds and keeps homes visibly secondary", async () => {
-  const lib = await read("apps/lib/index.html");
-  assert.match(lib, /let set = new URLSearchParams\(location\.search\)\.get\("set"\) === "homes" \? "libs" : "worlds"/);
+test("Lib defaults to published worlds, keeps homes secondary, and canonicalizes contextual links beneath Lib", async () => {
+  const [lib, canonical, web] = await Promise.all([read("apps/lib/index.html"), read("shared/lib-canonical.js"), read("shared/web.js")]);
+  assert.match(lib, /const requestedSet = new URLSearchParams\(location\.search\)\.get\("set"\)/);
+  assert.match(lib, /let set = requestedSet === "homes" \? "libs" : "worlds"/);
   assert.match(lib, /data-set="worlds"[^>]*class="here"|class="here"[^>]*data-set="worlds"/);
   assert.match(lib, /data-set="libs"/);
-  assert.match(lib, /package coordinate[^<]*provenance/i);
-  assert.match(lib, /home is reach and provenance, not a world/i);
-  assert.match(lib, /href="\/atlas"/);
-  assert.match(lib, /href="\/universe"/);
   assert.match(lib, /data-mobile="list"/);
   assert.match(lib, /class="lib-mobile-nav"/);
+  assert.match(canonical, /atlas\.href = "\/atlas"/);
+  assert.match(canonical, /universe\.href = "\/universe"/);
+  assert.match(canonical, /package coordinate is provenance, not semantic identity or authority/i);
+  assert.match(canonical, /home is reach and provenance, not a world/i);
+  assert.match(web, /lib-canonical\.js/);
+  assert.match(web, /product-canonical\.js/);
 });
