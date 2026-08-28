@@ -1,0 +1,85 @@
+name: Apply browser authority fix
+
+on:
+  push:
+    branches: [feat/exact-semantic-observatory-20260828]
+    paths:
+      - .github/workflows/apply-browser-authority-fix.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-browser-authority-fix
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/exact-semantic-observatory-20260828
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Replace the fake authority with the immutable built authority
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/browser-smoke.mjs')
+          source = path.read_text()
+
+          root_line = 'const root = resolve("dist");\n'
+          authority = '''const root = resolve("dist");
+          const authorityAsset = JSON.parse(await readFile(join(root, "runtime/authority.json"), "utf8"));
+          const browserAuthority = Object.freeze({
+            repository: String(authorityAsset?.language?.repository || ""),
+            commit: String(authorityAsset?.language?.commit || ""),
+          });
+          if (!browserAuthority.repository || !/^[0-9a-f]{40}$/.test(browserAuthority.commit)) {
+            throw new Error("invalid immutable browser smoke authority");
+          }
+          '''
+          assert source.count(root_line) == 1, 'browser smoke root boundary drifted'
+          source = source.replace(root_line, authority, 1)
+
+          fake_response = '    authority: { repository: "clpi/idol", commit: "browser-smoke-authority" },'
+          assert source.count(fake_response) == 1, 'native fixture authority boundary drifted'
+          source = source.replace(fake_response, '    authority: browserAuthority,', 1)
+
+          fake_config = '    const body = Buffer.from(`window.IDOL=Object.freeze({app:"graph",surface:"graph",origin:true,authority:"browser-smoke-authority"});\\n`);'
+          real_config = '    const body = Buffer.from(`window.IDOL=Object.freeze({app:"graph",surface:"graph",origin:true,authority:${JSON.stringify(browserAuthority.commit)}});\\n`);'
+          assert source.count(fake_config) == 1, 'browser config authority boundary drifted'
+          source = source.replace(fake_config, real_config, 1)
+
+          assert 'browser-smoke-authority' not in source
+          path.write_text(source)
+          PY
+
+          rm -f .github/workflows/browser-authority-red.yml
+          rm -f .github/workflows/apply-browser-authority-fix.yml
+
+      - name: Verify the regression, full build, and real browser interaction
+        shell: bash
+        run: |
+          node --check scripts/browser-smoke.mjs
+          node --test test/browser-smoke-contract.test.mjs
+          npm run check
+          node scripts/browser-smoke.mjs
+          git diff --check
+
+      - name: Commit the single root-cause fix
+        shell: bash
+        run: |
+          git config user.name 'Chris Pecunies'
+          git config user.email 'chris@pecunies.com'
+          git add scripts/browser-smoke.mjs test/browser-smoke-contract.test.mjs .github/workflows
+          git commit -m 'fix: bind browser smoke to built authority'
+          git push origin HEAD:feat/exact-semantic-observatory-20260828
