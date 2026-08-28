@@ -49,5 +49,7 @@ test("browser smoke publishes the immutable build authority in its native fixtur
   const smoke = await read("scripts/browser-smoke.mjs");
   assert.doesNotMatch(smoke, /browser-smoke-authority/, "a fake authority makes the exact Observatory refuse the response");
   assert.match(smoke, /runtime\/authority\.json/, "the smoke fixture must read the immutable built authority asset");
+  assert.match(smoke, /const browserAuthority = Object\.freeze/, "the fixture must hold one immutable authority projection");
   assert.match(smoke, /authority:\s*browserAuthority/, "the native fixture must publish the exact authority it read");
+  assert.match(smoke, /authority:\$\{JSON\.stringify\(browserAuthority\.commit\)\}/, "the browser config must project the same exact authority commit");
 });
