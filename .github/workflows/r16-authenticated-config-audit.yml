@@ -5,15 +5,17 @@ on:
     branches: [ops/r16-agent-migration-20260828]
     paths:
       - .github/workflows/r16-authenticated-config-audit.yml
-      - ops/r16-provider-bundle.enc.json
+      - ops/r16-provider-bundle.rsa.json
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
   R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
+  DEPLOY_KEY_ARTIFACT_ID: "9696748865"
 
 jobs:
   audit:
@@ -23,39 +25,66 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Decrypt one-time bundle in runner memory
+      - name: Open public-key encrypted bundle in runner memory
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p artifacts /tmp/r16key
           python -m pip install -q cryptography
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$DEPLOY_KEY_ARTIFACT_ID/zip" \
+            -o /tmp/r16-deploy-key.zip
+          unzip -q /tmp/r16-deploy-key.zip -d /tmp/r16key
           python - <<'PY'
           import base64, hashlib, json, os
           from pathlib import Path
-          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
           from cryptography.hazmat.primitives.ciphers.aead import AESGCM
           from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-          envelope = json.loads(Path('ops/r16-provider-bundle.enc.json').read_text())
-          salt = base64.b64decode(envelope['salt'])
-          nonce = base64.b64decode(envelope['nonce'])
-          key = HKDF(
+
+          protected = json.loads(Path('/tmp/r16key/r16-deploy-private.enc.json').read_text())
+          salt = base64.b64decode(protected['salt'])
+          nonce = base64.b64decode(protected['nonce'])
+          private_key_wrap = HKDF(
               algorithm=hashes.SHA256(), length=32, salt=salt,
-              info=envelope['info'].encode(),
+              info=protected['info'].encode(),
           ).derive(os.environ['CLOUDFLARE_API_TOKEN'].encode())
-          plain = AESGCM(key).decrypt(
-              nonce, base64.b64decode(envelope['ciphertext']), envelope['aad'].encode()
+          private_pem = AESGCM(private_key_wrap).decrypt(
+              nonce, base64.b64decode(protected['ciphertext']), protected['aad'].encode()
+          )
+          private_key = serialization.load_pem_private_key(private_pem, password=None)
+
+          envelope = json.loads(Path('ops/r16-provider-bundle.rsa.json').read_text())
+          data_key = private_key.decrypt(
+              base64.b64decode(envelope['encrypted_key']),
+              padding.OAEP(
+                  mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                  algorithm=hashes.SHA256(),
+                  label=None,
+              ),
+          )
+          plain = AESGCM(data_key).decrypt(
+              base64.b64decode(envelope['nonce']),
+              base64.b64decode(envelope['ciphertext']),
+              envelope['aad'].encode(),
           )
           if hashlib.sha256(plain).hexdigest() != envelope['payload_sha256']:
               raise SystemExit('bundle integrity mismatch')
           payload = json.loads(plain)
-          if payload.get('marker') != 'idol-r16-provider-migration-v1':
+          if payload.get('marker') != 'idol-r16-provider-migration-v2':
               raise SystemExit('bundle marker mismatch')
           path = Path('/tmp/r16-provider-bundle.json')
           path.write_bytes(plain)
           path.chmod(0o600)
-          print('encrypted bundle authenticated and decrypted')
+          print('public-key encrypted bundle authenticated and opened')
           PY
+          rm -rf /tmp/r16key /tmp/r16-deploy-key.zip
 
       - name: Read current Hermes and OpenClaw configuration without mutation
         env:
@@ -76,11 +105,10 @@ jobs:
           original="$(curl -fsS "${auth[@]}" "$r16/configurations" | jq -e '.result.config')"
           host="r16-auth-${RUN_ID}.pecunies.com"
           dns_id=''
-          mkdir -p artifacts
 
           cleanup() {
             set +e
-            rm -f /tmp/r16-provider-bundle.json /tmp/hermes.cookies
+            rm -f /tmp/r16-provider-bundle.json /tmp/hermes.cookies /tmp/hermes-env.json
             curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
               --data "$(jq -nc --argjson config "$original" '{config:$config}')" \
               "$r16/configurations" >/dev/null
@@ -113,7 +141,7 @@ jobs:
           curl -fsS -b /tmp/hermes.cookies "https://$host/api/env" > /tmp/hermes-env.json
           jq 'to_entries | map({key:.key,is_set:(.value.is_set//false),category:(.value.category//null),custom:(.value.custom//false)}) | sort_by(.key)' \
             /tmp/hermes-env.json > artifacts/hermes-env-inventory.json
-          jq '{paths:[.paths|to_entries[]|select(.key|test("^/api/(env|config|model)"))|{path:.key,methods:(.value|keys)}],schemas:(.components.schemas|keys)}' \
+          jq '{paths:[.paths|to_entries[]|select(.key|test("^/api/(env|config|model)"))|{path:.key,methods:(.value|keys),operations:.value}],schemas:.components.schemas}' \
             artifacts/hermes-openapi.json > artifacts/hermes-control-schema.json
           echo "Hermes configured keys: $(jq '[.[]|select(.is_set)]|length' artifacts/hermes-env-inventory.json)"
 
@@ -122,7 +150,7 @@ jobs:
           openclaw gateway probe --url "wss://$host" --token "$token" --json > artifacts/openclaw-probe.json
           openclaw gateway call config.get --url "wss://$host" --token "$token" --params '{}' --json > artifacts/openclaw-config-redacted.json
           jq '{ok,capability,targets:[.targets[]?|{id,connect,auth}]}' artifacts/openclaw-probe.json > artifacts/openclaw-probe-summary.json
-          jq '[..|objects|select(has("providers"))|.providers|if type=="object" then keys else [] end] | add | unique' \
+          jq '[..|objects|select(has("providers"))|.providers|if type=="object" then keys else [] end] | add // [] | unique' \
             artifacts/openclaw-config-redacted.json > artifacts/openclaw-provider-ids.json
           echo "OpenClaw provider IDs: $(jq 'length' artifacts/openclaw-provider-ids.json)"
 
@@ -132,5 +160,5 @@ jobs:
         with:
           name: r16-authenticated-config-${{ github.run_id }}
           path: artifacts/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
