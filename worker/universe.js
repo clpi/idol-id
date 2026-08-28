@@ -34,6 +34,10 @@ function sameOriginBrowser(request) {
     && request.headers.get("x-idol-request") === "browser";
 }
 
+function publicProjectionHost(info) {
+  return info.app === "worlds" || info.app === "lib";
+}
+
 async function readJson(request) {
   const declared = Number(request.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw new UniverseError("UNIVERSE_BODY_TOO_LARGE", "Universe View request body is too large", 413);
@@ -138,12 +142,12 @@ export async function handleUniverseTransport(request, env, pathname, info, depe
 
     const publicMatch = PUBLIC_ITEM.exec(pathname);
     if (publicMatch) {
-      if (info.app !== "lib") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
+      if (!publicProjectionHost(info) || request.method !== "GET") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
       const { universe } = await services(request, env, dependencies);
       return json(await universe.getPublicView(publicMatch[1]), 200, { "cache-control": "public, max-age=60" });
     }
     if (pathname === "/v1/universe/public") {
-      if (info.app !== "lib" || request.method !== "GET") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
+      if (!publicProjectionHost(info) || request.method !== "GET") return json({ error: "UNIVERSE_PUBLIC_HOST_REQUIRED" }, 404);
       const { universe } = await services(request, env, dependencies);
       return json({ views: await universe.listPublicViews(50) }, 200, { "cache-control": "public, max-age=30" });
     }
