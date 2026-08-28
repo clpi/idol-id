@@ -1,0 +1,177 @@
+name: Idol surface source repair
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-surface-source-repair.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: idol-surface-source-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: [self-hosted, macOS, ARM64, mac-mini, idol]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/idol-domain-repair-20260828
+          fetch-depth: 0
+
+      - name: Establish evidence and clean agent environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+          mkdir -p ops/reports
+          # Wait briefly for the hosted reconciliation job if this workflow won
+          # the runner race. Do not proceed from guessed live state.
+          for _ in $(seq 1 30); do
+            git fetch origin ops/idol-domain-repair-20260828 --quiet || true
+            git reset --hard origin/ops/idol-domain-repair-20260828
+            if [[ -s ops/reports/idol-domain-census.json || -s ops/reports/idol-domain-post.json ]]; then break; fi
+            sleep 10
+          done
+          test -s ops/reports/idol-domain-census.json -o -s ops/reports/idol-domain-post.json
+          git status --porcelain | grep -q . && { echo 'working tree not clean' >&2; exit 1; } || true
+          {
+            echo "codex=$(command -v codex 2>/dev/null || true)"
+            echo "claude=$(command -v claude 2>/dev/null || true)"
+            echo "opencode=$(command -v opencode 2>/dev/null || true)"
+            echo "node=$(command -v node 2>/dev/null || true)"
+          } > ops/reports/idol-surface-agent-capabilities.txt
+
+      - name: Let a coding agent repair source-level failures
+        shell: bash
+        env:
+          # Explicitly prevent infrastructure credentials from entering the
+          # coding-agent process. OAuth-backed local coding tools may use their
+          # own credential stores.
+          CLOUDFLARE_API_TOKEN: ""
+          MINIMAX_API_KEY: ""
+          HERMES_WEBUI_PASSWORD: ""
+          TELEGRAM_BOT_TOKEN: ""
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+          cat > /tmp/idol-surface-repair-prompt.txt <<'PROMPT'
+          You are the implementation agent for the Idol public web surfaces.
+
+          Scope:
+          - Repair idol.id and every currently configured *.idol.id public surface EXCEPT exactly hermes.idol.id and claw.idol.id.
+          - Work only in this checked-out clpi/idol-id branch.
+          - Read ops/reports/idol-domain-census.json, idol-domain-post.json, idol-domain-reconciliation.md, and any available source/origin census before changing code.
+          - Inspect the existing deploy workflow and package/build structure completely.
+          - Reproduce each source-level defect with a focused test or deterministic check before changing production code.
+          - Fix root causes: broken builds, asset paths, routing, redirects, stale endpoint links, runtime exceptions, blank screens, health endpoints, responsive layout, accessibility blockers, and documentation/API navigation.
+          - Preserve the existing language architecture and semantic-graph direction. Do not introduce legacy Duo/Duon/Idsem naming except in historical compatibility material.
+
+          Hard fences:
+          - Do not modify any Hermes or OpenClaw file, route, DNS name, tunnel, credential, password, token, or workflow.
+          - Do not modify Cloudflare state from the agent. Cloudflare authority is handled by the reconciler.
+          - Do not read ~/.hermes, shell history, keychains, environment secret files, or unrelated repositories.
+          - Do not weaken authentication or expose internal services.
+          - Do not send a broken hostname to a generic placeholder merely to obtain HTTP 200.
+          - Do not claim a domain is fixed until its source tests/build pass.
+
+          Deliverables in the working tree:
+          1. Minimal source fixes and regression tests.
+          2. A concise ops/reports/idol-surface-source-repair.md listing each defect reproduced, root cause, files changed, and exact verification command.
+          3. No commit; the workflow owns verification and commit.
+
+          Run the narrow tests while working. Finish only when the repository's applicable test, lint, typecheck, and production build commands pass.
+          PROMPT
+
+          if command -v codex >/dev/null 2>&1; then
+            codex exec --full-auto --sandbox workspace-write \
+              --output-last-message ops/reports/idol-surface-agent-last-message.txt \
+              "$(cat /tmp/idol-surface-repair-prompt.txt)"
+            echo codex > ops/reports/idol-surface-agent-used.txt
+          elif command -v claude >/dev/null 2>&1; then
+            claude -p "$(cat /tmp/idol-surface-repair-prompt.txt)" \
+              --permission-mode acceptEdits \
+              > ops/reports/idol-surface-agent-last-message.txt
+            echo claude > ops/reports/idol-surface-agent-used.txt
+          else
+            echo 'No approved coding agent is installed on the Idol runner.' >&2
+            exit 1
+          fi
+          rm -f /tmp/idol-surface-repair-prompt.txt
+
+      - name: Enforce scope fence
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test -n "$changed"
+          printf '%s\n' "$changed" > ops/reports/idol-surface-changed-files.txt
+          if printf '%s\n' "$changed" | grep -Ei '(^|/)(hermes|openclaw|claw)(/|\.|$)|hermes-bootstrap|hermes-ha'; then
+            echo 'Agent crossed the Hermes/Claw scope fence.' >&2
+            exit 1
+          fi
+          if git diff -- . ':!ops/reports/*' | grep -Ei '^\+.*(hermes\.idol\.id|claw\.idol\.id)'; then
+            echo 'Agent introduced a prohibited agent-domain reference.' >&2
+            exit 1
+          fi
+          if git diff -- . ':!ops/reports/*' | grep -Ei '^\+.*(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{12,}'; then
+            echo 'Possible credential material introduced.' >&2
+            exit 1
+          fi
+
+      - name: Run repository-native verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+          : > ops/reports/idol-surface-verification.log
+          run_logged() { echo "+ $*" | tee -a ops/reports/idol-surface-verification.log; "$@" 2>&1 | tee -a ops/reports/idol-surface-verification.log; }
+
+          if [[ -f package.json ]]; then
+            if [[ -f pnpm-lock.yaml ]]; then
+              corepack enable
+              run_logged pnpm install --frozen-lockfile
+              PM=pnpm
+            elif [[ -f yarn.lock ]]; then
+              corepack enable
+              run_logged yarn install --immutable
+              PM=yarn
+            elif [[ -f bun.lockb || -f bun.lock ]]; then
+              PM=bun
+              run_logged bun install --frozen-lockfile
+            else
+              PM=npm
+              if [[ -f package-lock.json ]]; then run_logged npm ci; else run_logged npm install --ignore-scripts=false; fi
+            fi
+            for script in lint typecheck check test build; do
+              if node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['$script']?0:1)"; then
+                run_logged "$PM" run "$script"
+              fi
+            done
+          fi
+          if [[ -f pyproject.toml || -f pytest.ini ]]; then
+            command -v pytest >/dev/null 2>&1 && run_logged pytest -q
+          fi
+          if [[ -f build.zig ]]; then
+            run_logged zig build test
+          fi
+          if [[ -f Cargo.toml ]]; then
+            run_logged cargo test --workspace
+          fi
+          echo RESULT=PASS | tee -a ops/reports/idol-surface-verification.log
+
+      - name: Commit verified source repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^RESULT=PASS$' ops/reports/idol-surface-verification.log
+          git config user.name idol-surface-agent
+          git config user.email idol-surface-agent@users.noreply.github.com
+          git add -A
+          git commit -m 'fix: repair non-agent Idol web surfaces'
+          git push origin HEAD:ops/idol-domain-repair-20260828
