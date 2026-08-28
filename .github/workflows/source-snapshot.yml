@@ -1,0 +1,32 @@
+name: source snapshot
+
+on:
+  push:
+    branches: [ops/source-snapshot-20260828]
+    paths:
+      - .github/workflows/source-snapshot.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Package source without Git metadata
+        run: |
+          set -euo pipefail
+          mkdir -p snapshot
+          rsync -a --exclude='.git/' --exclude='snapshot/' ./ snapshot/idol-id/
+          tar -C snapshot -czf idol-id-source.tar.gz idol-id
+      - uses: actions/upload-artifact@v4
+        with:
+          name: idol-id-source-${{ github.run_id }}
+          path: idol-id-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
