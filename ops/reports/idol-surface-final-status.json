@@ -1,0 +1,6 @@
+{
+  "admitted": false,
+  "reason": "production_admission_report_missing",
+  "schema": "idol.surface.final-gate.v1",
+  "status": "BLOCKED_PIPELINE"
+}
