@@ -1,0 +1,10 @@
+{
+  "admitted": false,
+  "exclusions": [
+    "hermes.idol.id",
+    "claw.idol.id"
+  ],
+  "reason": "v3_production_admission_not_yet_present",
+  "schema": "idol.surface.final-gate.v2",
+  "status": "PENDING_SOURCE_OR_DEPLOYMENT"
+}
