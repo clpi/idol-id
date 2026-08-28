@@ -85,7 +85,7 @@ test("playground uses compiler-published graph records and refuses browser-owned
   assert.match(playground, /Idol\.api\.post\("\/api\/run"/);
   assert.match(playground, /Idol\.api\.post\("\/api\/lower"/);
   assert.match(playground, /new GraphView/);
-  assert.match(playground, /setGraph\(graph\)/);
+  assert.match(playground, /\.setGraph\(/);
   assert.match(playground, /onSelectNode/);
   assert.match(playground, /onSelectEdge/);
   assert.match(playground, /semantic identity not published/i);
