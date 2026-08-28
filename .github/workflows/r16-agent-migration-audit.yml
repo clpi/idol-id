@@ -1,0 +1,139 @@
+name: r16 agent migration audit
+
+on:
+  push:
+    branches: [ops/r16-agent-migration-20260828]
+    paths:
+      - .github/workflows/r16-agent-migration-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+  R16_TUNNEL_ID: f43607fc-f26b-4fdc-b3b0-85f1bfc006e1
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - name: Audit Cloudflare ownership and probe r16 local agent services
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          account="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          r16="$account/cfd_tunnel/$R16_TUNNEL_ID"
+          mkdir -p artifacts
+
+          zone_id() {
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=$1&status=active" | jq -er '.result[0].id'
+          }
+
+          idol_zone="$(zone_id idol.id)"
+          pecu_zone="$(zone_id pecunies.com)"
+
+          echo '=== tunnel inventory ==='
+          curl -fsS "${auth[@]}" "$account/cfd_tunnel?is_deleted=false&per_page=100" \
+            | jq '{success, tunnels:[.result[]|{id,name,status,created_at,deleted_at,connections:(.connections|length)}]}' \
+            | tee artifacts/tunnels.json
+
+          echo '=== tunnel ingress ownership ==='
+          : > artifacts/ingress.ndjson
+          while IFS=$'\t' read -r tid tname; do
+            cfg="$(curl -fsS "${auth[@]}" "$account/cfd_tunnel/$tid/configurations" || true)"
+            if jq -e '.success == true' >/dev/null 2>&1 <<<"$cfg"; then
+              jq -c --arg id "$tid" --arg name "$tname" '{tunnel:{id:$id,name:$name},ingress:[.result.config.ingress[]?|{hostname:(.hostname//null),service:(.service|sub("//[^/@]+@";"//REDACTED@"))}]}' <<<"$cfg" \
+                | tee -a artifacts/ingress.ndjson
+            fi
+          done < <(curl -fsS "${auth[@]}" "$account/cfd_tunnel?is_deleted=false&per_page=100" | jq -r '.result[]|[.id,.name]|@tsv')
+
+          echo '=== relevant DNS ==='
+          for host in hermes.idol.id claw.idol.id r16.idol.id; do
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$idol_zone/dns_records?name=$host" \
+              | jq --arg host "$host" '{host:$host,records:[.result[]|{id,type,name,content,proxied,ttl}]}' \
+              | tee -a artifacts/dns.ndjson
+          done
+
+          echo '=== r16 connector state ==='
+          curl -fsS "${auth[@]}" "$r16/connections" \
+            | jq '{success,connections:[.result[]?|{id,colo_name,opened_at,origin_ip,client_id,client_version}]}' \
+            | tee artifacts/r16-connections.json
+
+          original="$(curl -fsS "${auth[@]}" "$r16/configurations" | jq -e '.result.config')"
+          probe_host="r16-agent-probe-${RUN_ID}.pecunies.com"
+          dns_base="https://api.cloudflare.com/client/v4/zones/$pecu_zone/dns_records"
+          dns_id=''
+
+          cleanup() {
+            set +e
+            curl -sS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --argjson config "$original" '{config:$config}')" \
+              "$r16/configurations" >/dev/null
+            if [ -n "$dns_id" ]; then
+              curl -sS -X DELETE "${auth[@]}" "$dns_base/$dns_id" >/dev/null
+            fi
+          }
+          trap cleanup EXIT
+
+          created="$(curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg name "$probe_host" --arg content "$R16_TUNNEL_ID.cfargotunnel.com" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')" \
+            "$dns_base")"
+          dns_id="$(jq -er '.result.id' <<<"$created")"
+
+          for _ in $(seq 1 45); do
+            dig +short @1.1.1.1 "$probe_host" | grep -q . && break
+            sleep 2
+          done
+
+          probe() {
+            label="$1"
+            service="$2"
+            path="$3"
+            cfg="$(jq --arg h "$probe_host" --arg s "$service" '.ingress as $i | .ingress=(($i[0:-1])+[{hostname:$h,service:$s}]+[$i[-1]])' <<<"$original")"
+            curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --argjson config "$cfg" '{config:$config}')" \
+              "$r16/configurations" | jq -e '.success == true' >/dev/null
+            sleep 10
+
+            body="artifacts/${label}.body"
+            headers="artifacts/${label}.headers"
+            set +e
+            code="$(curl -sS -L --max-time 20 -D "$headers" -o "$body" -w '%{http_code}' "https://$probe_host$path")"
+            rc=$?
+            set -e
+            title="$(tr '\n' ' ' < "$body" | sed -n 's:.*<title[^>]*>\([^<]*\)</title>.*:\1:p' | head -c 200)"
+            bytes="$(wc -c < "$body" | tr -d ' ')"
+            printf '%s\tservice=%s\tpath=%s\tcurl=%s\thttp=%s\tbytes=%s\ttitle=%s\n' "$label" "$service" "$path" "$rc" "$code" "$bytes" "$title" \
+              | tee -a artifacts/probes.tsv
+            sed -n '1,20p' "$headers" | grep -Eiv '^(set-cookie|cf-ray|date):' || true
+            head -c 600 "$body" | tr '\000-\010\013\014\016-\037' ' '; echo
+          }
+
+          : > artifacts/probes.tsv
+          probe graph http://localhost:8080 /__idol/health
+          probe hermes http://localhost:8787 /
+          probe hermes-login http://localhost:8787 /login
+          probe claw http://localhost:18789 /
+
+          echo '=== compact result ==='
+          cat artifacts/probes.tsv
+
+      - name: Preserve audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r16-agent-audit-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 7
