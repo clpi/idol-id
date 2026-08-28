@@ -1,0 +1,112 @@
+name: Apply browser smoke teardown fix
+
+on:
+  push:
+    branches: [feat/exact-semantic-observatory-20260828]
+    paths:
+      - .github/workflows/apply-browser-smoke-fix.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-browser-smoke-teardown-fix
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/exact-semantic-observatory-20260828
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Patch the proven cleanup race
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/browser-smoke.mjs')
+          source = path.read_text()
+
+          insertion = '''
+          async function waitForProcessExit(child, timeout) {
+            if (child.exitCode !== null || child.signalCode !== null) return true;
+            return new Promise((resolveExit) => {
+              let timer;
+              const finish = (exited) => {
+                clearTimeout(timer);
+                child.off("close", onClose);
+                child.off("error", onError);
+                resolveExit(exited);
+              };
+              const onClose = () => finish(true);
+              const onError = () => finish(false);
+              child.once("close", onClose);
+              child.once("error", onError);
+              if (child.exitCode !== null || child.signalCode !== null) return finish(true);
+              timer = setTimeout(() => finish(false), timeout);
+            });
+          }
+
+          async function terminateChrome(chrome, cdp) {
+            try { await cdp?.close(); } catch {}
+            if (chrome.exitCode !== null || chrome.signalCode !== null) return;
+            chrome.kill("SIGTERM");
+            if (await waitForProcessExit(chrome, 5000)) return;
+            chrome.kill("SIGKILL");
+            if (!(await waitForProcessExit(chrome, 2000))) throw new Error("Chrome did not exit after SIGKILL");
+          }
+
+          async function closeServer(server) {
+            if (!server.listening) return;
+            await new Promise((resolveClose, reject) => {
+              server.close((error) => error ? reject(error) : resolveClose());
+            });
+          }
+          '''
+
+          main_marker = '\nasync function main() {'
+          assert source.count(main_marker) == 1, 'main insertion point drifted'
+          source = source.replace(main_marker, insertion + main_marker)
+
+          old = '''  } finally {
+            try { await cdp?.close(); } catch {}
+            chrome.kill("SIGTERM");
+            server.close();
+            await rm(profile, { recursive: true, force: true });
+          }'''
+          new = '''  } finally {
+            let cleanupError;
+            try { await terminateChrome(chrome, cdp); } catch (error) { cleanupError = error; }
+            try { await closeServer(server); } catch (error) { cleanupError ||= error; }
+            try { await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (error) { cleanupError ||= error; }
+            if (cleanupError) throw cleanupError;
+          }'''
+          assert source.count(old) == 1, 'browser cleanup boundary drifted'
+          source = source.replace(old, new)
+          path.write_text(source)
+          PY
+
+      - name: Verify regression and syntax
+        shell: bash
+        run: |
+          node --check scripts/browser-smoke.mjs
+          node --test test/browser-smoke-contract.test.mjs
+          git diff --check
+
+      - name: Commit the minimal production fix
+        shell: bash
+        run: |
+          git config user.name 'Chris Pecunies'
+          git config user.email 'chris@pecunies.com'
+          git add scripts/browser-smoke.mjs
+          git commit -m 'fix: await browser smoke teardown'
+          git push origin HEAD:feat/exact-semantic-observatory-20260828
