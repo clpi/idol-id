@@ -65,6 +65,7 @@ jobs:
 
           rm -f .github/workflows/browser-authority-red.yml
           rm -f .github/workflows/apply-browser-authority-fix.yml
+          rm -f .github/workflows/patch-browser-smoke-authority.yml
 
       - name: Verify the regression, full build, and real browser interaction
         shell: bash
