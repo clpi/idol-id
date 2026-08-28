@@ -49,6 +49,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: test -n "$CLOUDFLARE_API_TOKEN" || { echo 'missing CLOUDFLARE_API_TOKEN'; exit 2; }
       - name: Snapshot the public world projection
+        env:
+          IDOL_WORLD_SNAPSHOT_RETAIN: "1"
         run: node scripts/snapshot-worlds.mjs
       - name: Provision D1 and Platform Access identity boundary
         env:
@@ -87,6 +89,7 @@ jobs:
           - `/__idol/version`, `/__idol/health`, browser config, installers and runtime manifests project one immutable authority document
           - post-deploy verification checks the exact web commit, Idol authority, idol-native authority and source-law edition on every configured hostname
           - no Wasm artifact is admitted from path existence alone
+          - world projection freshness is explicit: live snapshot when reachable, otherwise the checked-in snapshot is retained only after schema, source, revision and world validation
 
           Distribution:
           - curl -fsSL https://idol.id/install | sh
