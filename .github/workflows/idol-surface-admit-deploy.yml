@@ -1,0 +1,256 @@
+name: Idol surface admit and deploy
+
+on:
+  push:
+    branches: [ops/idol-domain-repair-20260828]
+    paths:
+      - .github/workflows/idol-surface-admit-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: idol-surface-admit-deploy
+  cancel-in-progress: false
+
+jobs:
+  admit:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      REPAIR_BRANCH: fix/idol-surfaces-20260828
+    steps:
+      - name: Wait for clean source repair pull request
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 90); do
+            if gh pr view "$REPAIR_BRANCH" --repo clpi/idol-id --json number,url,headRefOid,state >/tmp/pr.json 2>/dev/null; then
+              [[ "$(jq -r .state /tmp/pr.json)" == OPEN ]] && break
+            fi
+            sleep 20
+          done
+          test -s /tmp/pr.json
+          [[ "$(jq -r .state /tmp/pr.json)" == OPEN ]]
+          echo "PR_NUMBER=$(jq -r .number /tmp/pr.json)" >> "$GITHUB_ENV"
+          echo "PR_HEAD=$(jq -r .headRefOid /tmp/pr.json)" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/idol-surfaces-20260828
+          fetch-depth: 0
+
+      - name: Enforce clean source-only diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git diff --name-only origin/main...HEAD | tee /tmp/changed
+          test -s /tmp/changed
+          if grep -Ei '(^|/)(hermes|openclaw|claw)(/|\.|$)|hermes-bootstrap|hermes-ha' /tmp/changed; then
+            echo 'Repair PR crossed excluded agent infrastructure scope.' >&2
+            exit 1
+          fi
+          if git diff origin/main...HEAD | grep -Ei '^\+.*(hermes\.idol\.id|claw\.idol\.id)'; then
+            echo 'Repair PR introduced an excluded hostname.' >&2
+            exit 1
+          fi
+          grep -q '^RESULT=PASS$' ops/reports/idol-source-verification.log
+          test -s ops/reports/idol-source-repair.md
+
+      - name: Independently rebuild and test repair SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          : >/tmp/admission.log
+          logrun(){ echo "+ $*" | tee -a /tmp/admission.log; "$@" 2>&1 | tee -a /tmp/admission.log; }
+          if [[ -f package.json ]]; then
+            if [[ -f pnpm-lock.yaml ]]; then corepack enable; logrun pnpm install --frozen-lockfile; PM=pnpm
+            elif [[ -f yarn.lock ]]; then corepack enable; logrun yarn install --immutable; PM=yarn
+            elif [[ -f bun.lockb || -f bun.lock ]]; then curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; logrun bun install --frozen-lockfile; PM=bun
+            else PM=npm; [[ -f package-lock.json ]] && logrun npm ci || logrun npm install; fi
+            for script in lint typecheck check test build; do
+              if node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['$script']?0:1)"; then logrun "$PM" run "$script"; fi
+            done
+          fi
+          if [[ -f pyproject.toml || -f pytest.ini ]]; then
+            python3 -m pip install -q pytest
+            logrun python3 -m pytest -q
+          fi
+          [[ ! -f build.zig ]] || { sudo snap install zig --classic --beta >/dev/null 2>&1 || true; logrun zig build test; }
+          [[ ! -f Cargo.toml ]] || logrun cargo test --workspace
+          echo RESULT=PASS | tee -a /tmp/admission.log
+
+      - name: Wait for repository checks and merge admitted repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A repository with no additional PR checks is allowed because the
+          # independent admission build above is mandatory. Existing checks,
+          # when present, must all succeed.
+          set +e
+          gh pr checks "$PR_NUMBER" --repo clpi/idol-id --watch --fail-fast --interval 15
+          rc=$?
+          set -e
+          if [[ "$rc" -ne 0 ]]; then
+            pending="$(gh pr checks "$PR_NUMBER" --repo clpi/idol-id --json state 2>/dev/null | jq '[.[]|select(.state!="SUCCESS" and .state!="SKIPPED" and .state!="NEUTRAL")]|length' || echo 1)"
+            [[ "$pending" -eq 0 ]]
+          fi
+          gh pr merge "$PR_NUMBER" --repo clpi/idol-id --squash --delete-branch
+          main_sha="$(gh api repos/clpi/idol-id/commits/main --jq .sha)"
+          echo "MAIN_SHA=$main_sha" >> "$GITHUB_ENV"
+
+      - name: Ensure production deployment ran for admitted SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The merge push is the primary trigger. Dispatch is a fallback only
+          # when deploy.yml explicitly supports workflow_dispatch.
+          sleep 10
+          runs="$(gh api 'repos/clpi/idol-id/actions/runs?branch=main&per_page=50')"
+          matching="$(jq --arg sha "$MAIN_SHA" '[.workflow_runs[]|select(.head_sha==$sha and (.path|test("deploy")))]|length' <<<"$runs")"
+          if [[ "$matching" -eq 0 ]]; then
+            gh workflow run deploy.yml --repo clpi/idol-id --ref main 2>/dev/null || true
+          fi
+
+          run_id=""
+          for _ in $(seq 1 120); do
+            runs="$(gh api 'repos/clpi/idol-id/actions/runs?branch=main&per_page=50')"
+            run_id="$(jq -r --arg sha "$MAIN_SHA" '[.workflow_runs[]|select(.head_sha==$sha and (.path|test("deploy")))][0].id // empty' <<<"$runs")"
+            if [[ -n "$run_id" ]]; then
+              status="$(jq -r --argjson id "$run_id" '.workflow_runs[]|select(.id==$id)|.status' <<<"$runs")"
+              conclusion="$(jq -r --argjson id "$run_id" '.workflow_runs[]|select(.id==$id)|.conclusion // ""' <<<"$runs")"
+              if [[ "$status" == completed ]]; then
+                [[ "$conclusion" == success ]]
+                echo "DEPLOY_RUN_ID=$run_id" >> "$GITHUB_ENV"
+                break
+              fi
+            fi
+            sleep 15
+          done
+          test -n "$run_id"
+          test -n "${DEPLOY_RUN_ID:-}"
+
+      - name: Verify every non-Hermes non-Claw public surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p /tmp/idol-admission
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          api=https://api.cloudflare.com/client/v4
+          zone="$(curl -fsS "${auth[@]}" "$api/zones?name=idol.id&status=active" | jq -er '.result[0].id')"
+          curl -fsS "${auth[@]}" "$api/zones/$zone/dns_records?per_page=5000" >/tmp/idol-admission/dns.json
+          jq -r '.result[].name' /tmp/idol-admission/dns.json \
+            | awk 'NF && $0 !~ /^\*/ && $0 != "hermes.idol.id" && $0 != "claw.idol.id"' \
+            | sort -u >/tmp/idol-admission/hosts
+          printf 'idol.id\n' >>/tmp/idol-admission/hosts
+          sort -u -o /tmp/idol-admission/hosts /tmp/idol-admission/hosts
+
+          printf '[]' >/tmp/idol-admission/results.json
+          failed=0
+          while IFS= read -r host; do
+            probes='[]'
+            html_body=""
+            for path in / /health /api/health /__idol/health; do
+              body="/tmp/idol-admission/body"
+              rm -f "$body"
+              meta="$(curl -sS -L --connect-timeout 7 --max-time 25 --retry 2 --retry-all-errors \
+                -o "$body" -w '%{http_code}\t%{url_effective}\t%{content_type}\t%{num_redirects}\t%{size_download}\t%{time_total}\t%{ssl_verify_result}' \
+                "https://$host$path" 2>/dev/null || printf '000\thttps://%s%s\t\t0\t0\t0\t1' "$host" "$path")"
+              IFS=$'\t' read -r code final type redirects bytes seconds ssl <<<"$meta"
+              sha=""; [[ ! -f "$body" ]] || sha="$(sha256sum "$body"|awk '{print $1}')"
+              if [[ "$path" == / && "$type" == text/html* && -f "$body" ]]; then cp "$body" "/tmp/idol-admission/$host.html"; fi
+              probes="$(jq -nc --argjson a "$probes" --arg p "$path" --arg c "$code" --arg f "$final" --arg t "$type" --arg r "$redirects" --arg b "$bytes" --arg s "$seconds" --arg ssl "$ssl" --arg sha "$sha" \
+                '$a+[{path:$p,http:($c|tonumber?//0),final_url:$f,content_type:$t,redirects:($r|tonumber?//0),bytes:($b|tonumber?//0),seconds:($s|tonumber?//0),ssl_verify_result:($ssl|tonumber?//1),sha256:$sha}]')"
+            done
+            ok="$(jq '[.[]|select((.http>=200 and .http<400) and .ssl_verify_result==0)]|length>0' <<<"$probes")"
+            [[ "$ok" == true ]] || failed=1
+
+            assets='[]'
+            html="/tmp/idol-admission/$host.html"
+            if [[ -f "$html" ]]; then
+              python3 - "$host" "$html" >/tmp/idol-admission/assets-list <<'PY'
+          import html.parser,sys,urllib.parse
+          host,path=sys.argv[1:]
+          class P(html.parser.HTMLParser):
+              def __init__(self):super().__init__();self.urls=[]
+              def handle_starttag(self,t,a):
+                  d=dict(a)
+                  if t in ('script','img','source') and d.get('src'):self.urls.append(d['src'])
+                  if t=='link' and d.get('href'):self.urls.append(d['href'])
+          p=P();p.feed(open(path,errors='replace').read())
+          seen=set()
+          for raw in p.urls:
+              u=urllib.parse.urljoin(f'https://{host}/',raw)
+              if urllib.parse.urlparse(u).hostname==host and u not in seen:
+                  seen.add(u);print(u)
+          PY
+              while IFS= read -r url; do
+                [[ -n "$url" ]] || continue
+                code="$(curl -sS -L --connect-timeout 5 --max-time 15 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo 000)"
+                assets="$(jq -nc --argjson a "$assets" --arg u "$url" --arg c "$code" '$a+[{url:$u,http:($c|tonumber?//0)}]')"
+                [[ "$code" -ge 200 && "$code" -lt 400 ]] || failed=1
+              done < <(head -n 80 /tmp/idol-admission/assets-list)
+              # A successful HTML response with neither meaningful text nor a
+              # canvas/app root is a blank-screen failure.
+              python3 - "$html" <<'PY' || failed=1
+          import re,sys
+          text=open(sys.argv[1],errors='replace').read()
+          visible=re.sub(r'<(script|style)[^>]*>.*?</\1>','',text,flags=re.I|re.S)
+          visible=re.sub(r'<[^>]+>',' ',visible)
+          visible=re.sub(r'\s+',' ',visible).strip()
+          has_app=bool(re.search(r'<(?:canvas|main)\b|id=["\'](?:app|root|__next)["\']',text,re.I))
+          raise SystemExit(0 if len(visible)>=20 or has_app else 1)
+          PY
+            fi
+
+            jq -n --arg host "$host" --argjson ok "$ok" --argjson probes "$probes" --argjson assets "$assets" \
+              '{host:$host,healthy:$ok,probes:$probes,assets:$assets}' >/tmp/idol-admission/one.json
+            jq -s '.[0]+[.[1]]' /tmp/idol-admission/results.json /tmp/idol-admission/one.json >/tmp/idol-admission/merged.json
+            mv /tmp/idol-admission/merged.json /tmp/idol-admission/results.json
+          done </tmp/idol-admission/hosts
+
+          jq -n --arg observed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg sha "$MAIN_SHA" --arg run "$DEPLOY_RUN_ID" \
+            --slurpfile results /tmp/idol-admission/results.json \
+            '{schema:"idol.surface.production-admission.v1",observed_at:$observed_at,main_sha:$sha,deploy_run_id:($run|tonumber),exclusions:["hermes.idol.id","claw.idol.id"],results:$results[0],passed:([$results[0][]|select(.healthy!=true)]|length==0)}' \
+            > /tmp/idol-admission/report.json
+          [[ "$failed" -eq 0 ]]
+
+      - name: Persist production admission evidence on operations branch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -s /tmp/idol-admission/report.json ]] || exit 0
+          git fetch origin ops/idol-domain-repair-20260828
+          git checkout -B ops/idol-domain-repair-20260828 origin/ops/idol-domain-repair-20260828
+          mkdir -p ops/reports
+          cp /tmp/idol-admission/report.json ops/reports/idol-surface-production-admission.json
+          cp /tmp/admission.log ops/reports/idol-surface-independent-verification.log
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('ops/reports/idol-surface-production-admission.json').read_text())
+          lines=['# Idol surface production admission','',f"Observed: `{d['observed_at']}`",f"Main SHA: `{d['main_sha']}`",f"Deploy run: `{d['deploy_run_id']}`",f"Overall: **{'PASS' if d['passed'] else 'FAIL'}**",'',
+                 '| Host | Healthy | Root | Best health path | Assets checked | Broken assets |','|---|---:|---:|---:|---:|---:|']
+          for r in sorted(d['results'],key=lambda x:x['host']):
+              codes={x['path']:x['http'] for x in r['probes']}
+              best=max(codes.get('/health',0),codes.get('/api/health',0),codes.get('/__idol/health',0))
+              broken=sum(not (200<=x['http']<400) for x in r['assets'])
+              lines.append(f"| `{r['host']}` | {r['healthy']} | {codes.get('/',0)} | {best} | {len(r['assets'])} | {broken} |")
+          Path('ops/reports/idol-surface-production-admission.md').write_text('\n'.join(lines)+'\n')
+          PY
+          git config user.name idol-surface-admission
+          git config user.email idol-surface-admission@users.noreply.github.com
+          git add ops/reports/idol-surface-production-admission.json \
+            ops/reports/idol-surface-production-admission.md \
+            ops/reports/idol-surface-independent-verification.log
+          git commit -m 'ops: record production Idol surface admission' || exit 0
+          git push origin HEAD:ops/idol-domain-repair-20260828
