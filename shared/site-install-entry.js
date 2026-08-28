@@ -1,4 +1,4 @@
-(function installEntry() {
+(function siteEnhancement() {
 "use strict";
 
 async function copy(button) {
@@ -27,10 +27,32 @@ async function copy(button) {
   }, 1300);
 }
 
+function bindEditorMode() {
+  const shell = document.querySelector(".demo-shell");
+  const button = document.querySelector('[data-demo-action="edit"]');
+  const input = document.querySelector("#demo-editor .editor-input");
+  if (!shell || !button || !input) return;
+
+  function setMode(mode, focus = false) {
+    const editing = mode === "edit";
+    shell.dataset.editorMode = editing ? "edit" : "inspect";
+    input.style.pointerEvents = editing ? "auto" : "none";
+    input.tabIndex = editing ? 0 : -1;
+    button.textContent = editing ? "inspect" : "edit";
+    button.setAttribute("aria-pressed", String(editing));
+    button.setAttribute("aria-label", editing ? "Inspect exact highlighted tokens" : "Edit Idol source");
+    if (editing && focus) input.focus({ preventScroll: true });
+  }
+
+  button.addEventListener("click", () => setMode(shell.dataset.editorMode === "edit" ? "inspect" : "edit", true));
+  setMode("inspect");
+}
+
 function install() {
   for (const button of document.querySelectorAll("[data-copy-command]")) {
     button.addEventListener("click", () => copy(button));
   }
+  bindEditorMode();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
