@@ -9,7 +9,7 @@ export const hostMap = Object.freeze({
   "lib.idol.id": { app: "lib", surface: "lib", origin: true },
   "api.idol.id": { app: "api", surface: "api", origin: true },
   "graph.idol.id": { app: "graph", surface: "graph", origin: true },
-  "worlds.idol.id": { app: "lib", surface: "lib", origin: false, redirect: "https://lib.idol.id" },
+  "worlds.idol.id": { app: "worlds", surface: "worlds", origin: false },
   "platform.idol.id": { app: "platform", surface: "platform", origin: false },
   "r8a.idol.id": { app: "graph", surface: "r8a", origin: true },
   "r8b.idol.id": { app: "graph", surface: "r8b", origin: true },
@@ -159,7 +159,7 @@ function isNavigation(request, pathname) {
 function localSurface(surface) {
   if (["docs", "lib", "api"].includes(surface)) return { app: surface, surface, origin: true };
   if (["graph", "r8a", "r8b", "r16"].includes(surface)) return { app: "graph", surface, origin: true };
-  if (surface === "worlds" || surface === "atlas") return { app: "worlds", surface: "lib", origin: false };
+  if (["worlds", "atlas"].includes(surface)) return { app: "worlds", surface: "worlds", origin: false };
   if (surface === "platform") return { app: "platform", surface: "platform", origin: false };
   if (surface === "ide") return { app: "ide", surface: "ide", origin: false };
   return { app: "site", surface: "site", origin: true };
@@ -281,6 +281,11 @@ export async function handle(request, env, dependencies = {}) {
   }
 
   if (info.surface === "lib" && /^\/universe(?:\/|$)/.test(url.pathname) && isNavigation(request, url.pathname)) {
+    if (url.searchParams.get("mode") !== "public") {
+      const target = new URL(request.url);
+      target.searchParams.set("mode", "public");
+      return Response.redirect(target.toString(), 307);
+    }
     return appShell(env, request, "universe");
   }
 
