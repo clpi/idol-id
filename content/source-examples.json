@@ -1,21 +1,136 @@
 {
-  "schema": "idol.web.source-examples.v1",
+  "schema": "idol.web.source-examples.v2",
   "authority": {
     "repository": "clpi/idol",
     "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
     "source_law": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b",
     "compact_law_blob": "155edf8e9204d00316dab8363676f0fd7b2fb552"
   },
-  "rule": "examples project current law; they do not prove parser, lowering, execution, or performance support",
+  "rule": "Every example is pinned to the exact language authority. Compiler-evidence examples are derived from executed current-authority fixtures, but the live endpoint remains the authority for the current run. Law projections teach admitted meaning without claiming parser, lowering, execution, or performance support.",
+  "capabilities": {
+    "compiler-evidence": "source derived from an executed current-authority fixture; analyze, run, and lower remain live observations",
+    "law-projection": "admitted language meaning; implementation support is intentionally not claimed"
+  },
   "examples": [
+    {
+      "id": "any-relation",
+      "title": "existential relation without loop ceremony",
+      "summary": "Ask one semantic question of a fixed-shape subject, then inspect the application, subject, operand, result, demand, and selected realization.",
+      "status": "compiler-evidence",
+      "capability": "compiler-evidence",
+      "actions": ["analyze", "run", "lower"],
+      "authority": {
+        "repository": "clpi/idol",
+        "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
+        "source": "examples/any_relation_smoke.id"
+      },
+      "authority_sections": [
+        "law.md#9-application-and-projection",
+        "law.md#10-demand-and-observation"
+      ],
+      "source": "# any is one relation identity over the collection subject\nxs: [3]i64 = {3, 5, 8}\nhit = xs:any((x) x % 2 == 0)\nprint(hit)",
+      "expected": {
+        "run": "true",
+        "focus": ["relation", "subject", "operand", "result", "demand", "target"]
+      },
+      "meaning": [
+        "one relation identity: any",
+        "semantic subject: xs",
+        "ordinary operand: predicate relation value",
+        "one exact Boolean result",
+        "existential demand remains visible before realization"
+      ],
+      "refuses": [
+        "browser-invented loop nodes",
+        "method lookup",
+        "first-argument subject inference",
+        "name-matched graph identity"
+      ]
+    },
+    {
+      "id": "world-place",
+      "title": "world-backed place and absence semantics",
+      "summary": "Update an exact environment place, read it through the same world relation, and preserve the distinction between an empty value and absence.",
+      "status": "compiler-evidence",
+      "capability": "compiler-evidence",
+      "actions": ["analyze", "run", "lower"],
+      "authority": {
+        "repository": "clpi/idol",
+        "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
+        "source": "examples/projection/place.id"
+      },
+      "authority_sections": [
+        "law.md#6-world-home-reach-subject-place",
+        "law.md#9-application-and-projection"
+      ],
+      "source": "# environment is a world-backed place; the empty value remains present\nenv(\"IDOLHOME\") = \"ready\"\nvalue = env(\"IDOLHOME\") or \"absent\"\nprint(value)",
+      "expected": {
+        "run": "ready",
+        "focus": ["world", "relation", "subject", "result", "provenance"]
+      },
+      "meaning": [
+        "env is reached from the current world",
+        "the indexed write and read share one place identity",
+        "authority is separate from the value spelling",
+        "absence and the empty value remain different facts"
+      ],
+      "refuses": [
+        "namespace reconstruction",
+        "ambient authority manufacture",
+        "empty-string sentinel semantics"
+      ]
+    },
+    {
+      "id": "subject-chain",
+      "title": "direct relation and result chaining",
+      "summary": "A sequence of subject-oriented applications keeps every occurrence distinct while the demanded result supplies the next exact subject.",
+      "status": "lawful-source-implementation-not-claimed",
+      "capability": "law-projection",
+      "actions": ["analyze"],
+      "authority": {
+        "repository": "clpi/idol",
+        "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
+        "source": "docs/spec/law.md"
+      },
+      "authority_sections": [
+        "law.md#9-application-and-projection",
+        "law.md#10-demand-and-observation"
+      ],
+      "source": "prepare = (value)\n    value:validate():normalize():encode()",
+      "expected": {
+        "focus": ["relation", "subject", "result", "demand"]
+      },
+      "meaning": [
+        "ordinary relation applications share one application algebra",
+        "each exact demanded result supplies the next semantic subject",
+        "the tail expression supplies the demanded result",
+        "no pipeline operator or pipeline object exists"
+      ],
+      "refuses": [
+        "pipeline nodes",
+        "implicit self",
+        "first-result fallback when a pack is ambiguous"
+      ]
+    },
     {
       "id": "declaration-specialization",
       "title": "subject and projection specialization",
+      "summary": "One relation identity is qualified by a subject constraint and a stable projection fact; ordinary payload remains in the application pack.",
       "status": "lawful-source-implementation-not-claimed",
+      "capability": "law-projection",
+      "actions": ["analyze"],
+      "authority": {
+        "repository": "clpi/idol",
+        "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
+        "source": "docs/spec/law.md"
+      },
       "authority_sections": [
         "law.md#9-application-and-projection"
       ],
       "source": "# kg is a stable relation projection; factor is ordinary payload\nbody:weight(kg) = (factor)\n    :mass()\n        * factor",
+      "expected": {
+        "focus": ["relation", "subject", "projection", "operand", "witness", "demand"]
+      },
       "meaning": [
         "one relation identity: weight",
         "subject constraint: body",
@@ -34,61 +149,32 @@
     {
       "id": "projection-faces",
       "title": "computed and static projection",
+      "summary": "Computed indexing and one static named projection remain distinct from ordinary and subject-oriented application.",
       "status": "current-law",
+      "capability": "law-projection",
+      "actions": ["analyze"],
+      "authority": {
+        "repository": "clpi/idol",
+        "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
+        "source": "docs/spec/law.md"
+      },
       "authority_sections": [
         "law.md#5-delimiter-and-face-closure",
         "law.md#9-application-and-projection"
       ],
       "source": "value = table[key]\ntable[key] = replacement\nencoded = codec.encode(source)",
+      "expected": {
+        "focus": ["projection", "binding", "result", "provenance"]
+      },
       "meaning": [
         "[] is computed or indexed projection",
         ". is one statically known projection",
         "neither face is subject-oriented relation application"
-      ]
-    },
-    {
-      "id": "subject-chain",
-      "title": "direct relation and result chaining",
-      "status": "lawful-source-implementation-not-claimed",
-      "authority_sections": [
-        "law.md#9-application-and-projection",
-        "law.md#10-demand-and-observation"
       ],
-      "source": "prepare = (value)\n    value:validate():normalize():encode()",
-      "meaning": [
-        "ordinary relation applications share one application algebra",
-        "each exact demanded result supplies the next semantic subject",
-        "the tail expression supplies the demanded result",
-        "no pipeline operator or pipeline object exists"
-      ]
-    },
-    {
-      "id": "world",
-      "title": "current world and closed derivation",
-      "status": "current-law",
-      "authority_sections": [
-        "law.md#6-world-home-reach-subject-place"
-      ],
-      "source": "current = @member\ncompiled = thing@{ stage = compile }",
-      "meaning": [
-        "@member accesses one exact current-world member",
-        "@{ ... } derives a closed world with an exact fact delta",
-        "world membership does not manufacture authority"
-      ]
-    },
-    {
-      "id": "subject-section",
-      "title": "recoverable one-subject projection section",
-      "status": "lawful-source-implementation-not-claimed",
-      "authority_sections": [
-        "docs/spec/source.md",
-        "docs/spec/constitution.md"
-      ],
-      "source": "match = users:find(.id == id)",
-      "meaning": [
-        "the consuming relation demands exactly one recoverable subject",
-        "no lexical self or it binding is created",
-        "ambiguity must fail closed"
+      "refuses": [
+        "table(key) lookup",
+        "method search through static projection",
+        "browser-owned projection identity"
       ]
     }
   ]
