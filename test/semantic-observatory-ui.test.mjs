@@ -44,6 +44,13 @@ test("Semantic Observatory uses the exact semantic bundle and synchronized sourc
   assert.match(css, /min-height:\s*44px/);
 });
 
+test("Observatory uses the browser's exported lossless lexical segmenter", async () => {
+  const [html, presentation] = await Promise.all([read("apps/graph/index.html"), read("shared/idol.js")]);
+  assert.match(presentation, /global\.Idol = Object\.freeze\([\s\S]*?\blex,/);
+  assert.match(html, /Idol\.lex\(state\.source\)/);
+  assert.doesNotMatch(html, /Idol\.tokenize\(/);
+});
+
 test("Observatory never presents same spelling, paths, or names as definitions or semantic references", async () => {
   const [html, index, source] = await Promise.all([read("apps/graph/index.html"), read("shared/semantic-index.js"), read("shared/semantic-source.js")]);
   assert.match(html, /same spelling[^<]*lexical/i);
