@@ -115,9 +115,7 @@
     mount,
   });
 
-  // The Observatory originally called a missing presentation helper. Keep one
-  // compatibility face over the existing lossless lexical segmenter; this does
-  // not add grammar, keyword, descriptor, or semantic inference authority.
+  // Compatibility face over the existing lossless lexical segmenter. This does not add grammar, keyword, descriptor, or semantic inference authority.
   if (window.Idol?.lex && typeof window.Idol.tokenize !== "function") {
     window.Idol = Object.freeze({ ...window.Idol, tokenize: window.Idol.lex });
   }
