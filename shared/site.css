@@ -124,6 +124,7 @@ body {
   line-height: 1.55;
 }
 .hero-program {
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--site-border);
   border-radius: 14px;
@@ -344,6 +345,7 @@ body {
 }
 .install-stack { display: grid; gap: 10px; }
 .install-command {
+  min-width: 0;
   min-height: 62px;
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
@@ -354,7 +356,7 @@ body {
   border-radius: 9px;
   background: var(--site-panel);
 }
-.install-command code { overflow-x: auto; color: #f0d293; font: 14px/1.5 var(--mono); white-space: nowrap; }
+.install-command code { display: block; min-width: 0; max-width: 100%; overflow-x: auto; color: #f0d293; font: 14px/1.5 var(--mono); white-space: nowrap; }
 .install-links { display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 5px 2px; color: var(--site-dim); font-size: 13px; }
 .install-links a { color: #c9c7c0; }
 
