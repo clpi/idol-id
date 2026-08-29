@@ -46,7 +46,7 @@ It does not relabel an error as success or turn a transport response into a sema
 
 ```sh
 curl https://api.idol.id/v1/world/foreign
-curl https://api.idol.id/v1/world/c/integration
+curl https://api.idol.id/v1/world/c17/integration
 ```
 
 A foreign-origin world record preserves foreign provenance and explicit uncertainty. It does not inherit Idol identity or authority.
