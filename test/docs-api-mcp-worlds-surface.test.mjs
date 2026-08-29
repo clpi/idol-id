@@ -28,6 +28,8 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(script, /let documentGeneration = 0/);
   assert.match(script, /const generation = \+\+documentGeneration/);
   assert.match(script, /if \(generation !== documentGeneration\) return/);
+  assert.match(script, /function invalidateSearch\(\) \{\s*clearTimeout\(searchTimer\);\s*searchGeneration \+= 1;\s*\}/);
+  assert.match(script, /async function loadDocument\(\) \{\s*invalidateSearch\(\);/);
   assert.match(script, /function decodedHash\(\)/);
   assert.match(script, /try \{ return decodeURIComponent\(raw\); \} catch \{ return ""; \}/);
   assert.match(script, /if \(cache\.has\(entry\.id\)\)/);
@@ -111,6 +113,11 @@ test("MCP publishes and accepts only canonical Idol tool coordinates", async () 
   assert.match(controller, /decoder\.decode\(buffer\.subarray\(0, written\)\)/);
   assert.doesNotMatch(controller, /source\.slice\(0, read\)/);
   assert.doesNotMatch(controller, /if \(written === source\.length\)/);
+  assert.match(controller, /const invalid = new Error\("MCP response was not valid JSON\."\)/);
+  assert.match(controller, /invalid\.body = \{ error: \{ code: "MCP_INVALID_RESPONSE"/);
+  assert.match(controller, /invalid\.status = response\.status/);
+  assert.match(controller, /throw invalid/);
+  assert.doesNotMatch(controller, /catch \{ body = \{ error: \{ code: "MCP_INVALID_RESPONSE"/);
   assert.match(controller, /response display truncated/);
   assert.doesNotMatch(controller, /innerHTML/);
   assert.doesNotMatch(controller, /localStorage|sessionStorage|document\.cookie|indexedDB/);
