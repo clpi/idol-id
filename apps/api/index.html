@@ -1,128 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>API — idol.id</title>
-<link rel="stylesheet" href="/shared/theme.css">
-<script src="/config.js"></script>
-<style>
-  body { overflow: auto; }
-  .api-shell { max-width: 960px; margin: 0 auto; padding: 36px 32px 140px; }
-  .api-shell h1 { font-size: 22px; font-weight: 600; }
-  .api-shell .lede { color: var(--ink-3); margin: 6px 0 26px; font-size: 12.5px; }
-  .ep { border: 1px solid var(--rule); border-radius: var(--radius); margin-bottom: 10px; background: var(--bg); }
-  .ep-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; }
-  .ep-head:hover { background: var(--bg-hover); }
-  .ep-head .m { font-size: 10px; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 2px; min-width: 44px; text-align: center; }
-  .m.get { color: var(--ok); border: 1px solid rgba(126,201,126,0.35); }
-  .m.post { color: var(--signal); border: 1px solid rgba(230,180,80,0.4); }
-  .ep-head .path { color: var(--ink); }
-  .ep-head .desc { color: var(--ink-4); margin-left: auto; font-size: 11px; text-align: right; }
-  .ep-body { border-top: 1px solid var(--rule); padding: 14px; display: none; }
-  .ep.open .ep-body { display: block; }
-  .try { display: flex; gap: 8px; margin-bottom: 10px; }
-  .try textarea { flex: 1; min-height: 64px; font-size: 11.5px; resize: vertical; }
-  .ep pre { background: var(--bg-raise); border: 1px solid var(--rule); padding: 12px; overflow: auto; max-height: 320px; font-size: 11.5px; color: var(--ink-2); }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050607">
+  <meta name="description" content="Bounded inspection console for Idol deployment identity, compiler-origin APIs, and world-boundary projections.">
+  <title>API — Idol</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/shared/api-console.css">
   <link rel="stylesheet" href="/shared/studio.css">
+  <script src="/config.js"></script>
 </head>
 <body>
-<div class="app">
-  <div class="topbar"></div>
-  <div class="api-shell" id="root"></div>
-  <div class="statusbar"></div>
-</div>
+  <div class="app api-app">
+    <header class="topbar"></header>
 
-<script src="/shared/idol.js"></script>
-<script src="/shared/shell.js"></script>
-<script>
-(async function () {
-  Shell.boot("api", { title: "API", keys: [["⏎", "run request"]] });
-  IdolShell.crumbs([{ label: "api" }]);
+    <main class="api-wrap">
+      <section class="api-hero" aria-labelledby="api-title">
+        <div>
+          <div class="api-eyebrow">bounded transport inspection</div>
+          <h1 id="api-title">Idol API</h1>
+          <p class="api-lede">One console for exact deployment identity, compiler-origin requests, published records, and world-ingress planning. Every request names its owning boundary. The console displays responses; it does not reconstruct language or graph meaning.</p>
+          <div class="api-boundaries">
+            <span>edge identity exact</span>
+            <span>origin responses unmodified</span>
+            <span>semantic authority false</span>
+            <span>world planning only</span>
+          </div>
+        </div>
 
-  const EPS = [
-    { m: "GET", p: "/health", d: "liveness + compiler presence", try: {} },
-    { m: "GET", p: "/info", d: "service + authority edition", try: {} },
-    { m: "GET", p: "/api/authority", d: "source-law authority edition", try: {} },
-    { m: "POST", p: "/api/analyze", d: "graph + explain + check in one pass",
-      body: { source: "" } },
-    { m: "POST", p: "/api/lower", d: "realization text for a target",
-      body: { source: "", target: "aarch64-linux", emit: "asm", opt: "3" } },
-    { m: "POST", p: "/api/run", d: "native execution",
-      body: { source: "" } },
-    { m: "POST", p: "/api/fmt", d: "formatter",
-      body: { source: "" } },
-    { m: "GET", p: "/api/libs", d: "indexed homes", try: {} },
-    { m: "GET", p: "/api/worlds", d: "published worlds (r2-canonical)", try: {} },
-    { m: "GET", p: "/api/lib/:name/detail", d: "source + graph + explain + stats", try: { name: "json" } },
-    { m: "GET", p: "/api/lib/:name/source", d: "raw source text", try: { name: "json" } },
-    { m: "GET", p: "/api/lib/:name/uses", d: "outgoing references to other worlds", try: { name: "check" } },
-    { m: "GET", p: "/api/lib/:name/dependents", d: "who references this world", try: { name: "str" } },
-    { m: "GET", p: "/api/lib/:name/versions", d: "sealed version snapshots", try: { name: "std" } },
-    { m: "GET", p: "/api/lib/:name/version/:v", d: "source of one version", try: { name: "std", v: "0.1.0" } },
-    { m: "GET", p: "/api/whys?subject=X", d: "provenance facts across the corpus", try: { subject: "json" } },
-    { m: "POST", p: "/api/publish", d: "publish a world (write token)",
-      body: { name: "example", version: "0.1.0", source: "", summary: "example" },
-      note: "requires Authorization: Bearer <write token>" },
-  ];
+        <aside class="api-token" aria-labelledby="api-token-title">
+          <h2 id="api-token-title">Bearer token</h2>
+          <p>Used only for endpoints explicitly marked as bearer-authenticated. The value remains in this field and is never written to localStorage, sessionStorage, cookies, IndexedDB, or the URL.</p>
+          <label><span>Token</span><input id="api-token" type="password" autocomplete="off" spellcheck="false" placeholder="paste only when required"></label>
+          <div class="api-token-actions"><button id="api-show-token" type="button">Show</button><button id="api-forget-token" type="button">Forget</button></div>
+        </aside>
+      </section>
 
-  const SOURCE_EXAMPLES = "/content/source-examples.json";
-  let authorityExample = "";
-  try {
-    const response = await fetch(SOURCE_EXAMPLES, { cache: "no-cache" });
-    if (!response.ok) throw new Error(`source example manifest ${response.status}`);
-    const manifest = await response.json();
-    authorityExample = manifest.examples?.find((entry) => entry.status === "current-law")?.source || manifest.examples?.[0]?.source || "";
-    for (const endpoint of EPS) if (endpoint.body && Object.hasOwn(endpoint.body, "source")) endpoint.body.source = authorityExample;
-  } catch (error) { console.warn("authority-pinned source examples unavailable", error); }
+      <section class="api-intro" aria-labelledby="endpoints-title">
+        <h2 id="endpoints-title">Ask the exact boundary.</h2>
+        <p><span id="api-source-status" data-source-manifest="/content/source-examples.json">loading authority-pinned source defaults…</span> A lawful example is only input. Parser, analysis, lowering, execution, formatting, publication, and target support remain claims the receiving endpoint must prove in its response.</p>
+      </section>
 
-  const root = document.getElementById("root");
-  root.appendChild(Idol.el("h1", null, "API"));
-  root.appendChild(Idol.el("div", { class: "lede" },
-    "transport console over the deployed compiler and registry. Source defaults come from the authority-pinned example projection; lawful source does not imply parser, lowering, or runtime support."));
+      <nav class="api-filter" id="api-filters" aria-label="Filter API endpoints by owner"></nav>
+      <div id="api-endpoints"></div>
+    </main>
 
-  for (const ep of EPS) {
-    const body = Idol.el("div", { class: "ep" });
-    const head = Idol.el("div", { class: "ep-head" },
-      Idol.el("span", { class: "m " + ep.m.toLowerCase() }, ep.m),
-      Idol.el("span", { class: "path" }, ep.p),
-      Idol.el("span", { class: "desc" }, ep.d + (ep.note ? " · " + ep.note : "")));
-    const panel = Idol.el("div", { class: "ep-body" });
-    const out = Idol.el("pre", null, "—");
-    const send = async () => {
-      out.textContent = "…";
-      try {
-        let r;
-        if (ep.m === "GET") {
-          let p = ep.p;
-          if (ep.try) for (const [k, v] of Object.entries(ep.try)) p = p.replace(":" + k, v).replace("X", v);
-          const resp = await fetch(p);
-          out.textContent = resp.status + "  " + (await resp.text()).slice(0, 4000);
-        } else {
-          const resp = await fetch(ep.p, { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(ep.body || {}) });
-          out.textContent = resp.status + "  " + (await resp.text()).slice(0, 4000);
-        }
-      } catch (e) { out.textContent = String(e); }
-    };
-    const tryRow = Idol.el("div", { class: "try" },
-      ep.m === "POST"
-        ? Idol.el("textarea", { spellcheck: "false" }, JSON.stringify(ep.body || {}, null, 1))
-        : Idol.el("input", { type: "text", value: new URLSearchParams(ep.try || {}).toString(), readOnly: true, style: "flex:1" }),
-      Idol.el("button", { class: "primary", onclick: () => {
-        if (ep.m === "POST") {
-          try { ep.body = JSON.parse(panel.querySelector("textarea").value || "{}"); } catch (e) { out.textContent = "invalid JSON"; return; }
-        }
-        send();
-      } }, "send"));
-    panel.appendChild(tryRow);
-    panel.appendChild(out);
-    head.addEventListener("click", () => body.classList.toggle("open"));
-    body.appendChild(head); body.appendChild(panel);
-    root.appendChild(body);
-  }
-})();
-</script>
+    <footer class="statusbar"></footer>
+  </div>
+
+  <script src="/shared/shell.js"></script>
+  <script type="module" src="/shared/api-console.js"></script>
 </body>
 </html>

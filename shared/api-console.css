@@ -1,0 +1,68 @@
+html, body { min-height: 100%; height: auto; overflow-x: hidden; overflow-y: auto; }
+body { background: #050607; }
+.api-app { min-height: 100dvh; height: auto; padding-bottom: calc(44px + env(safe-area-inset-bottom)); }
+.api-wrap { width: min(100%, 1180px); margin: 0 auto; padding: clamp(40px, 6vw, 82px) clamp(18px, 5vw, 64px) 120px; }
+.api-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: clamp(34px, 7vw, 92px); align-items: end; padding-bottom: clamp(54px, 8vw, 100px); border-bottom: 1px solid var(--rule-2); }
+.api-eyebrow { color: var(--signal); font: 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+.api-hero h1 { margin-top: 17px; color: var(--ink); font: 560 clamp(58px, 8vw, 108px)/.88 var(--sans); letter-spacing: -.065em; }
+.api-lede { margin-top: 25px; max-width: 68ch; color: var(--ink-2); font-size: clamp(16px, 1.65vw, 20px); line-height: 1.7; }
+.api-boundaries { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 7px; }
+.api-boundaries span { padding: 6px 9px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-4); font: 9px/1 var(--mono); }
+.api-token { padding: 20px; border: 1px solid var(--rule-2); border-radius: 15px; background: rgba(10, 11, 12, .82); }
+.api-token h2 { color: var(--ink); font: 560 22px/1 var(--sans); letter-spacing: -.03em; }
+.api-token p { margin-top: 11px; color: var(--ink-3); font-size: 11px; line-height: 1.65; }
+.api-token label { display: grid; gap: 7px; margin-top: 16px; }
+.api-token label span { color: var(--ink-4); font-size: 10px; text-transform: uppercase; letter-spacing: .09em; }
+.api-token input { width: 100%; min-height: 44px; }
+.api-token-actions { display: flex; gap: 8px; margin-top: 12px; }
+.api-token-actions button { min-height: 44px; }
+.api-intro { display: grid; grid-template-columns: minmax(0, .7fr) minmax(280px, 1.3fr); gap: clamp(28px, 6vw, 82px); align-items: end; padding: clamp(48px, 7vw, 88px) 0 24px; }
+.api-intro h2 { color: var(--ink); font: 560 clamp(30px, 4vw, 52px)/1 var(--sans); letter-spacing: -.045em; }
+.api-intro p { color: var(--ink-3); font-size: 13px; line-height: 1.68; }
+.api-filter { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 24px; }
+.api-filter button { min-height: 44px; border-radius: 999px; }
+.api-filter button.here { color: var(--ink); border-color: var(--signal); background: var(--signal-dim); }
+.api-group { margin-top: 38px; }
+.api-group-title { margin-bottom: 10px; color: var(--ink-4); font: 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.api-endpoint { margin-bottom: 10px; border: 1px solid var(--rule-2); border-radius: 10px; background: rgba(7, 8, 9, .8); overflow: hidden; }
+.api-endpoint[open] { border-color: var(--rule-3); }
+.api-summary { min-height: 56px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 14px; cursor: pointer; list-style: none; }
+.api-summary::-webkit-details-marker { display: none; }
+.api-summary:hover, .api-summary:focus-visible { background: var(--bg-hover); }
+.api-method { min-width: 52px; padding: 4px 6px; border: 1px solid var(--rule-2); border-radius: 4px; text-align: center; font: 10px/1 var(--mono); letter-spacing: .08em; }
+.api-method.get { color: var(--ok); border-color: rgba(126, 201, 126, .35); }
+.api-method.post { color: var(--signal); border-color: rgba(230, 180, 80, .4); }
+.api-summary-main { min-width: 0; }
+.api-path { display: block; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font: 12px/1.4 var(--mono); white-space: nowrap; }
+.api-title { display: block; margin-top: 3px; color: var(--ink-4); font-size: 11px; }
+.api-owner { padding: 5px 8px; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink-4); font: 9px/1 var(--mono); white-space: nowrap; }
+.api-owner.edge { color: #79d4dc; }
+.api-owner.compiler-origin { color: #afa0e4; }
+.api-panel { padding: 18px; border-top: 1px solid var(--rule); }
+.api-description { max-width: 82ch; color: var(--ink-3); font-size: 12px; line-height: 1.7; }
+.api-boundary-note { margin-top: 12px; padding: 10px 12px; border-left: 2px solid var(--rule-3); background: rgba(255, 255, 255, .015); color: var(--ink-4); font: 10px/1.55 var(--mono); }
+.api-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 18px; }
+.api-field { min-width: 0; display: grid; gap: 7px; }
+.api-field.full { grid-column: 1 / -1; }
+.api-field span { color: var(--ink-4); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+.api-field input, .api-field textarea { width: 100%; min-height: 44px; padding: 10px 11px; border: 1px solid var(--rule-2); border-radius: 8px; background: #030405; color: var(--ink); font: 11px/1.45 var(--mono); }
+.api-field textarea { min-height: 150px; resize: vertical; }
+.api-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.api-actions button { min-height: 44px; }
+.api-actions button.primary { color: #050607; background: var(--ink); border-color: var(--ink); }
+.api-actions button[disabled] { opacity: .5; cursor: wait; }
+.api-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--ink-4); font: 9px/1.4 var(--mono); }
+.api-response { min-height: 120px; max-height: 480px; margin-top: 12px; overflow: auto; padding: 14px; border: 1px solid var(--rule); border-radius: 8px; background: #020303; color: var(--ink-3); font: 10.5px/1.58 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.api-response.error { color: #d98c8c; }
+@media (max-width: 820px) {
+  .api-hero, .api-intro { grid-template-columns: 1fr; }
+  .api-form { grid-template-columns: 1fr; }
+  .api-field.full { grid-column: auto; }
+}
+@media (max-width: 560px) {
+  .api-wrap { padding-inline: 15px; }
+  .api-summary { grid-template-columns: 52px minmax(0, 1fr); }
+  .api-owner { grid-column: 2; justify-self: start; }
+  .api-actions { display: grid; grid-template-columns: 1fr; }
+  .api-actions button { width: 100%; }
+}
