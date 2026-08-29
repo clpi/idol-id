@@ -73,13 +73,16 @@ jobs:
       - name: Browser interaction and responsive semantic QA
         run: |
           node scripts/browser-smoke.mjs
+          node scripts/studio-browser-smoke.mjs
           node scripts/live-mcp-browser-smoke.mjs
       - name: Upload browser interaction evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: idol-browser-smoke-${{ github.run_id }}
-          path: .artifacts/browser-smoke
+          path: |
+            .artifacts/browser-smoke
+            .artifacts/studio-browser-smoke
           if-no-files-found: warn
           retention-days: 7
       - name: Upload verified preview
