@@ -1,5 +1,7 @@
 const CURRENT_PROTOCOL = "2026-07-28";
 const ENDPOINT = "/mcp";
+const MAX_RENDER_BYTES = 160 * 1024;
+const encoder = new TextEncoder();
 
 const token = document.getElementById("mcp-token");
 const raw = document.getElementById("mcp-raw");
@@ -31,8 +33,16 @@ function exactJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function boundedDisplay(value) {
+  const source = typeof value === "string" ? value : exactJson(value);
+  const buffer = new Uint8Array(MAX_RENDER_BYTES);
+  const { read } = encoder.encodeInto(source, buffer);
+  if (read === source.length) return source;
+  return `${source.slice(0, read)}\n\n[response display truncated at ${MAX_RENDER_BYTES} UTF-8 bytes]`;
+}
+
 function show(value) {
-  raw.textContent = typeof value === "string" ? value : exactJson(value);
+  raw.textContent = boundedDisplay(value);
 }
 
 function toolCard(tool) {
