@@ -129,7 +129,7 @@ async function auditView(cdp, surface, width, height, exceptions) {
       title:document.title,
       textLength:text.length,
       stale:/\\b(?:Idsem|Duo|Duon)\\b/i.test(text),
-      marker:${JSON.stringify(surface.marker || "")}?text.includes(${JSON.stringify(surface.marker || "")}):true,
+      marker:${JSON.stringify(surface.marker || "")}?text.toLowerCase().includes(${JSON.stringify((surface.marker || "").toLowerCase())}):true,
       topbar:Boolean(topbar),
       width:document.documentElement.scrollWidth,
       clientWidth:document.documentElement.clientWidth,
