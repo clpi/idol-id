@@ -1,0 +1,104 @@
+name: verify live Idol product
+
+on:
+  push:
+    branches: [ops/verify-idol-production-20260829]
+    paths:
+      - .github/workflows/verify-live-idol-product.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Probe exact live product boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/live-product
+
+          curl --fail --silent --show-error --location --retry 4 --retry-all-errors \
+            https://idol.id/ -o .artifacts/live-product/root.html
+          grep -F '<title>Idol — semantic compiler studio</title>' .artifacts/live-product/root.html
+          grep -F 'One graph. Every <em>projection.</em>' .artifacts/live-product/root.html
+          if grep -Eiq '\b(idsem|duo|duon)\b' .artifacts/live-product/root.html; then
+            echo 'superseded identity is visible on the live root' >&2
+            exit 1
+          fi
+
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            https://idol.id/__idol/version -o .artifacts/live-product/version.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const version = JSON.parse(readFileSync('.artifacts/live-product/version.json', 'utf8'));
+          const expected = '7ddbecca7899fedeec9326b57d897571d75589fd';
+          if (version.commit !== expected) throw new Error(`live commit ${version.commit} != ${expected}`);
+          console.log(JSON.stringify({ live_commit: version.commit, authority: version.authority, source_law: version.source_law }, null, 2));
+          NODE
+
+          node --input-type=module <<'NODE' > .artifacts/live-product/request.json
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('content/source-examples.json', 'utf8'));
+          const example = manifest.examples.find((item) => ['compiler-executed', 'compiler-accepted'].includes(item.status)) || manifest.examples[0];
+          if (!example?.source) throw new Error('no authority-pinned source example');
+          process.stdout.write(JSON.stringify({ source: example.source }));
+          NODE
+
+          probe_post() {
+            local name="$1"
+            local url="$2"
+            local status
+            status=$(curl --silent --show-error --retry 2 --retry-all-errors \
+              -H 'content-type: application/json' \
+              --data-binary @.artifacts/live-product/request.json \
+              -o ".artifacts/live-product/${name}.json" \
+              -w '%{http_code}' "$url")
+            printf '%s' "$status" > ".artifacts/live-product/${name}.status"
+            echo "$name $status"
+          }
+
+          probe_get() {
+            local name="$1"
+            local url="$2"
+            local status
+            status=$(curl --silent --show-error --retry 2 --retry-all-errors \
+              -o ".artifacts/live-product/${name}.json" \
+              -w '%{http_code}' "$url")
+            printf '%s' "$status" > ".artifacts/live-product/${name}.status"
+            echo "$name $status"
+          }
+
+          probe_post analyze https://idol.id/api/analyze
+          probe_post lower https://idol.id/api/lower
+          probe_get worlds https://api.idol.id/api/worlds
+          probe_get origin-health https://idol.id/origin-health
+
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const names = ['analyze', 'lower', 'worlds', 'origin-health'];
+          const result = {};
+          for (const name of names) {
+            const status = Number(readFileSync(`.artifacts/live-product/${name}.status`, 'utf8'));
+            let body;
+            try { body = JSON.parse(readFileSync(`.artifacts/live-product/${name}.json`, 'utf8')); }
+            catch { body = readFileSync(`.artifacts/live-product/${name}.json`, 'utf8').slice(0, 1000); }
+            result[name] = { status, body };
+          }
+          writeFileSync('.artifacts/live-product/report.json', `${JSON.stringify(result, null, 2)}\n`);
+          console.log(JSON.stringify(result, null, 2));
+          NODE
+      - name: Upload exact live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-idol-product-${{ github.run_id }}
+          path: .artifacts/live-product
+          if-no-files-found: error
+          retention-days: 7
