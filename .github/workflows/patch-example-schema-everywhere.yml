@@ -1,0 +1,45 @@
+name: converge compiler example schema
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/patch-example-schema-everywhere.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - name: Replace the retired projection schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          roots=['apps','shared','content','runtime','worker','scripts','test']
+          exts={'.html','.js','.mjs','.json','.md','.txt'}
+          changed=[]
+          for name in roots:
+            root=Path(name)
+            if not root.exists(): continue
+            for path in root.rglob('*'):
+              if not path.is_file() or path.suffix not in exts: continue
+              source=path.read_text(errors='replace')
+              target=source.replace('idol.web.source-examples.v1','idol.web.compiler-examples.v1')
+              if target!=source:
+                path.write_text(target); changed.append(str(path))
+          print('\n'.join(changed))
+          PY
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add -A
+          git commit -m 'fix: converge compiler example schema consumers' || true
+          git push origin HEAD:fix/compiler-first-public-reset-20260828
