@@ -1,0 +1,38 @@
+name: patch public mobile overflow boundaries
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/patch-public-mobile-overflow.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - name: Bound mobile min-content
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('shared/site.css')
+          source=path.read_text()
+          source=source.replace('.hero-program {\n  overflow: hidden;', '.hero-program {\n  min-width: 0;\n  overflow: hidden;')
+          source=source.replace('.install-command {\n  min-height: 62px;', '.install-command {\n  min-width: 0;\n  min-height: 62px;')
+          source=source.replace('.install-command code { overflow-x: auto;', '.install-command code { display: block; min-width: 0; max-width: 100%; overflow-x: auto;')
+          path.write_text(source)
+          PY
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add shared/site.css
+          git commit -m 'fix: bound narrow public surfaces' || true
+          git push origin HEAD:fix/compiler-first-public-reset-20260828
