@@ -11,3 +11,11 @@ source = source.replace(
     "source, count = pattern.subn(lambda _: replacement, source, count=1)",
 )
 exec(compile(source, "apply-unified-studio.py", "exec"))
+
+web = root / "shared/web.js"
+current = web.read_text()
+current = current.replace(
+    '  if (host === "idol.id" || host === "www.idol.id") loadProjection("/shared/site-product-convergence.js");\n',
+    "",
+)
+web.write_text(current)
