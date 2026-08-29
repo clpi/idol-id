@@ -30,6 +30,10 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(script, /if \(generation !== documentGeneration\) return/);
   assert.match(script, /function decodedHash\(\)/);
   assert.match(script, /try \{ return decodeURIComponent\(raw\); \} catch \{ return ""; \}/);
+  assert.match(script, /const pending = fetch\(entry\.path/);
+  assert.match(script, /cache\.set\(entry\.id, pending\)/);
+  assert.match(script, /pending\.catch\(\(\) =>/);
+  assert.match(script, /if \(cache\.get\(entry\.id\) === pending\) cache\.delete\(entry\.id\)/);
   assert.match(css, /@media\s*\(max-width:\s*820px\)/);
   assert.match(css, /min-height:\s*44px/);
   assert.doesNotMatch(css, /\.docs-nav\s*\{[^}]*overflow-x:\s*auto/);
@@ -41,7 +45,7 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(universeDoc, /worlds\.idol\.id[\s\S]{0,180}path-preserving compatibility alias/i);
 });
 
-test("API inventory is unique, owner-explicit, editable, and includes the exact world boundary", async () => {
+test("API inventory is unique, owner-explicit, editable, byte-bounded, and terminating", async () => {
   const ids = API_ENDPOINTS.map((record) => record.id);
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(API_ENDPOINTS.every((record) => ["edge", "compiler-origin"].includes(record.owner)));
@@ -51,10 +55,11 @@ test("API inventory is unique, owner-explicit, editable, and includes the exact 
   const integration = API_ENDPOINTS.find((record) => record.id === "integration");
   assert.equal(resolveEndpointPath(integration), "/v1/world/c17/integration");
 
-  const [html, script, css] = await Promise.all([
+  const [html, script, css, endpointsSource] = await Promise.all([
     read("apps/api/index.html"),
     read("shared/api-console.js"),
     read("shared/api-console.css"),
+    read("shared/api-endpoints.js"),
   ]);
   assert.match(html, /id="api-token"/);
   assert.match(html, /localStorage/);
@@ -66,8 +71,17 @@ test("API inventory is unique, owner-explicit, editable, and includes the exact 
   assert.match(script, /authorization/);
   assert.match(script, /record\.auth === "bearer"/);
   assert.match(script, /response\.headers\.get\("cache-control"\)/);
-  assert.match(script, /new TextEncoder/);
+  assert.match(script, /const REQUEST_TIMEOUT_MS = 30_000/);
+  assert.match(script, /AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/);
+  assert.match(script, /response\.type === "opaqueredirect"/);
+  assert.match(script, /redirect not followed/i);
+  assert.match(script, /const encoder = new TextEncoder\(\)/);
+  assert.match(script, /new Uint8Array\(MAX_RENDER_BYTES\)/);
+  assert.match(script, /encoder\.encodeInto\(source, buffer\)/);
+  assert.match(script, /new TextDecoder\(\)/);
+  assert.doesNotMatch(script, /source\.slice\(0, MAX_RENDER_BYTES\)/);
   assert.doesNotMatch(script, /localStorage|sessionStorage|document\.cookie|indexedDB/);
+  assert.doesNotMatch(endpointsSource, /\blegacy\b/i);
   assert.match(css, /min-height:\s*44px/);
   assert.doesNotMatch(html + script, /r2-canonical/i);
 });
@@ -112,8 +126,6 @@ test("Worlds converge on canonical Lib routes and state the non-authority bounda
   assert.match(web, /host === "lib\.idol\.id"[\s\S]*?lib-canonical\.js/);
   assert.match(canonical, /atlas\.href = "\/atlas"/);
   assert.match(canonical, /universe\.href = "\/universe"/);
-  // Worlds title/H1/boundary/CSS/static canonical route are now static in apps/worlds/index.html;
-  // lib-canonical.js preserves an idempotent data attribute only.
   assert.match(canonical, /idempotent data attribute/i);
   assert.match(canonical, /compiler-published-world-projection/);
   assert.match(html, /compiler-published projection/);
