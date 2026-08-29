@@ -1,0 +1,113 @@
+name: finalize unified Idol studio
+
+on:
+  push:
+    branches: [fix/unified-idol-studio-20260828]
+    paths:
+      - .github/workflows/finalize-unified-studio.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/unified-idol-studio-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install permanent Studio admission and clean committed QA output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          deploy = Path('.github/workflows/deploy.yml')
+          source = deploy.read_text()
+          source = source.replace(
+              '          node scripts/browser-smoke.mjs\n          node scripts/live-mcp-browser-smoke.mjs\n',
+              '          node scripts/browser-smoke.mjs\n          node scripts/studio-browser-smoke.mjs\n          node scripts/live-mcp-browser-smoke.mjs\n',
+          )
+          source = source.replace(
+              '          path: .artifacts/browser-smoke\n',
+              '          path: |\n            .artifacts/browser-smoke\n            .artifacts/studio-browser-smoke\n',
+          )
+          if 'node scripts/studio-browser-smoke.mjs' not in source:
+              raise SystemExit('Studio browser admission was not installed')
+          deploy.write_text(source)
+
+          Path('test/studio-browser-admission.test.mjs').write_text('''import test from "node:test";
+          import assert from "node:assert/strict";
+          import { readFile } from "node:fs/promises";
+
+          const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+          test("deployment admits the Studio across the complete responsive viewport range", async () => {
+            const [deploy, smoke] = await Promise.all([
+              read(".github/workflows/deploy.yml"),
+              read("scripts/studio-browser-smoke.mjs"),
+            ]);
+            assert.match(deploy, /node scripts\\/studio-browser-smoke\\.mjs/);
+            assert.match(deploy, /\\.artifacts\\/studio-browser-smoke/);
+            for (const viewport of ["[320, 568]", "[390, 844]", "[430, 932]", "[768, 1024]", "[1440, 900]"]) {
+              assert.match(smoke, new RegExp(viewport.replace(/[\\[\\]]/g, "\\\\$&")));
+            }
+            assert.match(smoke, /scrollWidth > metrics\\.clientWidth/);
+            assert.match(smoke, /controls below 44px/);
+            assert.match(smoke, /explicit analysis refusal/);
+            assert.match(smoke, /minted graph presentation after refused analysis/);
+            assert.match(smoke, /Idol command palette|command palette/);
+            assert.match(smoke, /Page\\.captureScreenshot/);
+          });
+          ''')
+          PY
+          rm -rf .artifacts .wrangler-dry-run
+      - name: Run complete repository admission
+        shell: bash
+        run: |
+          mkdir -p .artifacts/unified-studio-final
+          set -o pipefail
+          npm run check 2>&1 | tee .artifacts/unified-studio-final/repository.log
+      - name: Validate Worker bundle
+        shell: bash
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run 2>&1 | tee .artifacts/unified-studio-final/worker.log
+      - name: Run all real Chrome admission
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            node scripts/browser-smoke.mjs
+            node scripts/studio-browser-smoke.mjs
+            node scripts/live-mcp-browser-smoke.mjs
+          } 2>&1 | tee .artifacts/unified-studio-final/browser.log
+      - name: Upload exact final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-idol-studio-final-${{ github.run_id }}
+          path: |
+            .artifacts/unified-studio-final
+            .artifacts/browser-smoke
+            .artifacts/studio-browser-smoke
+            .wrangler-dry-run
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Commit permanent admission without generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .artifacts .wrangler-dry-run
+          rm .github/workflows/finalize-unified-studio.yml
+          git config user.name "idol studio convergence"
+          git config user.email "actions@idol.id"
+          git add -A
+          git commit -m "test: permanently admit the unified Idol studio"
+          git push origin HEAD:fix/unified-idol-studio-20260828
