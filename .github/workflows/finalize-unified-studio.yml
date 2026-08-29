@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Install permanent Studio admission and clean committed QA output
+      - name: Install permanent Studio admission and repairs
         shell: bash
         run: |
           set -euo pipefail
@@ -42,9 +42,6 @@ jobs:
               raise SystemExit('Studio browser admission was not installed')
           deploy.write_text(source)
 
-          # GraphView owns the mounted graph subtree. Keep the Studio empty
-          # state inside that authoritative view rather than retaining a
-          # detached pre-mount element after GraphView.replaceChildren().
           app = Path('shared/studio-app.js')
           source = app.read_text().replace('const graphEmpty = q("#studio-graph-empty");\n', '')
           needle = '''const graphView = new GraphView(q("#studio-graph"), {
@@ -61,18 +58,17 @@ jobs:
               raise SystemExit('Studio GraphView initialization boundary missing')
           app.write_text(source.replace(needle, replacement, 1))
 
-          # A translated fixed drawer extended the document by its own width
-          # while closed at tablet sizes. Fade it in place so hidden chrome can
-          # never manufacture horizontal document overflow.
           css = Path('shared/studio.css')
           source = css.read_text()
           source = source.replace(
               '  transform: translateX(102%);\n  transition: transform var(--idol-ease);',
               '  transform: translateY(7px);\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  transition: transform var(--idol-ease), opacity var(--idol-fast), visibility var(--idol-fast);',
+              1,
           )
           source = source.replace(
               '.idol-drawer.open { transform: translateX(0); }',
               '.idol-drawer.open { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }',
+              1,
           )
           css.write_text(source)
 
@@ -105,7 +101,7 @@ jobs:
             assert.match(smoke, /Page\\.captureScreenshot/);
             assert.match(app, /const graphEmpty = graphView\\.empty/);
             assert.doesNotMatch(app, /const graphEmpty = q\\("#studio-graph-empty"\\)/);
-            assert.doesNotMatch(css, /translateX\\(102%\\)/);
+            assert.match(css, /\\.idol-drawer \\{[\\s\\S]*?transform: translateY\\(7px\\)/);
           });
           ''')
           PY
