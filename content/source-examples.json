@@ -1,5 +1,5 @@
 {
-  "schema": "idol.web.source-examples.v1",
+  "schema": "idol.web.compiler-examples.v1",
   "authority": {
     "repository": "clpi/idol",
     "commit": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
