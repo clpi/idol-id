@@ -12,7 +12,7 @@
 
   function convergeRegistry() {
     const lensbar = document.querySelector(".lensbar");
-    if (!lensbar) return;
+    if (!lensbar) return false;
     const links = [...lensbar.querySelectorAll("a")];
     const published = links.find((link) => link.textContent.trim().toLowerCase() === "published");
     const atlas = links.find((link) => link.textContent.trim().toLowerCase() === "atlas");
@@ -31,17 +31,19 @@
       boundary.append(strong, document.createTextNode(" A package coordinate is provenance, not semantic identity or authority. A home is reach and provenance, not a world."));
     }
     document.documentElement.dataset.idolProduct = "admitted-world-registry-projection";
+    return true;
   }
 
   function convergeAtlas() {
-    // Worlds title/H1/boundary/canonical route are now static in apps/worlds/index.html;
-    // this stub preserves an idempotent data attribute only.
+    if (!document.querySelector(".atlas")) return false;
+    // Worlds title/H1/boundary/canonical route are static in apps/worlds/index.html;
+    // this projection preserves only its distinct idempotent product identity.
     document.documentElement.dataset.idolProduct = "compiler-published-world-projection";
+    return true;
   }
 
   function apply() {
-    convergeRegistry();
-    convergeAtlas();
+    if (!convergeRegistry()) convergeAtlas();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply, { once: true });
