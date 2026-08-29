@@ -8,7 +8,7 @@ export const API_ENDPOINTS = Object.freeze([
   endpoint({ group: "deployment", id: "runtime", method: "GET", path: "/runtime/manifest.json", owner: "edge", title: "Runtime projection", description: "Bounded runtime capabilities and explicit unavailable boundaries." }),
   endpoint({ group: "deployment", id: "authority", method: "GET", path: "/runtime/authority.json", owner: "edge", title: "Authority document", description: "Pinned Idol, idol-native, and source-law identities packaged into this deployment." }),
 
-  endpoint({ group: "compiler origin", id: "health", method: "GET", path: "/health", owner: "compiler-origin", title: "Compiler liveness", description: "Legacy compiler-origin health response reached through the API host." }),
+  endpoint({ group: "compiler origin", id: "health", method: "GET", path: "/health", owner: "compiler-origin", title: "Compiler liveness", description: "Compiler-origin health response reached through the API host." }),
   endpoint({ group: "compiler origin", id: "info", method: "GET", path: "/info", owner: "compiler-origin", title: "Compiler information", description: "Compiler-origin service and capability projection." }),
   endpoint({ group: "compiler origin", id: "origin-authority", method: "GET", path: "/api/authority", owner: "compiler-origin", title: "Compiler authority", description: "Authority projection returned by the configured compiler origin." }),
   endpoint({ group: "compiler origin", id: "analyze", method: "POST", path: "/api/analyze", owner: "compiler-origin", title: "Analyze source", description: "Request graph, explanation, and checking from the compiler origin. Lawful source does not imply support.", source: true, body: { source: "" } }),
