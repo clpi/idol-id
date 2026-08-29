@@ -24,6 +24,7 @@ const menuButton = document.getElementById("docs-menu");
 const backdrop = document.getElementById("docs-backdrop");
 const cache = new Map();
 let searchGeneration = 0;
+let documentGeneration = 0;
 
 Shell.boot("docs", { title: "Docs", keys: [["/", "search"], ["Esc", "close navigation"]] });
 
@@ -215,8 +216,14 @@ async function sourceFor(entry) {
   return cache.get(entry.id);
 }
 
+function decodedHash() {
+  const raw = location.hash.replace(/^#/, "");
+  if (!raw) return "";
+  try { return decodeURIComponent(raw); } catch { return ""; }
+}
+
 function scrollToHash() {
-  const id = decodeURIComponent(location.hash.replace(/^#/, ""));
+  const id = decodedHash();
   if (!id) { scrollTo({ top: 0, behavior: "instant" }); return; }
   requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
 }
@@ -232,6 +239,7 @@ function enhanceIdolCode() {
 }
 
 async function loadDocument() {
+  const generation = ++documentGeneration;
   const entry = currentDocument();
   renderNavigation(search.value);
   mobileTitle.textContent = entry.name;
@@ -241,12 +249,14 @@ async function loadDocument() {
   main.textContent = "Loading exact document projection…";
   try {
     const source = await sourceFor(entry);
+    if (generation !== documentGeneration) return;
     main.className = "docs-content";
     main.innerHTML = renderMarkdown(source, entry.id);
     enhanceIdolCode();
     document.title = `${entry.name} — Idol docs`;
     scrollToHash();
   } catch (error) {
+    if (generation !== documentGeneration) return;
     main.className = "docs-content docs-empty";
     main.textContent = error.message;
   }
