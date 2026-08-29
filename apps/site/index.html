@@ -29,26 +29,15 @@
           <p class="hero-boundary">The compiler is under active construction. Self-hosting and faster-than-C evidence are goals, not current claims.</p>
         </div>
 
-        <figure class="source-window" aria-labelledby="source-caption">
+        <figure class="source-window" aria-labelledby="source-caption" data-source-manifest="/content/source-examples.json" data-source-example="projection-faces">
           <figcaption id="source-caption">
-            <span>examples/any_relation_smoke.id</span>
-            <span>repository smoke source</span>
+            <span id="authority-example-title">source law · computed and static projection</span>
+            <span id="authority-example-status">current-law</span>
           </figcaption>
-          <pre><code><span class="code-name">main</span>: <span class="code-type">i64</span> = ()
-    xs: [3]<span class="code-type">i64</span> = {3, 5, 8}
-    zs: [0]<span class="code-type">i64</span> = {}
-    hit = xs:<span class="code-relation">any</span>((x) x % 2 == 0)
-    miss = xs:<span class="code-relation">any</span>((x) x &gt; 100)
-    empty = zs:<span class="code-relation">any</span>((x) x &gt; 0)
-    verdict = 0
-    <span class="code-control">if</span> hit
-        verdict += 1
-    <span class="code-control">if</span> miss
-        verdict += 10
-    <span class="code-control">if</span> empty
-        verdict += 100
-    verdict</code></pre>
-          <div class="source-note">This source is drawn from the authority-pinned compiler repository. The browser page does not pretend to execute it.</div>
+          <pre><code id="authority-example-source">value = table[key]
+table[key] = replacement
+encoded = codec.encode(source)</code></pre>
+          <div class="source-note" id="authority-example-note">Loaded from the authority-pinned source example manifest. Current-law status does not claim parser, lowering, execution, or performance support.</div>
         </figure>
       </section>
 

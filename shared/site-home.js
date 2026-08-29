@@ -35,6 +35,32 @@
     }
   }
 
+  async function loadAuthorityExample() {
+    const frame = document.querySelector("[data-source-manifest][data-source-example]");
+    if (!frame) return;
+    const source = document.getElementById("authority-example-source");
+    const title = document.getElementById("authority-example-title");
+    const status = document.getElementById("authority-example-status");
+    const note = document.getElementById("authority-example-note");
+    try {
+      const response = await fetch(frame.dataset.sourceManifest, { headers: { accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error(`source example request failed: ${response.status}`);
+      const manifest = await response.json();
+      const example = Array.isArray(manifest.examples)
+        ? manifest.examples.find((candidate) => candidate?.id === frame.dataset.sourceExample)
+        : null;
+      if (!example || typeof example.source !== "string" || typeof example.title !== "string" || typeof example.status !== "string") {
+        throw new Error("authority example is missing or malformed");
+      }
+      if (source) source.textContent = example.source;
+      if (title) title.textContent = `source law · ${example.title}`;
+      if (status) status.textContent = example.status;
+      if (note) note.textContent = String(manifest.rule || "This source is a law projection and does not claim implementation support.");
+    } catch {
+      if (note) note.textContent = "Authority example manifest unavailable. Showing the embedded exact fallback; no implementation support is claimed.";
+    }
+  }
+
   async function copyText(button) {
     const source = document.getElementById(button.dataset.copy || "");
     if (!source) return;
@@ -64,6 +90,7 @@
       button.addEventListener("click", () => copyText(button));
     });
     loadIdentity();
+    loadAuthorityExample();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
