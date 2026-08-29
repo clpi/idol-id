@@ -129,7 +129,6 @@
     document.head.appendChild(script);
   }
   const host = location.hostname;
-  if (host === "idol.id" || host === "www.idol.id") loadProjection("/shared/site-product-convergence.js");
   if (host === "lib.idol.id") {
     loadProjection("/shared/lib-canonical.js");
     loadProjection("/shared/product-canonical.js");

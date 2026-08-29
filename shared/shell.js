@@ -1,36 +1,33 @@
-/* ============================================================================
-   shell.js — shared product chrome for every idol.id presentation projection.
-   Lib owns the public admitted-world registry; Atlas, homes, and Universe are
-   contextual projections and do not mint semantic identity or authority.
-   ========================================================================== */
+/* Shared product chrome for every idol.id presentation projection. */
 (function (global) {
 "use strict";
 
 const APPS = Object.freeze([
-  { id: "graph", label: "explorer", href: "https://graph.idol.id/", title: "Semantic Observatory" },
+  { id: "site", label: "compiler", href: "https://idol.id/", title: "Idol compiler" },
+  { id: "graph", label: "graph", href: "https://graph.idol.id/", title: "Compiler-published semantic graph" },
+  { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Language and product documentation" },
   { id: "live", label: "live", href: "https://live.idol.id/", title: "Causal project control plane" },
-  { id: "ide", label: "ide", href: "https://platform.idol.id/ide", title: "Browser IDE" },
-  { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Admitted world registry" },
-  { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Law and documentation" },
-  { id: "api", label: "api", href: "https://api.idol.id/", title: "Semantic API" },
-  { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Platform" },
+  { id: "install", label: "install", href: "https://idol.id/#install", title: "Install Idol" },
 ]);
 
 const CONTEXTUAL = Object.freeze([
-  { label: "published worlds", href: "https://lib.idol.id/", title: "Published admitted-world records" },
-  { label: "world atlas", href: "https://lib.idol.id/atlas", title: "Provided, published, and foreign-origin world projections" },
-  { label: "source homes", href: "https://lib.idol.id/?set=homes", title: "Reach and source provenance" },
-  { label: "public universe views", href: "https://lib.idol.id/universe", title: "Public operational projections" },
-  { label: "manage universe views", href: "https://platform.idol.id/universe", title: "Authenticated Universe management" },
-  { label: "repository observatory", href: "https://platform.idol.id/repo", title: "Authenticated Repository Observatory" },
-  { label: "hosted mcp", href: "https://mcp.idol.id/", title: "Stateless scoped MCP transport" },
+  { id: "ide", label: "browser ide", href: "https://platform.idol.id/ide", title: "Protected browser IDE" },
+  { id: "lib", label: "published worlds", href: "https://lib.idol.id/", title: "Published admitted-world records" },
+  { id: "atlas", label: "world atlas", href: "https://lib.idol.id/atlas", title: "Provided, published, and foreign-origin world projections" },
+  { id: "homes", label: "source homes", href: "https://lib.idol.id/?set=homes", title: "Reach and source provenance" },
+  { id: "universe-public", label: "public universe views", href: "https://lib.idol.id/universe", title: "Public operational projections" },
+  { id: "universe-manage", label: "manage universe views", href: "https://platform.idol.id/universe", title: "Authenticated Universe management" },
+  { id: "repository", label: "repository observatory", href: "https://platform.idol.id/repo", title: "Authenticated Repository Observatory" },
+  { id: "api", label: "semantic api", href: "https://api.idol.id/", title: "Semantic API" },
+  { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Authenticated platform" },
+  { id: "mcp", label: "hosted mcp", href: "https://mcp.idol.id/", title: "Stateless scoped MCP transport" },
 ]);
 
 function ensureSurfaceStyles() {
-  if (document.querySelector('link[href="/shared/surface.css"]')) return;
+  if ([...document.querySelectorAll('link[rel="stylesheet"]')].some((link) => new URL(link.href, global.location.href).pathname === "/shared/surface.css")) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = "/shared/surface.css";
+  link.href = "/shared/surface.css?v=compiler-20260829";
   document.head.appendChild(link);
 }
 function decodeWorldHash(hash = global.location.hash) {
@@ -72,11 +69,12 @@ function bindWorldHistory(app) {
 function activeApp(candidate, app) {
   const path = global.location.pathname;
   const host = global.location.hostname;
-  if (host === "platform.idol.id" && /^\/ide(?:\/|$)/.test(path)) return candidate.id === "ide";
-  if (host === "platform.idol.id" && /^\/(?:universe|repo)(?:\/|$)/.test(path)) return candidate.id === "platform";
-  if (host === "live.idol.id") return candidate.id === "live";
-  if (host === "lib.idol.id" || host === "worlds.idol.id" || app === "worlds") return candidate.id === "lib";
-  return candidate.id === app;
+  if (candidate.id === "site") return (host === "idol.id" || host === "www.idol.id" || app === "site") && global.location.hash !== "#install";
+  if (candidate.id === "install") return (host === "idol.id" || host === "www.idol.id" || app === "site") && global.location.hash === "#install";
+  if (candidate.id === "graph") return host === "graph.idol.id" || ["graph", "r8a", "r8b", "r16"].includes(app);
+  if (candidate.id === "docs") return host === "docs.idol.id" || app === "docs";
+  if (candidate.id === "live") return host === "live.idol.id" || app === "live";
+  return false;
 }
 function linkMarkup(item, here = false) {
   return `<a href="${item.href}" class="${here ? "here" : ""}" title="${item.title}"${here ? ' aria-current="page"' : ""}>${item.label}</a>`;
@@ -87,13 +85,13 @@ function createMobilePanel(app, toggle) {
   panel.className = "nav-panel";
   panel.id = "idol-nav-panel";
   panel.hidden = true;
-  panel.setAttribute("aria-label", "Idsem navigation");
+  panel.setAttribute("aria-label", "Idol navigation");
   panel.innerHTML = `
-    <nav class="nav-panel-primary" aria-label="Idsem products">
+    <nav class="nav-panel-primary" aria-label="Idol products">
       ${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}
     </nav>
-    <div class="nav-panel-context" aria-label="Contextual projections">
-      <div class="nav-panel-label">library, world, operational, and tool projections</div>
+    <div class="nav-panel-context" aria-label="Additional Idol surfaces">
+      <div class="nav-panel-label">additional surfaces and projections</div>
       ${CONTEXTUAL.map((item) => linkMarkup(item)).join("")}
     </div>`;
   document.body.appendChild(panel);
@@ -105,7 +103,7 @@ function createMobilePanel(app, toggle) {
     panel.classList.toggle("open", open);
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Close Idsem navigation" : "Open Idsem navigation");
+    toggle.setAttribute("aria-label", open ? "Close Idol navigation" : "Open Idol navigation");
     document.documentElement.classList.toggle("nav-open", open);
     if (!changed) return;
     if (open) {
@@ -145,7 +143,7 @@ function boot(app, opts) {
   prepareWorldRoute(app);
   bindWorldHistory(app);
   ensureSurfaceStyles();
-  document.title = `${opts.title || app} — idol.id`;
+  document.title = opts.title === "Idol" ? document.title : `${opts.title || app} — idol.id`;
   const bar = document.querySelector(".topbar") || (() => {
     const node = document.createElement("div");
     node.className = "topbar";
@@ -153,11 +151,11 @@ function boot(app, opts) {
     return node;
   })();
   bar.innerHTML = `
-    <div class="brand"><span class="dot"></span><a href="https://idol.id/" style="border:0;color:inherit">IDSEM</a></div>
+    <div class="brand"><span class="dot"></span><a href="https://idol.id/" style="border:0;color:inherit">IDOL</a></div>
     <div class="crumbs" id="crumbs"></div>
     <div class="spacer"></div>
-    <nav class="nav nav-desktop" aria-label="Idsem products">${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}</nav>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="idol-nav-panel" aria-label="Open Idsem navigation"><span aria-hidden="true">menu</span></button>`;
+    <nav class="nav nav-desktop" aria-label="Idol products">${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}</nav>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="idol-nav-panel" aria-label="Open Idol navigation"><span aria-hidden="true">menu</span></button>`;
   const navigation = createMobilePanel(app, bar.querySelector(".nav-toggle"));
 
   const statusbar = document.querySelector(".statusbar");
