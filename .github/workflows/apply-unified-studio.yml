@@ -1,0 +1,51 @@
+name: apply unified Idol studio
+
+on:
+  push:
+    branches: [fix/unified-idol-studio-20260828]
+    paths:
+      - .github/workflows/apply-unified-studio.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/unified-idol-studio-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Apply unified Studio source
+        run: python scripts/apply-unified-studio.py
+      - name: Verify repository, Worker, and browser contracts
+        run: |
+          npm run check
+          npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
+          node scripts/browser-smoke.mjs
+          node scripts/live-mcp-browser-smoke.mjs
+      - name: Commit admitted source and retire transfer payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm scripts/apply-unified-studio.py scripts/.studio-payload-* .github/workflows/apply-unified-studio.yml
+          git config user.name "idol studio convergence"
+          git config user.email "actions@idol.id"
+          git add -A
+          git commit -m "feat: unify idol.id around the semantic studio"
+          git push origin HEAD:fix/unified-idol-studio-20260828
+      - name: Upload exact verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-idol-studio-${{ github.run_id }}
+          path: |
+            .artifacts/browser-smoke
+            .wrangler-dry-run
+          if-no-files-found: warn
+          retention-days: 30
