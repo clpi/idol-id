@@ -1,0 +1,35 @@
+name: audit public idol.id surfaces
+
+on:
+  workflow_run:
+    workflows: ["deploy idol.id"]
+    types: [completed]
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Audit real public surfaces in mobile and desktop Chrome
+        shell: bash
+        run: node scripts/audit-live-surfaces.mjs
+      - name: Upload complete public-surface evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: idol-public-surfaces-${{ github.run_id }}
+          path: .artifacts/live-surfaces
+          retention-days: 30
