@@ -1,0 +1,69 @@
+name: probe live Idol source admission
+
+on:
+  push:
+    branches: [ops/verify-idol-production-20260829]
+    paths:
+      - .github/workflows/probe-live-idol-sources.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Probe current compiler-accepted source and world routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/source-probe
+          cat > /tmp/probe.mjs <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const candidates = [
+            ['binding', 'x = 1\n'],
+            ['arithmetic', 'a = 40\nb = 2\nc = a + b\n'],
+            ['callable', 'add = (a, b) a + b\nresult = add(40, 2)\n'],
+            ['typed', 'a: i64 = 40\nb: i64 = 2\nc = a + b\n'],
+            ['subject', 'value = 42\nresult = value:to(str)\n'],
+          ];
+          const result = {};
+          for (const [name, source] of candidates) {
+            const response = await fetch('https://idol.id/api/analyze', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ source }),
+            });
+            const body = await response.json().catch(async () => ({ text: await response.text() }));
+            result[name] = { status: response.status, source, body };
+          }
+          for (const [name, url] of [
+            ['root_worlds', 'https://idol.id/api/worlds'],
+            ['lib_worlds', 'https://lib.idol.id/api/worlds'],
+            ['api_worlds', 'https://api.idol.id/api/worlds'],
+            ['root_libs', 'https://idol.id/api/libs'],
+            ['lib_libs', 'https://lib.idol.id/api/libs'],
+            ['api_libs', 'https://api.idol.id/api/libs'],
+          ]) {
+            const response = await fetch(url);
+            const text = await response.text();
+            let body;
+            try { body = JSON.parse(text); } catch { body = text.slice(0, 500); }
+            result[name] = { status: response.status, body };
+          }
+          writeFileSync('.artifacts/source-probe/report.json', `${JSON.stringify(result, null, 2)}\n`);
+          console.log(JSON.stringify(result, null, 2));
+          NODE
+          node /tmp/probe.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-idol-source-probe-${{ github.run_id }}
+          path: .artifacts/source-probe
+          if-no-files-found: error
+          retention-days: 7
