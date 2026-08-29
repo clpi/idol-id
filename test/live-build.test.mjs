@@ -45,11 +45,12 @@ test("immutable build contains Live, hosted MCP, exact routes, and honest implem
 });
 
 test("Worker, Wrangler, Access, navigation, verification, and CI own the two new surfaces", async () => {
-  const [worker, entry, wrangler, provision, verify, shell, workflow] = await Promise.all([
+  const [worker, entry, wrangler, provision, access, verify, shell, workflow] = await Promise.all([
     read("worker/index.js"),
     read("worker/entry.js"),
     read("wrangler.jsonc"),
     read("scripts/provision-live-access.mjs"),
+    read("scripts/live-access-lib.mjs"),
     read("scripts/verify-production.mjs"),
     read("shared/shell.js"),
     read(".github/workflows/deploy.yml"),
@@ -60,7 +61,8 @@ test("Worker, Wrangler, Access, navigation, verification, and CI own the two new
   assert.match(entry, /handleMcpTransport/);
   assert.match(wrangler, /"pattern": "live\.idol\.id"[\s\S]*?"custom_domain": true/);
   assert.match(wrangler, /"pattern": "mcp\.idol\.id"[\s\S]*?"custom_domain": true/);
-  assert.match(provision, /live\.idol\.id\/\*/);
+  assert.match(provision, /provisionLiveAccess/);
+  assert.match(access, /live\.idol\.id\/\*/);
   assert.match(verify, /live\.idol\.id/);
   assert.match(verify, /mcp\.idol\.id/);
   assert.match(verify, /server\/discover/);

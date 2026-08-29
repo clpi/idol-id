@@ -23,7 +23,7 @@ function errorResponse(error) {
 }
 function configured(env, dependencies) {
   return {
-    access: Boolean(dependencies.verifyAccess || (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN))),
+    access: Boolean(dependencies.verifyAccess || (env.ACCESS_TEAM_DOMAIN && env.LIVE_ACCESS_AUD && (env.ACCESS_EMAIL || env.ACCESS_EMAIL_DOMAIN))),
     storage: Boolean(dependencies.liveStore || env.PLATFORM_DB),
   };
 }
@@ -48,10 +48,11 @@ async function browserIdentity(request, env, dependencies, mutation = false) {
   }
   const token = request.headers.get("cf-access-jwt-assertion") || request.headers.get("CF-Access-Jwt-Assertion");
   if (!token) throw new LiveError("ACCESS_IDENTITY_REQUIRED", "Cloudflare Access identity required", 401);
+  if (!env.LIVE_ACCESS_AUD) throw new LiveError("LIVE_ACCESS_UNCONFIGURED", "Live Access audience is unavailable", 503);
   try {
     return await verifyAccessJwt(token, {
       teamDomain: env.ACCESS_TEAM_DOMAIN,
-      audience: env.ACCESS_AUD,
+      audience: env.LIVE_ACCESS_AUD,
       email: env.ACCESS_EMAIL,
       emailDomain: env.ACCESS_EMAIL_DOMAIN,
       fetcher: dependencies.fetcher,
