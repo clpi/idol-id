@@ -1,0 +1,182 @@
+name: apply compiler-first public reset
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/apply-public-reset.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Converge current public identity, gates, and implementation plan
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          roots = [Path('apps'), Path('shared'), Path('content/docs')]
+          extensions = {'.html','.js','.mjs','.css','.md','.json','.txt'}
+          replacements = [
+              (re.compile(r'\bIDSEM\b'), 'IDOL'),
+              (re.compile(r'\bIdsem\b'), 'Idol'),
+              (re.compile(r'\bDUON\b'), 'IDOL'),
+              (re.compile(r'\bDuon\b'), 'Idol'),
+              (re.compile(r'\bDUO\b'), 'IDOL'),
+              (re.compile(r'\bDuo\b'), 'Idol'),
+          ]
+          changed = []
+          for root in roots:
+              if not root.exists(): continue
+              for path in root.rglob('*'):
+                  if not path.is_file() or path.suffix not in extensions: continue
+                  original = path.read_text(errors='strict')
+                  current = original
+                  for pattern, replacement in replacements:
+                      current = pattern.sub(replacement, current)
+                  if current != original:
+                      path.write_text(current)
+                      changed.append(str(path))
+          readme = Path('README.md')
+          if readme.exists():
+              original = readme.read_text()
+              current = original
+              for pattern, replacement in replacements:
+                  current = pattern.sub(replacement, current)
+              if current != original:
+                  readme.write_text(current)
+                  changed.append(str(readme))
+
+          package = Path('package.json')
+          data = json.loads(package.read_text())
+          scripts = data.setdefault('scripts', {})
+          scripts['public:identity'] = 'node scripts/check-public-identity.mjs'
+          scripts['check'] = 'npm run authority:check && npm run public:identity && npm test && npm run build'
+          package.write_text(json.dumps(data, indent=2) + '\n')
+
+          deploy = Path('.github/workflows/deploy.yml')
+          source = deploy.read_text()
+          if 'node scripts/public-browser-smoke.mjs' not in source:
+              lines = source.splitlines()
+              inserted = False
+              for index, line in enumerate(lines):
+                  if 'node scripts/browser-smoke.mjs' in line:
+                      indent = line[:len(line)-len(line.lstrip())]
+                      lines.insert(index + 1, indent + 'node scripts/public-browser-smoke.mjs')
+                      inserted = True
+                      break
+              if not inserted:
+                  raise SystemExit('deploy workflow has no browser-smoke command insertion point')
+              source = '\n'.join(lines) + '\n'
+          source = source.replace('path: .artifacts/browser-smoke\n', 'path: |\n            .artifacts/browser-smoke\n            .artifacts/public-browser-smoke\n')
+          deploy.write_text(source)
+
+          spec = Path('docs/superpowers/specs/2026-08-28-compiler-first-public-reset-design.md')
+          spec.parent.mkdir(parents=True, exist_ok=True)
+          spec.write_text('''# Compiler-First Public Reset Design
+
+## Purpose
+
+Make `idol.id` present Idol as a working Lua-derived native compiler, not as an ontology directory, speculative syntax showcase, or collection of infrastructure projections.
+
+## Product hierarchy
+
+The public first viewport answers four questions in order: what Idol is, why it matters, what works now, and how to try it. Primary navigation is Compiler, Playground, Graph, Docs, and Live. Library, API, Platform, Repository, Universe, and operational aliases remain secondary tools or projections.
+
+## Capability truth
+
+Homepage examples must be `compiler-accepted` or `compiler-executed` at the exact pinned `clpi/idol` revision. Law-only, historical, foreign, or unverified source may appear only behind explicit non-executable boundaries. Browser code never mints semantic identities or graph edges.
+
+## Visual system
+
+Use high-contrast editorial typography, 16–18px reading copy, broad whitespace, one warm signal color, and monospace only for source and exact machine facts. Dense workbench styling remains appropriate inside Graph, IDE, Live, and Platform, but not on the language homepage. Mobile receives one primary action and one menu, never a horizontally overflowing product strip.
+
+## Delivery and cache law
+
+Stable paths such as `/shared/shell.js` and `/shared/site.css` must revalidate. Only content-addressed asset names may receive one-year immutable caching. A deployment is admitted only when authority, identity, tests, build, Worker validation, and real Chrome interaction gates all pass.
+
+## Permanent refusals
+
+- superseded project names on active public surfaces;
+- speculative language examples as homepage defaults;
+- runtime DOM patches that rewrite product hierarchy after load;
+- browser-inferred semantic identity;
+- horizontal document overflow or touch targets below 44px;
+- production health when the deployed commit and authority projection disagree.
+''')
+
+          plan = Path('docs/superpowers/plans/2026-08-28-compiler-first-public-reset.md')
+          plan.parent.mkdir(parents=True, exist_ok=True)
+          plan.write_text('''# Compiler-First Public Reset Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans task-by-task.
+
+**Goal:** Replace the stale ontology-first public system with a readable compiler product, verified examples, safe asset caching, and responsive production admission.
+
+**Architecture:** Keep the existing static/Worker platform but replace homepage and shared chrome, bind public examples to exact compiler evidence, and strengthen build/deployment gates. `clpi/idol` remains sole semantic authority.
+
+**Tech Stack:** Static HTML/CSS/JavaScript, Cloudflare Worker and Assets, Node 22 tests, Chrome DevTools Protocol browser QA.
+
+**Spec:** `docs/superpowers/specs/2026-08-28-compiler-first-public-reset-design.md`
+
+## Global Constraints
+
+- No browser-owned semantic identity or edge inference.
+- No law-only source as a homepage default.
+- No stable-path immutable caching.
+- No superseded public identity.
+- Every mobile control is at least 44px and every tested viewport has zero horizontal overflow.
+
+### Task 1: Restore a green production baseline
+- Remove the merged RED-only Live/MCP contracts whose implementation never landed.
+- Preserve their Git history and separate product thesis.
+- Run the complete repository check.
+
+### Task 2: Replace the public product hierarchy
+- Replace the homepage and shared shell.
+- Move secondary tools out of primary navigation.
+- Add permanent superseded-identity tests.
+
+### Task 3: Publish only compiler evidence
+- Replace the speculative example manifest with compiler-accepted/executed sources.
+- Connect Run, Analyze, and Native controls to existing APIs.
+- Render only compiler-published graph records.
+
+### Task 4: Repair delivery identity
+- Revalidate stable assets.
+- Reserve immutable caching for content-addressed paths.
+- Remove post-load product rewrites.
+
+### Task 5: Admit the real browser product
+- Test 320x568, 390x844, 430x932, 768x1024, and 1440x900.
+- Exercise mobile navigation, Run, Analyze, exact edge selection, install commands, overflow, touch sizes, and console/runtime errors.
+- Merge and deploy only when every gate passes.
+''')
+          print('updated public files:', len(changed))
+          PY
+
+          npm run public:identity
+          node --test test/compiler-first-public-reset.test.mjs
+
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No convergence changes required.'
+          else
+            git commit -m 'chore: converge public identity and admission gates'
+            git push origin HEAD:fix/compiler-first-public-reset-20260828
+          fi
