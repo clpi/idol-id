@@ -105,6 +105,12 @@ test("MCP publishes and accepts only canonical Idol tool coordinates", async () 
   assert.match(controller, /textContent/);
   assert.match(controller, /MAX_RENDER_BYTES/);
   assert.match(controller, /new TextEncoder/);
+  assert.match(controller, /const decoder = new TextDecoder\(\)/);
+  assert.match(controller, /const \{ read, written \} = encoder\.encodeInto\(source, buffer\)/);
+  assert.match(controller, /if \(read === source\.length\) return source/);
+  assert.match(controller, /decoder\.decode\(buffer\.subarray\(0, written\)\)/);
+  assert.doesNotMatch(controller, /source\.slice\(0, read\)/);
+  assert.doesNotMatch(controller, /if \(written === source\.length\)/);
   assert.match(controller, /response display truncated/);
   assert.doesNotMatch(controller, /innerHTML/);
   assert.doesNotMatch(controller, /localStorage|sessionStorage|document\.cookie|indexedDB/);
