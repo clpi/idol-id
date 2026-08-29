@@ -1,0 +1,108 @@
+name: finalize exhaustive public surface admission v2
+
+on:
+  push:
+    branches: [fix/public-surface-admission-v2-20260828]
+    paths:
+      - .github/workflows/finalize-public-surface-admission-v2.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: fix/public-surface-admission-v2-20260828
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/public-surface-admission-v2-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Reconcile latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "idol public admission"
+          git config user.email "actions@idol.id"
+          git fetch origin main
+          git merge --no-edit origin/main
+          git push origin HEAD:${BRANCH}
+      - name: Run repository and pre-deploy browser gates
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p .artifacts/public-surface-final-v2
+          npm run check 2>&1 | tee .artifacts/public-surface-final-v2/check.log
+          node scripts/browser-smoke.mjs 2>&1 | tee .artifacts/public-surface-final-v2/semantic-browser.log
+          node scripts/public-browser-smoke.mjs 2>&1 | tee .artifacts/public-surface-final-v2/public-browser.log
+      - name: Upload pre-deploy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-surface-predeploy-v2-${{ github.run_id }}
+          path: |
+            .artifacts/public-surface-final-v2
+            .artifacts/browser-smoke
+            .artifacts/public-browser-smoke
+          retention-days: 30
+      - name: Remove patch and finalizer workflows
+        shell: bash
+        run: |
+          rm -f .github/workflows/patch-live-audit-marker.yml .github/workflows/finalize-public-surface-admission-v2.yml .github/workflows/finalize-public-surface-admission.yml
+          git add -A
+          git commit -m 'chore: retain only permanent public surface audit' || true
+          git push origin HEAD:${BRANCH}
+      - name: Create or reuse PR and merge
+        id: merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if git diff --quiet origin/main...HEAD; then
+            echo "pr=0" >> "$GITHUB_OUTPUT"
+            echo "sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number')"
+          if [[ -z "$pr" ]]; then
+            url="$(gh pr create --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --base main --title 'test: admit every public idol.id surface' --body 'Adds and verifies permanent real-Chrome mobile/desktop admission for all intended non-agent public surfaces.')"
+            pr="${url##*/}"
+          fi
+          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --admin --subject 'test: admit every public idol.id surface' --body 'Permanent transport, identity, layout, touch-target, console, and screenshot admission for all non-agent public surfaces.' || gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash
+          sha="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq '.mergeCommit.oid')"
+          test -n "$sha"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Wait for exact deployment
+        id: deploy
+        shell: bash
+        run: |
+          target='${{ steps.merge.outputs.sha }}'; run_id=''
+          for _ in $(seq 1 180); do
+            row="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow 'deploy idol.id' --branch main --limit 25 --json databaseId,headSha,status,conclusion --jq '.[] | select(.headSha == "'"$target"'") | [.databaseId,.status,(.conclusion // "")] | @tsv' | head -n1)"
+            if [[ -n "$row" ]]; then
+              run_id="$(cut -f1 <<<"$row")"; status="$(cut -f2 <<<"$row")"; conclusion="$(cut -f3 <<<"$row")"
+              if [[ "$status" == completed ]]; then [[ "$conclusion" == success ]]; break; fi
+            fi
+            sleep 10
+          done
+          test -n "$run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Run exhaustive live audit
+        shell: bash
+        run: node scripts/audit-live-surfaces.mjs
+      - name: Upload exhaustive live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-surface-live-v2-${{ github.run_id }}
+          path: .artifacts/live-surfaces
+          retention-days: 30
