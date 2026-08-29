@@ -134,7 +134,12 @@ async function rpc(method, params = {}, request) {
   const text = await response.text();
   let body;
   try { body = JSON.parse(text); }
-  catch { body = { error: { code: "MCP_INVALID_RESPONSE", detail: text.slice(0, 8192) } }; }
+  catch {
+    const invalid = new Error("MCP response was not valid JSON.");
+    invalid.body = { error: { code: "MCP_INVALID_RESPONSE", detail: text.slice(0, 8192) } };
+    invalid.status = response.status;
+    throw invalid;
+  }
   if (!response.ok) {
     const error = new Error(body?.error?.detail || body?.error?.message || body?.error?.code || `HTTP ${response.status}`);
     error.body = body;
