@@ -70,10 +70,30 @@ jobs:
               '.idol-drawer.open { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }',
               1,
           )
+          source = source.replace(
+              '  .studio-facts { position: absolute; z-index: 30; top: 0; right: 0; bottom: 0; width: min(420px, 88vw); transform: translateX(102%); transition: transform var(--idol-ease); box-shadow: -20px 0 60px rgba(0,0,0,.46); }',
+              '  .studio-facts { position: absolute; z-index: 30; top: 0; right: 0; bottom: 0; width: min(420px, 88vw); transform: translateY(7px); opacity: 0; visibility: hidden; pointer-events: none; transition: transform var(--idol-ease), opacity var(--idol-fast), visibility var(--idol-fast); box-shadow: -20px 0 60px rgba(0,0,0,.46); }',
+              1,
+          )
+          source = source.replace(
+              '  .studio-root[data-facts-open="true"] .studio-facts { transform: translateX(0); }',
+              '  .studio-root[data-facts-open="true"] .studio-facts { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }',
+              1,
+          )
+          source = source.replace(
+              '  .studio-root[data-studio-mode="projection"] .studio-projection { display: flex; transform: none; width: auto; box-shadow: none; }',
+              '  .studio-root[data-studio-mode="projection"] .studio-projection { display: flex; transform: none; width: auto; box-shadow: none; opacity: 1; visibility: visible; pointer-events: auto; }',
+              1,
+          )
           css.write_text(source)
 
           smoke = Path('scripts/studio-browser-smoke.mjs')
-          smoke.write_text(smoke.read_text().replace('.idol-brand-word', '.idol-brand span:last-child'))
+          source = smoke.read_text().replace('.idol-brand-word', '.idol-brand span:last-child')
+          source = source.replace(
+              'if (metrics.scrollWidth > metrics.clientWidth) throw new Error(`${width} viewport overflows: ${metrics.scrollWidth} > ${metrics.clientWidth}`);',
+              'if (metrics.scrollWidth > metrics.clientWidth) throw new Error(`${width} viewport overflows: ${metrics.scrollWidth} > ${metrics.clientWidth}`);',
+          )
+          smoke.write_text(source)
 
           Path('test/studio-browser-admission.test.mjs').write_text('''import test from "node:test";
           import assert from "node:assert/strict";
@@ -102,6 +122,7 @@ jobs:
             assert.match(app, /const graphEmpty = graphView\\.empty/);
             assert.doesNotMatch(app, /const graphEmpty = q\\("#studio-graph-empty"\\)/);
             assert.match(css, /\\.idol-drawer \\{[\\s\\S]*?transform: translateY\\(7px\\)/);
+            assert.doesNotMatch(css, /translateX\\(102%\\)/);
           });
           ''')
           PY
