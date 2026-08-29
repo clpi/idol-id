@@ -9,8 +9,10 @@ const MAX_RENDER_BYTES = 160 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const activeRequests = new Set();
 let authorityExample = "";
 let selectedOwner = "all";
+let requestGeneration = 0;
 
 Shell.boot("api", { title: "API", keys: [["⌘K", "focus endpoint filter"], ["Esc", "close endpoint"]] });
 IdolShell.crumbs([{ label: "api" }, { label: "transport console" }]);
@@ -28,9 +30,9 @@ function prettyResponse(value, type) {
 
 function bounded(value) {
   const source = text(value);
-  if (encoder.encode(source).byteLength <= MAX_RENDER_BYTES) return source;
   const buffer = new Uint8Array(MAX_RENDER_BYTES);
-  const { written } = encoder.encodeInto(source, buffer);
+  const { read, written } = encoder.encodeInto(source, buffer);
+  if (read === source.length) return source;
   return `${decoder.decode(buffer.subarray(0, written))}\n\n[response display truncated by the browser console]`;
 }
 
@@ -155,6 +157,9 @@ function endpointView(record) {
   }
 
   async function sendRequest() {
+    const generation = requestGeneration;
+    const request = new AbortController();
+    activeRequests.add(request);
     send.disabled = true;
     output.classList.remove("error");
     output.textContent = "Requesting…";
@@ -177,8 +182,9 @@ function endpointView(record) {
         ...(payload === undefined ? {} : { body: payload }),
         cache: "no-store",
         redirect: "manual",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.any([request.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]),
       });
+      if (generation !== requestGeneration) return;
       const elapsed = (performance.now() - started).toFixed(1);
       if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
         meta.status.textContent = "status: redirect not followed";
@@ -191,6 +197,7 @@ function endpointView(record) {
       }
       const contentType = response.headers.get("content-type") || "";
       const raw = await response.text();
+      if (generation !== requestGeneration) return;
       meta.status.textContent = `status: ${response.status} ${response.statusText}`;
       meta.elapsed.textContent = `elapsed: ${elapsed} ms`;
       meta["content-type"].textContent = `content-type: ${contentType || "not published"}`;
@@ -198,6 +205,7 @@ function endpointView(record) {
       output.textContent = bounded(prettyResponse(raw, contentType));
       output.classList.toggle("error", !response.ok);
     } catch (error) {
+      if (generation !== requestGeneration) return;
       const timedOut = error?.name === "TimeoutError";
       meta.status.textContent = timedOut ? "status: request timed out" : "status: client refusal";
       meta.elapsed.textContent = `elapsed: ${(performance.now() - started).toFixed(1)} ms`;
@@ -206,6 +214,7 @@ function endpointView(record) {
       output.textContent = timedOut ? `Request exceeded ${REQUEST_TIMEOUT_MS / 1000} seconds.` : error.message;
       output.classList.add("error");
     } finally {
+      activeRequests.delete(request);
       send.disabled = false;
     }
   }
@@ -283,6 +292,9 @@ async function loadAuthorityExample() {
 }
 
 document.getElementById("api-forget-token").addEventListener("click", () => {
+  requestGeneration += 1;
+  for (const request of activeRequests) request.abort();
+  activeRequests.clear();
   token.value = "";
   token.focus();
 });
