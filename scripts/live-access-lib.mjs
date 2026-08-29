@@ -108,15 +108,38 @@ async function ensureApplication(context, allowedIdps) {
   });
 }
 
+function isExactEmailRule(rule, bootstrapEmail) {
+  if (!rule || typeof rule !== "object" || Array.isArray(rule)) return false;
+  if (Object.keys(rule).length !== 1 || !rule.email || typeof rule.email !== "object" || Array.isArray(rule.email)) return false;
+  if (Object.keys(rule.email).length !== 1) return false;
+  return String(rule.email.email || "").trim().toLowerCase() === bootstrapEmail;
+}
+
+function emptyRules(value) {
+  return value === undefined || (Array.isArray(value) && value.length === 0);
+}
+
 function policyMatches(policy, bootstrapEmail) {
-  return policy?.decision === "allow" && Array.isArray(policy.include) && policy.include.some(
-    (rule) => String(rule?.email?.email || "").toLowerCase() === bootstrapEmail,
-  );
+  return policy?.name === LIVE_ACCESS_POLICY_NAME
+    && policy.decision === "allow"
+    && Array.isArray(policy.include)
+    && policy.include.length === 1
+    && isExactEmailRule(policy.include[0], bootstrapEmail)
+    && emptyRules(policy.require)
+    && emptyRules(policy.exclude)
+    && (policy.session_duration === undefined || policy.session_duration === "24h");
 }
 
 async function ensurePolicy(context, app, bootstrapEmail) {
   const listed = await cloudflare(context, `/access/apps/${encodeURIComponent(app.id)}/policies?per_page=100`);
-  const existing = Array.isArray(listed) ? listed.find((policy) => policy.name === LIVE_ACCESS_POLICY_NAME) : null;
+  const policies = Array.isArray(listed) ? listed : [];
+  for (const policy of policies) {
+    if (policy.name === LIVE_ACCESS_POLICY_NAME) continue;
+    if (policy.decision === "allow") throw new Error(`${LIVE_ACCESS_APPLICATION_NAME} has an unrelated allow policy: ${policy.name || "<unnamed>"}`);
+    throw new Error(`${LIVE_ACCESS_APPLICATION_NAME} has an unrelated Access policy: ${policy.name || "<unnamed>"}`);
+  }
+
+  const existing = policies.find((policy) => policy.name === LIVE_ACCESS_POLICY_NAME) || null;
   if (existing) {
     if (!policyMatches(existing, bootstrapEmail)) throw new Error(`${LIVE_ACCESS_POLICY_NAME} exists with a different admission rule`);
     return existing;
