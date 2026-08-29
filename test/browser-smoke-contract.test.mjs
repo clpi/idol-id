@@ -5,12 +5,14 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("verified builds execute a real Chrome semantic-interaction gate", async () => {
-  const [workflow, smoke] = await Promise.all([
+  const [workflow, runner, smoke] = await Promise.all([
     read(".github/workflows/deploy.yml"),
+    read("scripts/run-browser-smoke.mjs"),
     read("scripts/browser-smoke.mjs"),
   ]);
 
-  assert.match(workflow, /node scripts\/browser-smoke\.mjs/);
+  assert.match(workflow, /node scripts\/run-browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/browser-smoke\.mjs/);
   assert.match(workflow, /idol-browser-smoke-\$\{\{ github\.run_id \}\}/);
   assert.match(workflow, /\.artifacts\/browser-smoke/);
   assert.match(smoke, /390, 844/);
