@@ -1,0 +1,73 @@
+name: patch reachable optional public surface audit
+
+on:
+  push:
+    branches: [fix/public-surface-admission-v2-20260828]
+    paths:
+      - .github/workflows/patch-live-audit-optional.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/public-surface-admission-v2-20260828
+          fetch-depth: 0
+      - name: Tighten optional and protected admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('scripts/audit-live-surfaces.mjs')
+          source=path.read_text()
+          source=source.replace('{ id: "platform", url: "https://platform.idol.id/", kind: "protected", finalHost: "platform.idol.id" }','{ id: "platform", url: "https://platform.idol.id/", kind: "protected", finalHost: "platform.idol.id", marker: "Idol" }')
+          source=source.replace('{ id: "live", url: "https://live.idol.id/", kind: "optional" }','{ id: "live", url: "https://live.idol.id/", kind: "optional", marker: "Idol" }')
+          source=source.replace('{ id: "mcp", url: "https://mcp.idol.id/", kind: "optional" }','{ id: "mcp", url: "https://mcp.idol.id/", kind: "optional", marker: "Idol" }')
+          old='''  if (surface.kind === "redirect" && observed.host !== surface.finalHost) failures.push(`redirect landed on ${observed.host}`);
+  else if (surface.kind === "protected" && !protectedPage && observed.host !== surface.finalHost) failures.push(`protected surface landed on ${observed.host}`);
+  else if (surface.kind === "public") {
+    if (observed.host !== new URL(surface.url).hostname) failures.push(`unexpected host ${observed.host}`);
+    if (observed.textLength < 80) failures.push("blank or skeletal page");
+    if (!observed.marker) failures.push(`missing marker ${surface.marker}`);
+    if (!observed.topbar) failures.push("shared chrome missing");
+    if (observed.stale) failures.push("superseded identity visible");
+    if (observed.width > observed.clientWidth) failures.push(`horizontal overflow ${observed.width}>${observed.clientWidth}`);
+    if (width <= 760 && observed.short.length) failures.push(`touch controls below 44px: ${observed.short.join(",")}`);
+    if (observed.appError) failures.push(`application error: ${observed.appError}`);
+    if (exceptions.length) failures.push(`console/runtime errors: ${exceptions.join(" | ")}`);
+  }'''
+          new='''  if (surface.kind === "redirect" && observed.host !== surface.finalHost) failures.push(`redirect landed on ${observed.host}`);
+  else if (surface.kind === "protected" && protectedPage) {
+    // Cloudflare Access is the admitted public boundary; private UI is tested after authentication elsewhere.
+  } else if (surface.kind === "protected" && observed.host !== surface.finalHost) failures.push(`protected surface landed on ${observed.host}`);
+  else if (surface.kind === "optional" && optionalAbsent) {
+    // An absent optional product is safer than a misleading or stale public surface.
+  } else if (["public", "protected", "optional"].includes(surface.kind)) {
+    const expectedHost = surface.kind === "protected" ? surface.finalHost : new URL(surface.url).hostname;
+    if (observed.host !== expectedHost) failures.push(`unexpected host ${observed.host}`);
+    if (observed.textLength < 80) failures.push("blank or skeletal page");
+    if (!observed.marker) failures.push(`missing marker ${surface.marker}`);
+    if (!observed.topbar) failures.push("shared chrome missing");
+    if (observed.stale) failures.push("superseded identity visible");
+    if (observed.width > observed.clientWidth) failures.push(`horizontal overflow ${observed.width}>${observed.clientWidth}`);
+    if (width <= 760 && observed.short.length) failures.push(`touch controls below 44px: ${observed.short.join(",")}`);
+    if (observed.appError) failures.push(`application error: ${observed.appError}`);
+    if (exceptions.length) failures.push(`console/runtime errors: ${exceptions.join(" | ")}`);
+  }'''
+          if old not in source:
+            if 'An absent optional product is safer' not in source: raise SystemExit('audit decision block not found')
+          else: source=source.replace(old,new)
+          path.write_text(source)
+          PY
+          node --test test/live-surface-audit-contract.test.mjs
+          git config user.name "idol public admission"
+          git config user.email "actions@idol.id"
+          git add scripts/audit-live-surfaces.mjs
+          git commit -m 'fix: audit every reachable optional public surface' || true
+          git push origin HEAD:fix/public-surface-admission-v2-20260828
