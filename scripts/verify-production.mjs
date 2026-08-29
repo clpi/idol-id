@@ -57,6 +57,55 @@ async function verifyHost(host) {
   }
   return verifyVersion(host);
 }
+
+function cachePolicy(response, label) {
+  const value = response.headers.get("cache-control") || "";
+  assert(/no-cache/.test(value), `${label} must revalidate, received cache-control ${value || "<missing>"}`);
+  assert(!/immutable/.test(value), `${label} is incorrectly immutable: ${value}`);
+  return value;
+}
+
+async function verifyHomepage() {
+  const home = await document(`https://idol.id/?deploy=${expectedCommit}`);
+  assert(home.response.status === 200, `homepage returned ${home.response.status}`);
+  cachePolicy(home.response, "homepage HTML");
+  const html = String(home.body || "");
+  assert(html.includes("Idol — Lua-derived native compiler"), "homepage title is not the compiler product");
+  assert(html.includes("Dynamic by default."), "homepage omits the compiler headline");
+  assert(html.includes("Native when known."), "homepage omits the specialization headline");
+  assert(html.includes("/content/source-examples.json"), "homepage is not bound to the authority-pinned source examples");
+  assert(html.includes('id="install"'), "homepage omits installation surface");
+  assert(!/\b(?:IDSEM|Idsem|DUO|Duo|DUON|Duon)\b|current law projection|>Registry<|World Atlas/i.test(html), "homepage still contains superseded product copy");
+
+  const shell = await document(`https://idol.id/shared/shell.js?v=${expectedCommit}`);
+  assert(shell.response.status === 200, `homepage shell returned ${shell.response.status}`);
+  cachePolicy(shell.response, "stable shell asset");
+  const shellText = String(shell.body || "");
+  assert(shellText.includes('label: "compiler"'), "homepage shell omits compiler navigation");
+  assert(shellText.includes(">IDOL</a>"), "homepage shell omits Idol identity");
+  assert(!/\b(?:IDSEM|Idsem|DUO|Duo|DUON|Duon)\b/.test(shellText), "homepage shell retains superseded identity");
+
+  const style = await document(`https://idol.id/shared/site-home.css?v=${expectedCommit}`);
+  assert(style.response.status === 200, `homepage stylesheet returned ${style.response.status}`);
+  cachePolicy(style.response, "stable homepage stylesheet");
+  assert(String(style.body || "").includes(".hero h1"), "homepage stylesheet is not the compiler-first design");
+
+  const examples = await document(`https://idol.id/content/source-examples.json?v=${expectedCommit}`);
+  assert(examples.response.status === 200, `source example manifest returned ${examples.response.status}`);
+  cachePolicy(examples.response, "stable source example manifest");
+  assert(examples.body?.authority?.commit === authority.language.commit, "source example authority commit mismatch");
+  assert(examples.body?.authority?.source_law === authority.language.source_law.sha256, "source example law mismatch");
+  assert(examples.body?.examples?.some((example) => example.id === "projection-faces" && example.status === "current-law"), "homepage source example is not admitted by the manifest");
+
+  return {
+    status: home.response.status,
+    title: "Idol — Lua-derived native compiler",
+    shell_cache: shell.response.headers.get("cache-control"),
+    stylesheet_cache: style.response.headers.get("cache-control"),
+    source_example: "projection-faces",
+  };
+}
+
 async function verifyMcp() {
   const shell = await document("https://mcp.idol.id/");
   assert(shell.response.status === 200, `MCP shell returned ${shell.response.status}`);
@@ -90,11 +139,13 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
   try {
     const results = [];
     for (const host of hosts) results.push(await verifyHost(host));
+    const homepage = await verifyHomepage();
     await verifyMcp();
     console.log(JSON.stringify({
       verified: true,
       commit: expectedCommit,
       authority: authority.language.commit,
+      homepage,
       hosts: results,
       live: "Cloudflare Access protected",
       mcp: "server/discover fails closed without API token"
