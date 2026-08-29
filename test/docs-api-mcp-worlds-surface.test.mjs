@@ -115,6 +115,18 @@ test("MCP publishes and accepts only canonical Idol tool coordinates", async () 
   assert.doesNotMatch(build, /legacy_tool_prefix|accepted-not-advertised/);
 });
 
+test("MCP forget aborts active requests and invalidates stale completions", async () => {
+  const controller = await read("shared/mcp-console.js");
+  assert.match(controller, /let requestGeneration = 0/);
+  assert.match(controller, /let activeRequest = null/);
+  assert.match(controller, /const generation = \+\+requestGeneration/);
+  assert.match(controller, /activeRequest\?\.abort\(\)/);
+  assert.match(controller, /signal: request\.signal/);
+  assert.match(controller, /if \(generation !== requestGeneration\) return null/);
+  assert.match(controller, /requestGeneration \+= 1/);
+  assert.match(controller, /setBusy\(false\)/);
+});
+
 test("Worlds converge on canonical Lib routes and state the non-authority boundary", async () => {
   const [canonical, css, html, docs, web] = await Promise.all([
     read("shared/lib-canonical.js"),
