@@ -11,6 +11,8 @@ const select = document.getElementById("mcp-tool-select");
 const argumentsInput = document.getElementById("mcp-arguments");
 const actionButtons = [...document.querySelectorAll("#mcp-discover, #mcp-tools, #mcp-call")];
 let tools = [];
+let requestGeneration = 0;
+let activeRequest = null;
 
 Shell.boot("mcp", { title: "MCP", keys: [["D", "discover"], ["T", "tools"], ["C", "call"]] });
 IdolShell.crumbs([{ label: "mcp" }, { label: "streamable http" }]);
@@ -108,7 +110,7 @@ async function loadPublicTools() {
   }
 }
 
-async function rpc(method, params = {}) {
+async function rpc(method, params = {}, request) {
   const bearer = token.value.trim();
   if (!bearer) throw new Error("Paste a Platform API token first.");
   const name = method === "tools/call" ? String(params.name || "") : "";
@@ -125,6 +127,7 @@ async function rpc(method, params = {}) {
     headers,
     body: JSON.stringify({ jsonrpc: "2.0", id: requestId(), method, params }),
     cache: "no-store",
+    signal: request.signal,
   });
   const text = await response.text();
   let body;
@@ -140,21 +143,30 @@ async function rpc(method, params = {}) {
 }
 
 async function run(method, params = {}) {
+  const generation = ++requestGeneration;
+  activeRequest?.abort();
+  const request = new AbortController();
+  activeRequest = request;
   setBusy(true);
   setStatus("requesting");
   show("Requesting…");
   try {
-    const body = await rpc(method, params);
+    const body = await rpc(method, params, request);
+    if (generation !== requestGeneration) return null;
     show(body);
     setStatus("connected");
     if (method === "tools/list") renderTools(body?.result?.tools);
     return body;
   } catch (error) {
+    if (generation !== requestGeneration) return null;
     show(error.body || { error: { code: "MCP_REQUEST_FAILED", detail: error.message, status: error.status || null } });
     setStatus("refused", true);
     return null;
   } finally {
-    setBusy(false);
+    if (generation === requestGeneration) {
+      activeRequest = null;
+      setBusy(false);
+    }
   }
 }
 
@@ -201,6 +213,10 @@ document.getElementById("mcp-discover").addEventListener("click", () => run("ser
 document.getElementById("mcp-tools").addEventListener("click", () => run("tools/list"));
 document.getElementById("mcp-call").addEventListener("click", callSelected);
 document.getElementById("mcp-forget").addEventListener("click", () => {
+  requestGeneration += 1;
+  activeRequest?.abort();
+  activeRequest = null;
+  setBusy(false);
   token.value = "";
   argumentsInput.value = "{}";
   show("Token forgotten. No browser storage was used.");
