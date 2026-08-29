@@ -6,6 +6,9 @@ const token = document.getElementById("api-token");
 const sourceStatus = document.getElementById("api-source-status");
 const sourceManifest = sourceStatus?.dataset.sourceManifest || "";
 const MAX_RENDER_BYTES = 160 * 1024;
+const REQUEST_TIMEOUT_MS = 30_000;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 let authorityExample = "";
 let selectedOwner = "all";
 
@@ -25,18 +28,10 @@ function prettyResponse(value, type) {
 
 function bounded(value) {
   const source = text(value);
-  const encoded = new TextEncoder().encode(source);
-  if (encoded.byteLength <= MAX_RENDER_BYTES) return source;
-  // Stop at byte boundary: decode progressively until adding the next byte would exceed limit.
-  for (let size = MAX_RENDER_BYTES; size > 0; size--) {
-    try {
-      const chunk = encoded.slice(0, size);
-      if (new TextDecoder().decode(chunk).length === chunk.length ||
-          !chunk.some((b, i) => b >= 0xC0)) return new TextDecoder().decode(chunk);
-    } catch { /* skip */ }
-  }
-  const decoded = new TextDecoder().decode(encoded.slice(0, MAX_RENDER_BYTES));
-  return `${decoded}\n\n[response display truncated by the browser console]`;
+  if (encoder.encode(source).byteLength <= MAX_RENDER_BYTES) return source;
+  const buffer = new Uint8Array(MAX_RENDER_BYTES);
+  const { written } = encoder.encodeInto(source, buffer);
+  return `${decoder.decode(buffer.subarray(0, written))}\n\n[response display truncated by the browser console]`;
 }
 
 function field(label, value = "", options = {}) {
@@ -182,21 +177,33 @@ function endpointView(record) {
         ...(payload === undefined ? {} : { body: payload }),
         cache: "no-store",
         redirect: "manual",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
+      const elapsed = (performance.now() - started).toFixed(1);
+      if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
+        meta.status.textContent = "status: redirect not followed";
+        meta.elapsed.textContent = `elapsed: ${elapsed} ms`;
+        meta["content-type"].textContent = "content-type: not exposed";
+        meta["cache-control"].textContent = "cache-control: not exposed";
+        output.textContent = "Manual redirect received. The browser console intentionally does not follow or reinterpret the redirect target.";
+        output.classList.add("error");
+        return;
+      }
       const contentType = response.headers.get("content-type") || "";
       const raw = await response.text();
       meta.status.textContent = `status: ${response.status} ${response.statusText}`;
-      meta.elapsed.textContent = `elapsed: ${(performance.now() - started).toFixed(1)} ms`;
+      meta.elapsed.textContent = `elapsed: ${elapsed} ms`;
       meta["content-type"].textContent = `content-type: ${contentType || "not published"}`;
       meta["cache-control"].textContent = `cache-control: ${response.headers.get("cache-control") || "not published"}`;
       output.textContent = bounded(prettyResponse(raw, contentType));
       output.classList.toggle("error", !response.ok);
     } catch (error) {
-      meta.status.textContent = "status: client refusal";
+      const timedOut = error?.name === "TimeoutError";
+      meta.status.textContent = timedOut ? "status: request timed out" : "status: client refusal";
       meta.elapsed.textContent = `elapsed: ${(performance.now() - started).toFixed(1)} ms`;
       meta["content-type"].textContent = "content-type: —";
       meta["cache-control"].textContent = "cache-control: —";
-      output.textContent = error.message;
+      output.textContent = timedOut ? `Request exceeded ${REQUEST_TIMEOUT_MS / 1000} seconds.` : error.message;
       output.classList.add("error");
     } finally {
       send.disabled = false;
