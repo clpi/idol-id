@@ -5,20 +5,20 @@ import { readFile } from "node:fs/promises";
 const site = await readFile(new URL("../apps/site/index.html", import.meta.url), "utf8");
 const shell = await readFile(new URL("../shared/shell.js", import.meta.url), "utf8");
 
-test("homepage presents Idsem as the current language identity", () => {
-  assert.match(site, /<title>Idsem — semantic identity/);
-  assert.match(site, /<h1>IDSEM<\/h1>/);
-  assert.match(site, /Idsem keeps one graph of exact meaning/);
-  assert.match(site, /<span>IDSEM · \.ID<\/span>/);
-  assert.match(site, /Shell\.boot\("site", \{ title: "Idsem" \}\)/);
+test("homepage presents Idol as the current language identity", () => {
+  assert.match(site, /<title>Idol — semantic identity/);
+  assert.match(site, /<h1>IDOL<\/h1>/);
+  assert.match(site, /Idol keeps one graph of exact meaning/);
+  assert.match(site, /<span>IDOL · \.ID<\/span>/);
+  assert.match(site, /Shell\.boot\("site", \{ title: "Idol" \}\)/);
   assert.doesNotMatch(site, /aria-label="Idol product surfaces"/);
   assert.doesNotMatch(site, />IDOL · \.ID</);
 });
 
-test("shared chrome presents Idsem while preserving compatibility interfaces", () => {
-  assert.match(shell, />IDSEM<\/a>/);
-  assert.match(shell, /aria-label="Idsem products"/);
-  assert.match(shell, /Open Idsem navigation/);
+test("shared chrome presents Idol while preserving compatibility interfaces", () => {
+  assert.match(shell, />IDOL<\/a>/);
+  assert.match(shell, /aria-label="Idol products"/);
+  assert.match(shell, /Open Idol navigation/);
   assert.doesNotMatch(shell, /aria-label="Idol products"/);
   assert.doesNotMatch(shell, />IDOL<\/a>/);
 

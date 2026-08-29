@@ -1,0 +1,7 @@
+{
+  "schema": "idol.public.reset.scope.v1",
+  "primary_navigation": ["compiler", "playground", "graph", "docs", "live"],
+  "public_example_statuses": ["compiler-executed", "compiler-accepted"],
+  "viewports": [[320,568],[390,844],[430,932],[768,1024],[1440,900]],
+  "immutable_cache": "content-addressed-only"
+}

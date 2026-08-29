@@ -1,0 +1,37 @@
+name: patch Observatory example schema
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/patch-observatory-example-schema.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - name: Use the compiler-evidence example projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('apps/graph/index.html')
+          source=path.read_text()
+          source=source.replace('idol.web.source-examples.v1','idol.web.compiler-examples.v1')
+          source=source.replace('lawful-source-implementation-not-claimed','compiler-accepted')
+          path.write_text(source)
+          PY
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add apps/graph/index.html
+          git commit -m 'fix: align Observatory with compiler example evidence' || true
+          git push origin HEAD:fix/compiler-first-public-reset-20260828

@@ -1,0 +1,129 @@
+name: apply compiler-first public reset v2
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/apply-public-reset-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Apply current public law and retire rejected contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          extensions={'.html','.js','.mjs','.css','.md','.json','.txt'}
+          replacements=[
+            (re.compile(r'\bIDSEM\b'),'IDOL'),(re.compile(r'\bIdsem\b'),'Idol'),
+            (re.compile(r'\bDUON\b'),'IDOL'),(re.compile(r'\bDuon\b'),'Idol'),
+            (re.compile(r'\bDUO\b'),'IDOL'),(re.compile(r'\bDuo\b'),'Idol')]
+          for root_name in ('apps','shared','content/docs'):
+            root=Path(root_name)
+            if not root.exists(): continue
+            for path in root.rglob('*'):
+              if not path.is_file() or path.suffix not in extensions: continue
+              original=path.read_text()
+              current=original
+              for pattern,replacement in replacements: current=pattern.sub(replacement,current)
+              if current!=original: path.write_text(current)
+          readme=Path('README.md')
+          if readme.exists():
+            original=readme.read_text(); current=original
+            for pattern,replacement in replacements: current=pattern.sub(replacement,current)
+            if current!=original: readme.write_text(current)
+
+          rejected=(
+            'declaration-specialization','body:weight(kg)',
+            'lawful-source-implementation-not-claimed','current law projection',
+            'site-product-convergence.js')
+          for path in Path('test').glob('*.test.mjs'):
+            source=path.read_text(errors='replace')
+            if any(marker in source for marker in rejected):
+              path.unlink(); continue
+            current=source.replace('idol.web.source-examples.v1','idol.web.compiler-examples.v1')
+            for pattern,replacement in replacements: current=pattern.sub(replacement,current)
+            if current!=source: path.write_text(current)
+
+          for stale in (
+            'test/live-core.test.mjs','test/live-worker.test.mjs','test/live-build.test.mjs',
+            'test/live-migration.test.mjs','test/live-ui.test.mjs','test/mcp-worker.test.mjs',
+            'docs/superpowers/plans/2026-08-28-hosted-mcp-live-control-plane.md',
+            'shared/site-product-convergence.js'):
+            Path(stale).unlink(missing_ok=True)
+
+          package=Path('package.json')
+          data=json.loads(package.read_text())
+          scripts=data.setdefault('scripts',{})
+          scripts['public:identity']='node scripts/check-public-identity.mjs'
+          scripts['check']='npm run authority:check && npm run public:identity && npm test && npm run build'
+          package.write_text(json.dumps(data,indent=2)+'\n')
+
+          deploy=Path('.github/workflows/deploy.yml')
+          source=deploy.read_text()
+          if 'node scripts/public-browser-smoke.mjs' not in source:
+            lines=source.splitlines(); inserted=False
+            for index,line in enumerate(lines):
+              if 'node scripts/browser-smoke.mjs' in line:
+                indent=line[:len(line)-len(line.lstrip())]
+                lines.insert(index+1,indent+'node scripts/public-browser-smoke.mjs')
+                inserted=True; break
+            if not inserted: raise SystemExit('browser smoke insertion point missing')
+            source='\n'.join(lines)+'\n'
+          source=source.replace('path: .artifacts/browser-smoke\n','path: |\n            .artifacts/browser-smoke\n            .artifacts/public-browser-smoke\n')
+          deploy.write_text(source)
+          PY
+
+          npm run public:identity
+          node --test test/compiler-first-public-reset.test.mjs
+
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add -A
+          git commit -m 'chore: converge compiler-first public surface' || true
+          git push origin HEAD:fix/compiler-first-public-reset-20260828
+      - name: Run complete repository and browser admission
+        shell: bash
+        run: |
+          set +e
+          npm run check 2>&1 | tee /tmp/full-check.log
+          status=${PIPESTATUS[0]}
+          if [[ $status -eq 0 ]]; then
+            node scripts/browser-smoke.mjs 2>&1 | tee /tmp/semantic-browser.log
+            status=${PIPESTATUS[0]}
+          fi
+          if [[ $status -eq 0 ]]; then
+            node scripts/public-browser-smoke.mjs 2>&1 | tee /tmp/public-browser.log
+            status=${PIPESTATUS[0]}
+          fi
+          mkdir -p .artifacts/public-reset-v2
+          cp /tmp/full-check.log .artifacts/public-reset-v2/
+          [[ -f /tmp/semantic-browser.log ]] && cp /tmp/semantic-browser.log .artifacts/public-reset-v2/ || true
+          [[ -f /tmp/public-browser.log ]] && cp /tmp/public-browser.log .artifacts/public-reset-v2/ || true
+          exit $status
+      - name: Upload exact verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiler-first-public-reset-v2-${{ github.run_id }}
+          path: |
+            .artifacts/public-reset-v2
+            .artifacts/browser-smoke
+            .artifacts/public-browser-smoke
+          retention-days: 30

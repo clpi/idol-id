@@ -1,0 +1,1 @@
+compiler-first public reset verification

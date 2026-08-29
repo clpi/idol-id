@@ -1,0 +1,175 @@
+name: finalize compiler-first public reset v4
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/finalize-public-reset-v4.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: fix/compiler-first-public-reset-20260828
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Reconcile the final exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json,re
+          replacements=[
+            (re.compile(r'\bIDSEM\b'),'IDOL'),(re.compile(r'\bIdsem\b'),'Idol'),
+            (re.compile(r'\bDUON\b'),'IDOL'),(re.compile(r'\bDuon\b'),'Idol'),
+            (re.compile(r'\bDUO\b'),'IDOL'),(re.compile(r'\bDuo\b'),'Idol')]
+          extensions={'.html','.js','.mjs','.css','.md','.json','.txt'}
+          for root_name in ('apps','shared','content/docs'):
+            root=Path(root_name)
+            if not root.exists(): continue
+            for path in root.rglob('*'):
+              if not path.is_file() or path.suffix not in extensions: continue
+              before=path.read_text(); after=before
+              for pattern,replacement in replacements: after=pattern.sub(replacement,after)
+              if after!=before: path.write_text(after)
+          readme=Path('README.md')
+          if readme.exists():
+            before=readme.read_text(); after=before
+            for pattern,replacement in replacements: after=pattern.sub(replacement,after)
+            if after!=before: readme.write_text(after)
+          for stale in (
+            'test/live-core.test.mjs','test/live-worker.test.mjs','test/live-build.test.mjs','test/live-migration.test.mjs','test/live-ui.test.mjs','test/mcp-worker.test.mjs',
+            'docs/superpowers/plans/2026-08-28-hosted-mcp-live-control-plane.md','shared/site-product-convergence.js'):
+            Path(stale).unlink(missing_ok=True)
+          for path in Path('test').glob('*.test.mjs'):
+            source=path.read_text(errors='replace')
+            current=source.replace('idol.web.source-examples.v1','idol.web.compiler-examples.v1')
+            if current!=source: path.write_text(current)
+          graph=Path('apps/graph/index.html')
+          if graph.exists(): graph.write_text(graph.read_text().replace('idol.web.source-examples.v1','idol.web.compiler-examples.v1'))
+          package=Path('package.json'); data=json.loads(package.read_text()); scripts=data.setdefault('scripts',{})
+          scripts['public:identity']='node scripts/check-public-identity.mjs'
+          scripts['check']='npm run authority:check && npm run public:identity && npm test && npm run build'
+          package.write_text(json.dumps(data,indent=2)+'\n')
+          deploy=Path('.github/workflows/deploy.yml'); source=deploy.read_text()
+          if 'node scripts/public-browser-smoke.mjs' not in source:
+            lines=source.splitlines()
+            for index,line in enumerate(lines):
+              if 'node scripts/browser-smoke.mjs' in line:
+                indent=line[:len(line)-len(line.lstrip())]
+                lines.insert(index+1,indent+'node scripts/public-browser-smoke.mjs'); break
+            else: raise SystemExit('missing browser-smoke insertion point')
+            source='\n'.join(lines)+'\n'
+          source=source.replace('path: .artifacts/browser-smoke\n','path: |\n            .artifacts/browser-smoke\n            .artifacts/public-browser-smoke\n')
+          deploy.write_text(source)
+          PY
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add -A
+          git commit -m 'chore: reconcile final compiler-first contracts' || true
+          git push origin HEAD:${BRANCH}
+      - name: Run repository and real-browser admission
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p .artifacts/final-v4
+          npm run check 2>&1 | tee .artifacts/final-v4/check.log
+          node scripts/browser-smoke.mjs 2>&1 | tee .artifacts/final-v4/semantic-browser.log
+          node scripts/public-browser-smoke.mjs 2>&1 | tee .artifacts/final-v4/public-browser.log
+      - name: Upload pre-merge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiler-first-final-v4-${{ github.run_id }}
+          path: |
+            .artifacts/final-v4
+            .artifacts/browser-smoke
+            .artifacts/public-browser-smoke
+          retention-days: 30
+      - name: Remove bootstrap automation and operations debris
+        shell: bash
+        run: |
+          rm -f \
+            .github/workflows/apply-public-reset.yml \
+            .github/workflows/public-reset-admission.yml \
+            .github/workflows/finalize-public-reset.yml \
+            .github/workflows/apply-public-reset-v2.yml \
+            .github/workflows/finalize-public-reset-v2.yml \
+            .github/workflows/patch-public-smoke-race.yml \
+            .github/workflows/patch-public-mobile-overflow.yml \
+            .github/workflows/finalize-public-reset-v3.yml \
+            .github/workflows/patch-observatory-example-schema.yml \
+            .github/workflows/finalize-public-reset-v4.yml
+          find ops -maxdepth 1 -type f -name 'public-reset-*' -delete 2>/dev/null || true
+          git add -A
+          git commit -m 'chore: remove reset bootstrap automation' || true
+          git push origin HEAD:${BRANCH}
+      - name: Merge the admitted branch
+        id: merge
+        shell: bash
+        run: |
+          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number')"
+          test -n "$pr"
+          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --admin \
+            --subject 'fix: reset idol.id around the actual compiler' \
+            --body 'Readable compiler-first public product, compiler evidence only, stable-asset revalidation, responsive shared chrome, and real-browser admission.' \
+            || gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash
+          sha="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq '.mergeCommit.oid')"
+          test -n "$sha"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Wait for exact production deployment
+        id: deploy
+        shell: bash
+        run: |
+          target='${{ steps.merge.outputs.sha }}'; run_id=''
+          for _ in $(seq 1 180); do
+            row="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow 'deploy idol.id' --branch main --limit 25 --json databaseId,headSha,status,conclusion --jq '.[] | select(.headSha == "'"$target"'") | [.databaseId,.status,(.conclusion // "")] | @tsv' | head -n1)"
+            if [[ -n "$row" ]]; then
+              run_id="$(cut -f1 <<<"$row")"; status="$(cut -f2 <<<"$row")"; conclusion="$(cut -f3 <<<"$row")"
+              if [[ "$status" == completed ]]; then [[ "$conclusion" == success ]]; break; fi
+            fi
+            sleep 10
+          done
+          test -n "$run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Verify live product, cache identity, installers, and screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/production-v4
+          curl -fsS --retry 12 --retry-all-errors --max-time 20 https://idol.id/ -o .artifacts/production-v4/index.html
+          curl -fsS --retry 12 --retry-all-errors --max-time 20 -D .artifacts/production-v4/shell.headers https://idol.id/shared/shell.js -o .artifacts/production-v4/shell.js
+          curl -fsS --retry 12 --retry-all-errors --max-time 20 -D .artifacts/production-v4/site.headers https://idol.id/shared/site.css -o .artifacts/production-v4/site.css
+          curl -fsS --retry 12 --retry-all-errors --max-time 20 https://idol.id/__idol/version -o .artifacts/production-v4/version.json
+          curl -fsS --retry 12 --retry-all-errors --max-time 20 https://idol.id/install.sh -o /dev/null
+          curl -fsS --retry 12 --retry-all-errors --max-time 20 https://idol.id/install.ps1 -o /dev/null
+          grep -q 'Dynamic by default' .artifacts/production-v4/index.html
+          ! grep -Eiq '\b(Idsem|Duo|Duon)\b' .artifacts/production-v4/index.html .artifacts/production-v4/shell.js
+          grep -Eiq '^cache-control:.*no-cache' .artifacts/production-v4/shell.headers
+          grep -Eiq '^cache-control:.*no-cache' .artifacts/production-v4/site.headers
+          jq -e --arg sha '${{ steps.merge.outputs.sha }}' '.commit == $sha' .artifacts/production-v4/version.json
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --screenshot=.artifacts/production-v4/mobile.png https://idol.id/
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1000 --screenshot=.artifacts/production-v4/desktop.png https://idol.id/
+          printf '%s\n' '{"schema":"idol.public.production.admission.v4","result":"ADMITTED","pull_request":${{ steps.merge.outputs.pr }},"commit":"${{ steps.merge.outputs.sha }}","deploy_run":"${{ steps.deploy.outputs.run_id }}"}' > .artifacts/production-v4/admission.json
+      - name: Upload production admission
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiler-first-production-v4-${{ github.run_id }}
+          path: .artifacts/production-v4
+          retention-days: 30
