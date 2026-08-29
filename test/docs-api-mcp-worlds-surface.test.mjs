@@ -30,10 +30,10 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(script, /if \(generation !== documentGeneration\) return/);
   assert.match(script, /function decodedHash\(\)/);
   assert.match(script, /try \{ return decodeURIComponent\(raw\); \} catch \{ return ""; \}/);
-  assert.match(script, /const pending = fetch\(entry\.path/);
-  assert.match(script, /cache\.set\(entry\.id, pending\)/);
-  assert.match(script, /pending\.catch\(\(\) =>/);
-  assert.match(script, /if \(cache\.get\(entry\.id\) === pending\) cache\.delete\(entry\.id\)/);
+  assert.match(script, /if \(cache\.has\(entry\.id\)\)/);
+  assert.match(script, /try \{ await cache\.get\(entry\.id\); \} catch \{ cache\.delete\(entry\.id\); \}/);
+  assert.match(script, /const promise = fetch\(`/);
+  assert.match(script, /cache\.set\(entry\.id, promise\)/);
   assert.match(css, /@media\s*\(max-width:\s*820px\)/);
   assert.match(css, /min-height:\s*44px/);
   assert.doesNotMatch(css, /\.docs-nav\s*\{[^}]*overflow-x:\s*auto/);
