@@ -211,7 +211,7 @@ async function inspectViewport(cdp, width, height, exceptions) {
       clientWidth: root.clientWidth,
       scrollWidth: root.scrollWidth,
       title: document.title,
-      brand: document.querySelector(".idol-brand-word")?.textContent || "",
+      brand: document.querySelector(".idol-brand span:last-child")?.textContent || "",
       editor: document.querySelector("#studio-editor")?.value.length || 0,
       stale: /\\b(?:idsem|duo|duon)\\b/i.test(document.body.innerText),
       controls,

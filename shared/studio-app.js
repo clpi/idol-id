@@ -7,7 +7,6 @@ const editor = q("#studio-editor");
 const facts = q("#studio-facts-body");
 const projection = q("#studio-projection-body");
 const capability = q("#studio-capability");
-const graphEmpty = q("#studio-graph-empty");
 const analyzeButton = q('[data-action="analyze"]');
 const lowerButton = q('[data-action="lower"]');
 const sampleSelect = q("#studio-sample");
@@ -30,6 +29,10 @@ const graphView = new GraphView(q("#studio-graph"), {
   onSelectNode(node) { select("node", node?.raw || node); },
   onSelectEdge(edge) { select("edge", edge?.raw || edge); },
 });
+const graphEmpty = graphView.empty;
+graphEmpty.id = "studio-graph-empty";
+graphEmpty.classList.add("studio-graph-empty");
+graphEmpty.innerHTML = "No semantic graph is inferred in the browser.<br>Analyze source to request exact compiler-published identities and structural edges.";
 
 function setCapability(text, status = "") {
   capability.textContent = text;
