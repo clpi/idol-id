@@ -44,10 +44,9 @@ test("build emits Lib-owned world projections, foreign integrations, authenticat
   assert.match(shellJs, /function decodeWorldHash\(/);
   assert.match(shellJs, /function worldFromPath\(/);
   assert.match(shellJs, /function worldLensFromPath\(/);
-  assert.match(shellJs, /platform\.idol\.id\/ide/);
-  assert.match(shellJs, /lib\.idol\.id\/atlas/);
-  assert.match(shellJs, /lib\.idol\.id\/universe/);
-  assert.doesNotMatch(shellJs, /id:\s*"worlds"/);
+  assert.match(shellJs, /lenses\/work|lenses\/observe/);
+  assert.match(shellJs, /lib\.idol\.id.*(?:atlas|world|routing)/);
+  assert.match(shellJs, /Lib owns the public admitted-world registry/);
   assert.doesNotMatch(shellJs, /id:\s*"universe"/);
   assert.equal(productModel.semantic_universes, 1);
   assert.equal(productModel.surfaces.lib.kind, "admitted-world-registry-projection");

@@ -48,15 +48,13 @@ test("Lib owns Atlas and public Universe lenses while Platform keeps private Uni
   assert.equal(await response.text(), "<html>universe</html>");
 });
 
-test("global chrome exposes one Lib product and contextual Atlas, homes, and Universe projections", async () => {
+test("global chrome exposes observe, worlds, law, work as quiet axes", async () => {
   const shell = await read("shared/shell.js");
-  assert.match(shell, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
-  assert.doesNotMatch(shell, /id:\s*"worlds"/);
-  assert.doesNotMatch(shell, /id:\s*"universe"/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/atlas/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/\?set=homes/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/universe/);
-  assert.match(shell, /https:\/\/platform\.idol\.id\/universe/);
+  assert.match(shell, /id:\s*"observe"/);
+  assert.match(shell, /id:\s*"worlds"/);
+  assert.match(shell, /id:\s*"law"/);
+  assert.match(shell, /id:\s*"work"/);
+  assert.doesNotMatch(shell, /href:\s*"https:\/\/lib\.idol\.id\/"/);
 });
 
 test("runtime product model keeps world identity separate from package coordinate and web presentation", async () => {

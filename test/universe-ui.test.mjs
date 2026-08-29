@@ -22,10 +22,10 @@ test("Universe workspace is packaged for authenticated Platform and contextual p
   assert.match(build, /"universe"/);
   assert.match(build, /platform-universe-entry\.js/);
   assert.match(build, /public:\s*"https:\/\/lib\.idol\.id\/universe"/);
+  // worlds is now a quiet lens axis (observe/worlds/law/work); no standalone universe remains
   assert.doesNotMatch(shell, /id:\s*"universe"/);
-  assert.doesNotMatch(shell, /id:\s*"worlds"/);
-  assert.match(shell, /public universe views/i);
-  assert.match(shell, /manage universe views/i);
+  assert.match(shell, /Admitted[- ]world registry|operational.*projection/i);
+  assert.match(shell, /Atlas.*homes.*Universe/);
   assert.match(canonical, /worlds\.idol\.id/);
   assert.match(canonical, /lib\.idol\.id/);
 });

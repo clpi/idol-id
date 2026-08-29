@@ -4,11 +4,11 @@ import { constants } from "node:fs";
 import { spawn } from "node:child_process";
 import { extname, join, normalize, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { WebSocket as WSWebSocket } from "ws";
 
 const root = resolve("dist");
 const artifacts = resolve(".artifacts/browser-smoke");
 const port = Number(process.env.IDOL_LIVE_BROWSER_SMOKE_PORT || 41740);
-const debugPort = Number(process.env.IDOL_LIVE_BROWSER_DEBUG_PORT || 9230);
 const origin = `http://127.0.0.1:${port}`;
 const mime = Object.freeze({
   ".html": "text/html; charset=utf-8",
@@ -114,13 +114,13 @@ async function requestHandler(request, response) {
   if (request.method === "POST" && url.pathname === "/mcp") {
     const document = await readBody(request);
     if (document.method === "server/discover") {
-      sendJson(response, { jsonrpc: "2.0", id: document.id, result: { protocolVersion: "2026-07-28", supportedProtocolVersions: ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"], serverInfo: { name: "idsem-hosted-mcp", version: "browser-smoke" }, capabilities: { tools: { listChanged: false } }, cacheScope: "private", ttlMs: 30000, semanticAuthority: false } });
+      sendJson(response, { jsonrpc: "2.0", id: document.id, result: { protocolVersion: "2026-07-28", supportedProtocolVersions: ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"], serverInfo: { name: "idol-hosted-mcp", version: "browser-smoke" }, capabilities: { tools: { listChanged: false } }, cacheScope: "private", ttlMs: 30000, semanticAuthority: false } });
       return;
     }
     if (document.method === "tools/list") {
       sendJson(response, { jsonrpc: "2.0", id: document.id, result: { tools: [
-        { name: "idsem.live.projects.list", description: "List subject-owned projects.", requiredScopes: ["mcp:connect", "live:read"], inputSchema: { type: "object" } },
-        { name: "idsem.live.project.create", description: "Create one project.", requiredScopes: ["mcp:connect", "live:write"], inputSchema: { type: "object" } },
+        { name: "idol.live.projects.list", description: "List subject-owned projects.", requiredScopes: ["mcp:connect", "live:read"], inputSchema: { type: "object" } },
+        { name: "idol.live.project.create", description: "Create one project.", requiredScopes: ["mcp:connect", "live:write"], inputSchema: { type: "object" } },
       ], cacheScope: "private", ttlMs: 30000 } });
       return;
     }
@@ -162,7 +162,7 @@ class Cdp {
     listeners.push(listener);
     this.listeners.set(method, listeners);
   }
-  close() { this.socket.close(); }
+  async close() { this.socket.close(); }
 }
 async function waitFor(url, attempts = 100) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -245,17 +245,52 @@ async function closeServer(server) {
   if (!server.listening) return;
   await new Promise((resolveClose) => server.close(resolveClose));
 }
+
+// Resolve the actual devtools port by reading the DevToolsActivePort file from the Chrome profile.
+// This avoids pre-allocating a port which retains a race condition.
+async function resolveChromeDevtools(profile) {
+  // Wait for Chrome to write DevToolsActivePort in its profile directory
+  for (let i = 0; i < 60; i++) {
+    try {
+      const portFile = join(profile, "DevToolsActivePort");
+      const content = (await readFile(portFile, "utf8")).trim();
+      const parts = content.split(":");
+      if (parts.length >= 2 && !isNaN(Number(parts[0]))) {
+        return { host: parts[0] || "127.0.0.1", port: Number(parts[1]) };
+      }
+    } catch { /* file not yet written */ }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error("timed out waiting for Chrome DevToolsActivePort in profile");
+}
+
 async function main() {
   await mkdir(artifacts, { recursive: true });
   const server = createServer((request, response) => requestHandler(request, response).catch((error) => sendJson(response, { error: error.message }, 500)));
   await new Promise((resolveListen, reject) => { server.once("error", reject); server.listen(port, "127.0.0.1", resolveListen); });
   const profile = await mkdtemp(join(tmpdir(), "idol-live-browser-smoke-"));
-  const chrome = spawn(await chromePath(), ["--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "about:blank"], { stdio: ["ignore", "pipe", "pipe"] });
+  
+  // Launch Chrome with ephemeral port --remote-debugging-port=0 (no pre-allocation race)
+  const chrome = spawn(await chromePath(), ["--headless=new", "--no-sandbox", "--disable-gpu", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { stdio: ["ignore", "pipe", "pipe"] });
+  
+  // Consume bounded stderr to detect early Chrome exit
+  const getStderr = consumeBoundedStderr(chrome, 4096);
+  
+  // Wait for Chrome process stability before proceeding
+  const exitedEarly = await waitForEarlyExit(chrome, 30000);
+  if (exitedEarly) {
+    const stderrSnapshot = getStderr();
+    throw new Error(`Chrome exited early: ${stderrSnapshot || "(empty stderr)"}`);
+  }
+  
   let cdp;
   try {
-    const version = await (await waitFor(`http://127.0.0.1:${debugPort}/json/version`)).json();
-    const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent("about:blank")}`, { method: "PUT" })).json();
-    const socket = new WebSocket(target.webSocketDebuggerUrl);
+    // Read DevToolsActivePort from the exact profile directory (no pre-allocated port)
+    const devtools = await resolveChromeDevtools(profile);
+    const version = await (await waitFor(`http://${devtools.host}:${devtools.port}/json/version`)).json();
+    const target = await (await fetch(`http://${devtools.host}:${devtools.port}/json/new?${encodeURIComponent("about:blank")}`, { method: "PUT" })).json();
+    // Use admitted WebSocket implementation (WSWebSocket from ws package)
+    const socket = new WSWebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolveSocket, reject) => { socket.addEventListener("open", resolveSocket, { once: true }); socket.addEventListener("error", reject, { once: true }); });
     cdp = new Cdp(socket);
     const exceptions = [];
@@ -269,18 +304,15 @@ async function main() {
     await writeFile(join(artifacts, "live-mcp-report.json"), `${JSON.stringify(report, null, 2)}\n`);
     console.log(`Live/MCP browser smoke passed: ${report.chrome}`);
   } finally {
-    try { cdp?.close(); } catch {}
-    if (chrome.exitCode === null && chrome.signalCode === null) {
-      chrome.kill("SIGTERM");
-      if (!(await waitForExit(chrome, 5000))) chrome.kill("SIGKILL");
-    }
+    // Close Chrome BEFORE deleting profile — terminate first, then clean up
+    try { await closeChrome(chrome, cdp); } catch { /* best-effort */ }
     await closeServer(server);
     await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 main().catch(async (error) => {
-  await mkdir(artifacts, { recursive: true });
-  await writeFile(join(artifacts, "live-mcp-failure.txt"), `${error.stack || error}\n`);
+  await mkdir(artifacts, { recursive: true }).catch(() => {});
+  await writeFile(join(artifacts, "live-mcp-failure.txt"), `${error.stack || error}\n`).catch(() => {});
   console.error(error.stack || error);
   process.exitCode = 1;
 });

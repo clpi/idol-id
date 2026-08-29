@@ -45,15 +45,18 @@ test("hosted MCP page explains endpoint, auth, scopes, protocol, and transport b
   assert.match(html, /sessionStorage/);
 });
 
-test("shared chrome and immutable-build adapters expose Live and hosted MCP without duplicating semantic authority", async () => {
+test("shared chrome exposes work lens instead of external Live/MCP host links", async () => {
   const [shell, platformEntry, siteEntry, buildLive] = await Promise.all([
     read("shared/shell.js"),
     read("shared/platform-live-entry.js"),
     read("shared/site-live-entry.js"),
     read("scripts/build-live.mjs"),
   ]);
-  assert.match(shell, /id:\s*"live"[\s\S]*?https:\/\/live\.idol\.id\//);
-  assert.match(shell, /https:\/\/mcp\.idol\.id\//);
+  // Shell no longer links external live.idol.id; work lens covers authenticated workspace
+  assert.match(shell, /id:\s*"work"/);
+  assert.match(shell, /"\/lenses\/work\//);
+  assert.doesNotMatch(shell, /https:\/\/live\.idol\.id\//);
+  assert.doesNotMatch(shell, /https:\/\/mcp\.idol\.id\//);
   for (const scope of ["live:read", "live:write", "mcp:connect", "world:write"]) assert.match(platformEntry, new RegExp(scope.replace(":", "\\:")));
   assert.match(siteEntry, /Live/);
   assert.match(siteEntry, /MCP/);

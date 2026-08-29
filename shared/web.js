@@ -129,7 +129,7 @@
     document.head.appendChild(script);
   }
   const host = location.hostname;
-  if (host === "idol.id" || host === "www.idol.id") loadProjection("/shared/site-product-convergence.js");
+  // No post-load DOM rewrite — converged to four quiet lens axes per shared chrome
   if (host === "lib.idol.id") {
     loadProjection("/shared/lib-canonical.js");
     loadProjection("/shared/product-canonical.js");

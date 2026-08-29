@@ -4,6 +4,7 @@ import { constants } from "node:fs";
 import { spawn } from "node:child_process";
 import { extname, join, normalize, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { WebSocket as WSWebSocket } from "ws";
 
 const root = resolve("dist");
 const authorityAsset = JSON.parse(await readFile(join(root, "runtime/authority.json"), "utf8"));
@@ -16,7 +17,6 @@ if (!browserAuthority.repository || !/^[0-9a-f]{40}$/.test(browserAuthority.comm
 }
 const artifacts = resolve(".artifacts/browser-smoke");
 const port = Number(process.env.IDOL_BROWSER_SMOKE_PORT || 41739);
-const debugPort = Number(process.env.IDOL_BROWSER_DEBUG_PORT || 9229);
 const origin = `http://127.0.0.1:${port}`;
 const mime = Object.freeze({
   ".html": "text/html; charset=utf-8",
@@ -287,18 +287,51 @@ async function closeServer(server) {
   });
 }
 
+async function resolveChromeDevtools(chrome, profile) {
+  return new Promise((resolveDevtools, rejectDevtools) => {
+    let timer;
+    const collect = [];
+    chrome.stderr.on("data", (chunk) => {
+      collect.push(chunk);
+      const text = chunk.toString();
+      // Chrome prints "DevTools listening on ws://127.0.0.1:<port>/<path>" or
+      // "DevTools WebSocket available at ws://127.0.0.1:<port>/..." when launched with --remote-debugging-port=0
+      const match = text.match(/ws:\/\/127\.0\.0\.1:(\d+)\//i);
+      if (match) {
+        clearTimeout(timer);
+        resolveDevtools({ host: "127.0.0.1", port: Number(match[1]), url: `http://${match[1]}` });
+      }
+    });
+    const onDone = () => {
+      chrome.stderr.off("data", collect);
+      clearTimeout(timer);
+    };
+    chrome.once("exit", onDone);
+    chrome.once("error", onDone);
+    timer = setTimeout(() => {
+      chrome.stderr.off("data", collect);
+      chrome.removeListener("exit", onDone);
+      chrome.removeListener("error", onDone);
+      rejectDevtools(new Error("timed out waiting for Chrome DevTools"));
+    }, 30000);
+  });
+}
+
 async function main() {
   await rm(artifacts, { recursive: true, force: true });
   await mkdir(artifacts, { recursive: true });
   const server = createServer((request, response) => { requestHandler(request, response).catch((error) => json(response, { error: error.message }, 500)); });
   await new Promise((resolveListen, reject) => { server.once("error", reject); server.listen(port, "127.0.0.1", resolveListen); });
   const profile = await mkdtemp(join(tmpdir(), "idol-browser-smoke-"));
-  const chrome = spawn(await chromePath(), ["--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "about:blank"], { stdio: ["ignore", "pipe", "pipe"] });
+  const chrome = spawn(await chromePath(), ["--headless=new", "--no-sandbox", "--disable-gpu", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { stdio: ["ignore", "pipe", "pipe"] });
+  const devtools = await resolveChromeDevtools(chrome, profile);
+  const debugHost = devtools.host;
+  const debugPortNum = devtools.port;
   let cdp;
   try {
-    const version = await (await waitFor(`http://127.0.0.1:${debugPort}/json/version`)).json();
-    const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent("about:blank")}`, { method: "PUT" })).json();
-    const socket = new WebSocket(target.webSocketDebuggerUrl);
+    const version = await (await waitFor(`http://${debugHost}:${debugPortNum}/json/version`)).json();
+    const target = await (await fetch(`http://${debugHost}:${debugPortNum}/json/new?${encodeURIComponent("about:blank")}`, { method: "PUT" })).json();
+    const socket = new WSWebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolveSocket, reject) => { socket.addEventListener("open", resolveSocket, { once: true }); socket.addEventListener("error", reject, { once: true }); });
     cdp = new Cdp(socket);
     const exceptions = [];

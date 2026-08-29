@@ -20,19 +20,19 @@ const STRING_ARRAY = (maximum = 64) => Object.freeze({ type: "array", maxItems: 
 
 const tools = [
   {
-    name: "idsem.analyze",
+    name: "idol.analyze",
     description: "Analyze bounded Idol source through the fixed canonical compiler-analysis endpoint. Source text is never stored in MCP audit metadata.",
     scopes: ["analysis:read"],
     inputSchema: schema({ source: Object.freeze({ type: "string", minLength: 1, maxLength: 524288 }) }, ["source"]),
   },
   {
-    name: "idsem.authority",
+    name: "idol.authority",
     description: "Read the immutable Idol language, native, and source-law authority projection for this deployment.",
     scopes: ["profile:read"],
     inputSchema: OBJECT,
   },
   {
-    name: "idsem.live.application.create",
+    name: "idol.live.application.create",
     description: "Publish one Live collaboration application record. The relation is an operation identity; graph edges remain derived structural roles.",
     scopes: ["live:write"],
     inputSchema: schema({
@@ -49,7 +49,7 @@ const tools = [
     }, ["project_id", "relation", "subject"]),
   },
   {
-    name: "idsem.live.event.append",
+    name: "idol.live.event.append",
     description: "Append an immutable causal event to a Live project history.",
     scopes: ["live:write"],
     inputSchema: schema({
@@ -62,61 +62,61 @@ const tools = [
     }, ["project_id", "kind"]),
   },
   {
-    name: "idsem.live.frontier.set",
+    name: "idol.live.frontier.set",
     description: "Append a held/admitted/rejected/superseded/reversed frontier decision; admission fails unless predecessors are already admitted.",
     scopes: ["live:write"],
     inputSchema: schema({ project_id: PROJECT, event_id: EVENT, state: Object.freeze({ type: "string", enum: ["held", "admitted", "rejected", "superseded", "reversed"] }), reason: TEXT(2048) }, ["project_id", "event_id", "state", "reason"]),
   },
   {
-    name: "idsem.live.graph.get",
+    name: "idol.live.graph.get",
     description: "Read the exact derived Live collaboration graph, causal history, frontier, and reverse indexes for one subject-owned project.",
     scopes: ["live:read"],
     inputSchema: schema({ project_id: PROJECT }, ["project_id"]),
   },
   {
-    name: "idsem.live.node.create",
+    name: "idol.live.node.create",
     description: "Create a bounded Live domain node such as a goal, task, attempt, intent, claim, review, witness, or evidence record.",
     scopes: ["live:write"],
     inputSchema: schema({ project_id: PROJECT, category: TEXT(40), label: TEXT(200), summary: TEXT(2048), data: Object.freeze({ type: "object" }) }, ["project_id", "category", "label", "summary"]),
   },
   {
-    name: "idsem.live.project.create",
+    name: "idol.live.project.create",
     description: "Create one subject-owned Live project with one immutable history and one accepted frontier.",
     scopes: ["live:write"],
     inputSchema: schema({ name: TEXT(120), slug: Object.freeze({ type: "string", pattern: "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$" }), summary: TEXT(1024), visibility: Object.freeze({ type: "string", enum: ["private", "public"] }) }, ["name", "slug", "summary"]),
   },
   {
-    name: "idsem.live.project.get",
+    name: "idol.live.project.get",
     description: "Read one subject-owned Live project record.",
     scopes: ["live:read"],
     inputSchema: schema({ project_id: PROJECT }, ["project_id"]),
   },
   {
-    name: "idsem.live.projects.list",
+    name: "idol.live.projects.list",
     description: "List bounded summaries of the authenticated subject's Live projects.",
     scopes: ["live:read"],
     inputSchema: schema({ limit: Object.freeze({ type: "integer", minimum: 1, maximum: 100 }) }),
   },
   {
-    name: "idsem.live.world.bind",
+    name: "idol.live.world.bind",
     description: "Bind a subject-owned Universe View to a Live project as an operational projection reference with no authority grant or world publication.",
     scopes: ["live:write", "universe:read"],
     inputSchema: schema({ project_id: PROJECT, universe_view_id: Object.freeze({ type: "string", pattern: "^uv_[A-Za-z0-9_-]{12,}$" }) }, ["project_id", "universe_view_id"]),
   },
   {
-    name: "idsem.profile",
+    name: "idol.profile",
     description: "Read the authenticated API-token principal and transport-authority boundary.",
     scopes: ["profile:read"],
     inputSchema: OBJECT,
   },
   {
-    name: "idsem.universe.list",
+    name: "idol.universe.list",
     description: "List the authenticated subject's operational Universe Views; views do not mint another semantic universe or authority.",
     scopes: ["universe:read"],
     inputSchema: schema({ limit: Object.freeze({ type: "integer", minimum: 1, maximum: 100 }) }),
   },
   {
-    name: "idsem.worlds.list",
+    name: "idol.worlds.list",
     description: "Read the deployed published and foreign-origin world projections without manufacturing semantic identity or authority.",
     scopes: ["world:read"],
     inputSchema: OBJECT,

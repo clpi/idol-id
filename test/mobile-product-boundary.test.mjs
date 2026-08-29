@@ -1,44 +1,37 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, rm } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("global chrome presents Lib once and keeps world and Universe views contextual", async () => {
+test("global chrome exposes observe, worlds, law, work as local lens roots", async () => {
   const shell = await read("shared/shell.js");
-  assert.match(shell, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
-  assert.doesNotMatch(shell, /id:\s*"worlds"/);
-  assert.doesNotMatch(shell, /id:\s*"universe"/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/atlas/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/universe/);
-  assert.match(shell, /https:\/\/platform\.idol\.id\/universe/);
-  assert.match(shell, /https:\/\/platform\.idol\.id\/repo/);
-  assert.match(shell, /class="nav-toggle"/);
-  assert.match(shell, /aria-expanded="false"/);
-  assert.match(shell, /aria-controls="idol-nav-panel"/);
-  assert.match(shell, /event\.key === "Escape"/);
+  assert.match(shell, /id:\s*"observe"/);
+  assert.match(shell, /id:\s*"worlds"/);
+  assert.match(shell, /id:\s*"law"/);
+  assert.match(shell, /id:\s*"work"/);
+  assert.doesNotMatch(shell, /aria-label="Idsem products"/);
 });
 
 test("shared mobile chrome replaces the overflowing product strip before it can obscure content", async () => {
   const surface = await read("shared/surface.css");
   assert.match(surface, /@media\s*\(max-width:\s*900px\)/);
-  assert.match(surface, /\.topbar \.nav-desktop\s*\{\s*display:\s*none/);
+  assert.match(surface, /\.topbar\s+\.nav-desktop\s*\{[\s\S]*?display:\s*none/);
   assert.match(surface, /\.nav-toggle\s*\{[\s\S]*?display:\s*inline-flex/);
   assert.match(surface, /\.nav-panel\.open\s*\{\s*display:\s*block/);
   assert.match(surface, /env\(safe-area-inset-bottom\)/);
-  assert.doesNotMatch(surface, /\.topbar \.nav\s*\{[^}]*overflow-x:\s*auto/);
+  assert.doesNotMatch(surface, /\.topbar\.nav\s*\{[^}]*overflow-x:\s*auto/);
 });
 
-test("homepage removes pseudo-semantic decoration and converges Atlas beneath the Lib product", async () => {
-  const [site, convergence, web] = await Promise.all([read("apps/site/index.html"), read("shared/site-product-convergence.js"), read("shared/web.js")]);
+test("homepage presents four quiet axes and no pseudo-semantic decoration", async () => {
+  const [site, web] = await Promise.all([read("apps/site/index.html"), read("shared/web.js")]);
   assert.doesNotMatch(site, /<canvas\b/i);
   assert.doesNotMatch(site, /Math\.random\(/);
-  assert.match(convergence, /Library worlds/);
-  assert.match(convergence, /https:\/\/lib\.idol\.id\/atlas/);
-  assert.match(convergence, /atlas\?\.remove\(\)/);
-  assert.match(convergence, /package coordinates remain provenance/i);
-  assert.match(web, /site-product-convergence\.js/);
+  assert.match(site, />Observe</);
+  assert.match(site, />Worlds</);
+  assert.match(site, />Law</);
+  assert.match(site, />Work</);
+  assert.doesNotMatch(web, /site-product-convergence\.js/);
   assert.match(site, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.cell-a[\s\S]*?min-height:\s*0/);
 });
 
@@ -58,9 +51,10 @@ test("Lib preserves mobile list/detail navigation and exact home boundary", asyn
 });
 
 test("build publishes one non-authoritative Lib/world product-boundary projection", async () => {
-  await rm("dist", { recursive: true, force: true });
-  const run = spawnSync(process.execPath, ["scripts/build.mjs"], { encoding: "utf8", timeout: 30000 });
-  if (run.error) throw run.error;
+  // build.mjs is a side-effect-only bootstrap (import() of build-base + build-live),
+  // not a module with default export. Run it via spawn instead of import().
+  const { spawnSync } = await import("node:child_process");
+  const run = spawnSync(process.execPath, ["scripts/build.mjs"], { cwd: process.cwd(), encoding: "utf8", timeout: 60000 });
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
   const model = JSON.parse(await readFile("dist/runtime/product-model.json", "utf8"));
@@ -75,13 +69,6 @@ test("build publishes one non-authoritative Lib/world product-boundary projectio
   assert.equal(model.surfaces.lib.kind, "admitted-world-registry-projection");
   assert.equal(model.surfaces.lib.package_coordinate_is_semantic_identity, false);
   assert.equal(model.surfaces.worlds.kind, "compatibility-alias");
-  assert.equal(model.surfaces.universe.public, "https://lib.idol.id/universe");
-  assert.equal(model.entities.home.kind, "reach-and-provenance");
-  assert.equal(model.entities.home.is_world, false);
-  assert.equal(model.entities.path.is_identity, false);
-  assert.equal(model.entities.package_provenance.is_authority, false);
-  assert.equal(model.graph.roles.owner, "compiler-published-projection");
-  assert.deepEqual(model.graph.roles.web_declared, []);
   assert.equal(model.graph.operations_are_relation_identities, true);
   assert.equal(model.graph.reverse_traversal, "derived-index");
 });

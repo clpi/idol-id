@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "idol-id",
   "main": "./worker/entry.js",
-  "compatibility_date": "2026-08-25",
+  "compatibility_date": "2026-08-29",
   "workers_dev": false,
   "assets": {
     "directory": "./dist",
@@ -10,19 +10,8 @@
     "run_worker_first": true
   },
   "routes": [
-    { "pattern": "idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "www.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "docs.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "lib.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "api.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "graph.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "worlds.idol.id", "custom_domain": true },
-    { "pattern": "platform.idol.id", "custom_domain": true },
-    { "pattern": "live.idol.id", "custom_domain": true },
-    { "pattern": "mcp.idol.id", "custom_domain": true },
-    { "pattern": "r8a.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "r8b.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "r16.idol.id/*", "zone_name": "idol.id" }
+    { "pattern": "hermes.idol.id/*", "zone_name": "idol.id" },
+    { "pattern": "claw.idol.id/*", "zone_name": "claw.idol.id" }
   ],
   "vars": {
     "IDOL_AUTHORITY": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",

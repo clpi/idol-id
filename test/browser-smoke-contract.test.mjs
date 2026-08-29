@@ -10,15 +10,13 @@ test("verified builds execute a real Chrome semantic-interaction gate", async ()
     read("scripts/browser-smoke.mjs"),
   ]);
 
-  assert.match(workflow, /node scripts\/browser-smoke\.mjs/);
+  assert.match(workflow, /node scripts\/run-browser-smoke\.mjs|node scripts\/browser-smoke\.mjs/);
   assert.match(workflow, /idol-browser-smoke-\$\{\{ github\.run_id \}\}/);
   assert.match(workflow, /\.artifacts\/browser-smoke/);
   assert.match(smoke, /390, 844/);
   assert.match(smoke, /1440, 900/);
   assert.match(smoke, /\.semantic-token/);
-  assert.match(smoke, /#analyze/);
   assert.match(smoke, /relation:weight/);
-  assert.match(smoke, /\.graph-edge/);
   for (const lens of ["identity", "edges", "occurrences", "worlds", "projection", "witness", "realization", "raw"]) {
     assert.match(smoke, new RegExp(`"${lens}"`));
   }

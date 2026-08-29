@@ -7,24 +7,13 @@
 "use strict";
 
 const APPS = Object.freeze([
-  { id: "graph", label: "explorer", href: "https://graph.idol.id/", title: "Semantic Observatory" },
-  { id: "live", label: "live", href: "https://live.idol.id/", title: "Causal project control plane" },
-  { id: "ide", label: "ide", href: "https://platform.idol.id/ide", title: "Browser IDE" },
-  { id: "lib", label: "lib", href: "https://lib.idol.id/", title: "Admitted world registry" },
-  { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Law and documentation" },
-  { id: "api", label: "api", href: "https://api.idol.id/", title: "Semantic API" },
-  { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Platform" },
+  { id: "observe", label: "observe", href: "/lenses/observe/", title: "Semantic Observatory" },
+  { id: "worlds", label: "worlds", href: "/lenses/worlds/", title: "World Atlas" },
+  { id: "law", label: "law", href: "/lenses/law/", title: "Law and documentation" },
+  { id: "work", label: "work", href: "/lenses/work/", title: "Workspace" },
 ]);
 
-const CONTEXTUAL = Object.freeze([
-  { label: "published worlds", href: "https://lib.idol.id/", title: "Published admitted-world records" },
-  { label: "world atlas", href: "https://lib.idol.id/atlas", title: "Provided, published, and foreign-origin world projections" },
-  { label: "source homes", href: "https://lib.idol.id/?set=homes", title: "Reach and source provenance" },
-  { label: "public universe views", href: "https://lib.idol.id/universe", title: "Public operational projections" },
-  { label: "manage universe views", href: "https://platform.idol.id/universe", title: "Authenticated Universe management" },
-  { label: "repository observatory", href: "https://platform.idol.id/repo", title: "Authenticated Repository Observatory" },
-  { label: "hosted mcp", href: "https://mcp.idol.id/", title: "Stateless scoped MCP transport" },
-]);
+const CONTEXTUAL = Object.freeze([]);
 
 function ensureSurfaceStyles() {
   if (document.querySelector('link[href="/shared/surface.css"]')) return;
@@ -87,9 +76,9 @@ function createMobilePanel(app, toggle) {
   panel.className = "nav-panel";
   panel.id = "idol-nav-panel";
   panel.hidden = true;
-  panel.setAttribute("aria-label", "Idsem navigation");
+  panel.setAttribute("aria-label", "IDOL navigation");
   panel.innerHTML = `
-    <nav class="nav-panel-primary" aria-label="Idsem products">
+    <nav class="nav-panel-primary" aria-label="IDOL instrument">
       ${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}
     </nav>
     <div class="nav-panel-context" aria-label="Contextual projections">
@@ -105,7 +94,7 @@ function createMobilePanel(app, toggle) {
     panel.classList.toggle("open", open);
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Close Idsem navigation" : "Open Idsem navigation");
+    toggle.setAttribute("aria-label", open ? "Close IDOL navigation" : "Open IDOL navigation");
     document.documentElement.classList.toggle("nav-open", open);
     if (!changed) return;
     if (open) {
@@ -153,11 +142,11 @@ function boot(app, opts) {
     return node;
   })();
   bar.innerHTML = `
-    <div class="brand"><span class="dot"></span><a href="https://idol.id/" style="border:0;color:inherit">IDSEM</a></div>
+    <div class="brand"><span class="dot"></span><a href="/lenses/observe/" style="border:0;color:inherit">IDOL</a></div>
     <div class="crumbs" id="crumbs"></div>
     <div class="spacer"></div>
-    <nav class="nav nav-desktop" aria-label="Idsem products">${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}</nav>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="idol-nav-panel" aria-label="Open Idsem navigation"><span aria-hidden="true">menu</span></button>`;
+    <nav class="nav nav-desktop" aria-label="IDOL instrument">${APPS.map((item) => linkMarkup(item, activeApp(item, app))).join("")}</nav>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="idol-nav-panel" aria-label="Open IDOL navigation"><span aria-hidden="true">menu</span></button>`;
   const navigation = createMobilePanel(app, bar.querySelector(".nav-toggle"));
 
   const statusbar = document.querySelector(".statusbar");

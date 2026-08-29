@@ -123,20 +123,20 @@ test("tools/list is deterministic and keeps operation names as tool relations, n
   const names = document.result.tools.map((tool) => tool.name);
   assert.deepEqual(names, [...names].sort());
   for (const required of [
-    "idsem.analyze",
-    "idsem.authority",
-    "idsem.live.application.create",
-    "idsem.live.event.append",
-    "idsem.live.frontier.set",
-    "idsem.live.graph.get",
-    "idsem.live.node.create",
-    "idsem.live.project.create",
-    "idsem.live.project.get",
-    "idsem.live.projects.list",
-    "idsem.live.world.bind",
-    "idsem.profile",
-    "idsem.universe.list",
-    "idsem.worlds.list",
+    "idol.analyze",
+    "idol.authority",
+    "idol.live.application.create",
+    "idol.live.event.append",
+    "idol.live.frontier.set",
+    "idol.live.graph.get",
+    "idol.live.node.create",
+    "idol.live.project.create",
+    "idol.live.project.get",
+    "idol.live.projects.list",
+    "idol.live.world.bind",
+    "idol.profile",
+    "idol.universe.list",
+    "idol.worlds.list",
   ]) assert.ok(names.includes(required), `missing ${required}`);
 });
 
@@ -146,9 +146,9 @@ test("tools/call delegates to one authenticated Live service and an exact fixed 
   const deps = dependencies(repository);
 
   let response = await handle(mcpRequest(token.token, rpc("tools/call", {
-    name: "idsem.live.project.create",
+    name: "idol.live.project.create",
     arguments: { name: "MCP project", slug: "mcp-project", summary: "created through hosted MCP", visibility: "private" },
-  }), { "mcp-method": "tools/call", "mcp-name": "idsem.live.project.create" }), envWithAssets(), deps);
+  }), { "mcp-method": "tools/call", "mcp-name": "idol.live.project.create" }), envWithAssets(), deps);
   assert.equal(response.status, 200);
   let document = await response.json();
   assert.equal(document.result.isError, false);
@@ -156,9 +156,9 @@ test("tools/call delegates to one authenticated Live service and an exact fixed 
   assert.match(project.id, /^lp_/);
 
   response = await handle(mcpRequest(token.token, rpc("tools/call", {
-    name: "idsem.analyze",
+    name: "idol.analyze",
     arguments: { source: "answer = 42" },
-  }, 2), { "mcp-method": "tools/call", "mcp-name": "idsem.analyze" }), envWithAssets(), deps);
+  }, 2), { "mcp-method": "tools/call", "mcp-name": "idol.analyze" }), envWithAssets(), deps);
   document = await response.json();
   assert.equal(document.result.structuredContent.source_size, 11);
   assert.equal(document.result.structuredContent.check.ok, true);
@@ -176,7 +176,7 @@ test("hosted MCP rejects missing scopes, unsafe origins, mismatched routing head
   assert.equal(response.status, 403);
   assert.equal((await response.json()).error.code, "MCP_ORIGIN_REFUSED");
 
-  response = await handle(mcpRequest(token.token, rpc("tools/list"), { "mcp-method": "tools/call", "mcp-name": "idsem.profile" }), envWithAssets(), dependencies(repository));
+  response = await handle(mcpRequest(token.token, rpc("tools/list"), { "mcp-method": "tools/call", "mcp-name": "idol.profile" }), envWithAssets(), dependencies(repository));
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error.code, "MCP_ROUTING_MISMATCH");
 
@@ -184,7 +184,7 @@ test("hosted MCP rejects missing scopes, unsafe origins, mismatched routing head
   assert.equal(response.status, 405);
 
   const huge = "x".repeat(70 * 1024);
-  response = await handle(mcpRequest(token.token, rpc("tools/call", { name: "idsem.profile", arguments: { huge } }), { "mcp-method": "tools/call", "mcp-name": "idsem.profile" }), envWithAssets(), dependencies(repository));
+  response = await handle(mcpRequest(token.token, rpc("tools/call", { name: "idol.profile", arguments: { huge } }), { "mcp-method": "tools/call", "mcp-name": "idol.profile" }), envWithAssets(), dependencies(repository));
   assert.equal(response.status, 413);
 });
 
@@ -206,5 +206,5 @@ test("legacy initialize remains compatible without creating a server session", a
   assert.equal(response.headers.has("mcp-session-id"), false);
   const body = await response.json();
   assert.equal(body.result.protocolVersion, "2025-11-25");
-  assert.equal(body.result.serverInfo.name, "idsem-hosted-mcp");
+  assert.equal(body.result.serverInfo.name, "idol-hosted-mcp");
 });
