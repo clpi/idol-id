@@ -1,0 +1,16 @@
+
+ ⛅️ wrangler 4.125.0
+────────────────────
+✨ Read 113 files from the assets directory /home/runner/work/idol-id/idol-id/dist
+Total Upload: 238.57 KiB / gzip: 51.64 KiB
+Your Worker has access to the following bindings:
+Binding                                                                      Resource                  
+env.ASSETS                                                                   Assets                    
+env.IDOL_AUTHORITY ("cb2199dff026c1b2d3fbd0caa04d6d323370a...")              Environment Variable      
+env.IDOL_NATIVE_AUTHORITY ("ad438a856daa8786e77ac9f033d38deb9e8f5...")       Environment Variable      
+env.IDOL_SOURCE_LAW ("95e70291b13062881ebc6c96005c5ad02230b...")             Environment Variable      
+env.IDOL_LOCAL_DEVELOPMENT ("1")                                             Environment Variable      
+
+--dry-run: exiting now.
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md

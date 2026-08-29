@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "chrome": "Chrome/151.0.7922.173",
+  "origin": "http://127.0.0.1:41740",
+  "viewports": [
+    [
+      390,
+      844
+    ],
+    [
+      1440,
+      900
+    ]
+  ],
+  "artifacts": [
+    "live-mobile.png",
+    "live-desktop.png",
+    "mcp-mobile.png",
+    "mcp-desktop.png"
+  ]
+}

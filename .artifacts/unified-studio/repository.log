@@ -1,0 +1,1552 @@
+
+> idol-id@0.2.0 check
+> npm run authority:check && npm run public:identity && npm test && npm run build
+
+
+> idol-id@0.2.0 authority:check
+> node scripts/check-authority.mjs
+
+authority gate passed: cb2199dff026c1b2d3fbd0caa04d6d323370a9e8 · authored Idol sources 2
+
+> idol-id@0.2.0 public:identity
+> node scripts/check-public-identity.mjs
+
+public identity gate passed: apps, shared, content/docs + README · IDOL only · 12 app shells converged
+
+> idol-id@0.2.0 test
+> node --test --test-concurrency=1
+
+TAP version 13
+# Subtest: verified builds execute a real Chrome semantic-interaction gate
+ok 1 - verified builds execute a real Chrome semantic-interaction gate
+  ---
+  duration_ms: 6.377009
+  type: 'test'
+  ...
+# Subtest: browser smoke closes Chrome before deleting its profile
+ok 2 - browser smoke closes Chrome before deleting its profile
+  ---
+  duration_ms: 2.518938
+  type: 'test'
+  ...
+# Subtest: browser smoke publishes the immutable build authority in its native fixture
+ok 3 - browser smoke publishes the immutable build authority in its native fixture
+  ---
+  duration_ms: 1.676493
+  type: 'test'
+  ...
+# Subtest: immutable build ships exact language authority, source law, and source examples
+ok 4 - immutable build ships exact language authority, source law, and source examples
+  ---
+  duration_ms: 110.645585
+  type: 'test'
+  ...
+# Subtest: build emits Lib-owned world projections, foreign integrations, authenticated platform, and local-first IDE
+ok 5 - build emits Lib-owned world projections, foreign integrations, authenticated platform, and local-first IDE
+  ---
+  duration_ms: 118.200214
+  type: 'test'
+  ...
+# Subtest: foreign world index is available on Lib and API surfaces without origin fetch
+ok 6 - foreign world index is available on Lib and API surfaces without origin fetch
+  ---
+  duration_ms: 30.798091
+  type: 'test'
+  ...
+# Subtest: Worlds compatibility host redirects foreign transport to Lib
+ok 7 - Worlds compatibility host redirects foreign transport to Lib
+  ---
+  duration_ms: 0.662267
+  type: 'test'
+  ...
+# Subtest: one integration record is returned by provenance slug
+ok 8 - one integration record is returned by provenance slug
+  ---
+  duration_ms: 1.495275
+  type: 'test'
+  ...
+# Subtest: unknown foreign integration slug fails closed
+ok 9 - unknown foreign integration slug fails closed
+  ---
+  duration_ms: 1.120244
+  type: 'test'
+  ...
+# Subtest: import plan is deterministic, plan-only, and performs no fetch
+ok 10 - import plan is deterministic, plan-only, and performs no fetch
+  ---
+  duration_ms: 2.293226
+  type: 'test'
+  ...
+# Subtest: invalid import JSON and unsupported kinds fail exactly
+ok 11 - invalid import JSON and unsupported kinds fail exactly
+  ---
+  duration_ms: 1.885684
+  type: 'test'
+  ...
+# Subtest: import plan body is bounded
+ok 12 - import plan body is bounded
+  ---
+  duration_ms: 1.02708
+  type: 'test'
+  ...
+# Subtest: foreign candidates never fabricate semantic identity
+ok 13 - foreign candidates never fabricate semantic identity
+  ---
+  duration_ms: 1.154277
+  type: 'test'
+  ...
+# Subtest: integration records expose obligations and exact refusal
+ok 14 - integration records expose obligations and exact refusal
+  ---
+  duration_ms: 0.760963
+  type: 'test'
+  ...
+# Subtest: integration lookup and search remain provenance based
+ok 15 - integration lookup and search remain provenance based
+  ---
+  duration_ms: 1.09179
+  type: 'test'
+  ...
+# Subtest: import planning is deterministic and performs no import
+ok 16 - import planning is deterministic and performs no import
+  ---
+  duration_ms: 0.472282
+  type: 'test'
+  ...
+# Subtest: all approved import kinds preserve an explicit authority boundary
+ok 17 - all approved import kinds preserve an explicit authority boundary
+  ---
+  duration_ms: 0.432999
+  type: 'test'
+  ...
+# Subtest: unsupported import kinds fail exactly
+ok 18 - unsupported import kinds fail exactly
+  ---
+  duration_ms: 0.395609
+  type: 'test'
+  ...
+# Subtest: import request bounds are enforced
+ok 19 - import request bounds are enforced
+  ---
+  duration_ms: 0.339174
+  type: 'test'
+  ...
+# Subtest: canonical graph model contains only compiler-published nodes and edges
+ok 20 - canonical graph model contains only compiler-published nodes and edges
+  ---
+  duration_ms: 1.773735
+  type: 'test'
+  ...
+# Subtest: deterministic layout is byte-stable and requires no force simulation
+ok 21 - deterministic layout is byte-stable and requires no force simulation
+  ---
+  duration_ms: 8.190628
+  type: 'test'
+  ...
+# Subtest: edge presentation reports the exact published field and never guesses an operation role
+ok 22 - edge presentation reports the exact published field and never guesses an operation role
+  ---
+  duration_ms: 0.989449
+  type: 'test'
+  ...
+# Subtest: reverse traversal and neighbourhood are derived indexes rather than duplicate semantic edges
+ok 23 - reverse traversal and neighbourhood are derived indexes rather than duplicate semantic edges
+  ---
+  duration_ms: 0.391272
+  type: 'test'
+  ...
+# Subtest: malformed published graph endpoints fail closed
+ok 24 - malformed published graph endpoints fail closed
+  ---
+  duration_ms: 0.566238
+  type: 'test'
+  ...
+# Subtest: IDE analysis requires independently verified Access identity on Platform
+ok 25 - IDE analysis requires independently verified Access identity on Platform
+  ---
+  duration_ms: 25.723807
+  type: 'test'
+  ...
+# Subtest: IDE identity claims fail closed when subject email issuer or audience drift
+ok 26 - IDE identity claims fail closed when subject email issuer or audience drift
+  ---
+  duration_ms: 3.425873
+  type: 'test'
+  ...
+# Subtest: IDE analysis requires same-origin browser proof
+ok 27 - IDE analysis requires same-origin browser proof
+  ---
+  duration_ms: 1.246159
+  type: 'test'
+  ...
+# Subtest: IDE analysis validates JSON bounds identifiers paths and source
+ok 28 - IDE analysis validates JSON bounds identifiers paths and source
+  ---
+  duration_ms: 21.218637
+  type: 'test'
+  ...
+# Subtest: admitted IDE analysis audits before and after one fixed upstream call without source
+ok 29 - admitted IDE analysis audits before and after one fixed upstream call without source
+  ---
+  duration_ms: 10.531833
+  type: 'test'
+  ...
+# Subtest: IDE upstream failures are bounded 502 evidence with refusal audit
+ok 30 - IDE upstream failures are bounded 502 evidence with refusal audit
+  ---
+  duration_ms: 3.175725
+  type: 'test'
+  ...
+# Subtest: IDE analysis fails closed before source transfer when audit storage is unavailable
+ok 31 - IDE analysis fails closed before source transfer when audit storage is unavailable
+  ---
+  duration_ms: 1.802689
+  type: 'test'
+  ...
+# Subtest: root is a working Idol semantic instrument rather than a product directory
+ok 32 - root is a working Idol semantic instrument rather than a product directory
+  ---
+  duration_ms: 1.024475
+  type: 'test'
+  ...
+# Subtest: studio uses real compiler transports and refuses browser-minted semantics
+ok 33 - studio uses real compiler transports and refuses browser-minted semantics
+  ---
+  duration_ms: 0.261068
+  type: 'test'
+  ...
+# Subtest: shared chrome presents one bounded Idol product hierarchy
+ok 34 - shared chrome presents one bounded Idol product hierarchy
+  ---
+  duration_ms: 0.322283
+  type: 'test'
+  ...
+# Subtest: responsive system removes horizontal product strips and keeps touch controls
+ok 35 - responsive system removes horizontal product strips and keeps touch controls
+  ---
+  duration_ms: 0.303137
+  type: 'test'
+  ...
+# Subtest: every active app consumes the same design system and current identity
+ok 36 - every active app consumes the same design system and current identity
+  ---
+  duration_ms: 11.543682
+  type: 'test'
+  ...
+# Subtest: Unix installer is user-local, authority-pinned, and honest about bootstrap status
+ok 37 - Unix installer is user-local, authority-pinned, and honest about bootstrap status
+  ---
+  duration_ms: 4.618873
+  type: 'test'
+  ...
+# Subtest: PowerShell installer is user-local, authority-pinned, and verifies canonical provenance
+ok 38 - PowerShell installer is user-local, authority-pinned, and verifies canonical provenance
+  ---
+  duration_ms: 1.521594
+  type: 'test'
+  ...
+# Subtest: Lib owns the public admitted-world registry and Worlds preserves compatibility as an alias
+ok 39 - Lib owns the public admitted-world registry and Worlds preserves compatibility as an alias
+  ---
+  duration_ms: 21.759648
+  type: 'test'
+  ...
+# Subtest: Lib owns Atlas and public Universe lenses while Platform keeps private Universe management
+ok 40 - Lib owns Atlas and public Universe lenses while Platform keeps private Universe management
+  ---
+  duration_ms: 6.602129
+  type: 'test'
+  ...
+# Subtest: global chrome exposes Worlds and Registry as bounded projections over one semantic universe
+ok 41 - global chrome exposes Worlds and Registry as bounded projections over one semantic universe
+  ---
+  duration_ms: 6.902661
+  type: 'test'
+  ...
+# Subtest: runtime product model keeps world identity separate from package coordinate and web presentation
+ok 42 - runtime product model keeps world identity separate from package coordinate and web presentation
+  ---
+  duration_ms: 109.095232
+  type: 'test'
+  ...
+# Subtest: Lib defaults to published worlds, keeps homes secondary, and canonicalizes contextual links beneath Lib
+ok 43 - Lib defaults to published worlds, keeps homes secondary, and canonicalizes contextual links beneath Lib
+  ---
+  duration_ms: 2.132486
+  type: 'test'
+  ...
+# Subtest: Live creates an independent one-destination Access application and exact-owner policy
+ok 44 - Live creates an independent one-destination Access application and exact-owner policy
+  ---
+  duration_ms: 25.144886
+  type: 'test'
+  ...
+# Subtest: Live Access provisioning is idempotent and never mutates the Platform application
+ok 45 - Live Access provisioning is idempotent and never mutates the Platform application
+  ---
+  duration_ms: 1.329555
+  type: 'test'
+  ...
+# Subtest: Live Access refuses unrelated destination drift before updating anything
+ok 46 - Live Access refuses unrelated destination drift before updating anything
+  ---
+  duration_ms: 1.870135
+  type: 'test'
+  ...
+# Subtest: Live Access refuses broadened or unrelated allow policies
+ok 47 - Live Access refuses broadened or unrelated allow policies
+  ---
+  duration_ms: 1.606832
+  type: 'test'
+  ...
+# Subtest: Live Access repairs admitted application drift without broadening its destination
+ok 48 - Live Access repairs admitted application drift without broadening its destination
+  ---
+  duration_ms: 1.097231
+  type: 'test'
+  ...
+# Subtest: production Wrangler keeps Platform and Live JWT audiences distinct
+ok 49 - production Wrangler keeps Platform and Live JWT audiences distinct
+  ---
+  duration_ms: 0.209311
+  type: 'test'
+  ...
+# Subtest: deployment and Worker consume the separate Live audience without destination append logic
+ok 50 - deployment and Worker consume the separate Live audience without destination append logic
+  ---
+  duration_ms: 12.011079
+  type: 'test'
+  ...
+# Subtest: immutable build contains Live, hosted MCP, exact routes, and honest implementation status
+ok 51 - immutable build contains Live, hosted MCP, exact routes, and honest implementation status
+  ---
+  duration_ms: 111.618069
+  type: 'test'
+  ...
+# Subtest: Worker, Wrangler, Access, navigation, verification, and CI own the two new surfaces
+ok 52 - Worker, Wrangler, Access, navigation, verification, and CI own the two new surfaces
+  ---
+  duration_ms: 3.515871
+  type: 'test'
+  ...
+# Subtest: Idol Live source bridge is admitted only as exact authored source, never as the executing implementation
+ok 53 - Idol Live source bridge is admitted only as exact authored source, never as the executing implementation
+  ---
+  duration_ms: 1.73361
+  type: 'test'
+  ...
+# Subtest: Live owns one causal collaboration history and one admitted frontier without minting Idol semantics
+ok 54 - Live owns one causal collaboration history and one admitted frontier without minting Idol semantics
+  ---
+  duration_ms: 16.35643
+  type: 'test'
+  ...
+# Subtest: Live project world management binds an existing Universe View as a projection and grants no authority
+ok 55 - Live project world management binds an existing Universe View as a projection and grants no authority
+  ---
+  duration_ms: 1.283779
+  type: 'test'
+  ...
+# Subtest: Live stores are subject-owned and project lists are bounded summaries
+ok 56 - Live stores are subject-owned and project lists are bounded summaries
+  ---
+  duration_ms: 0.706371
+  type: 'test'
+  ...
+# Subtest: standalone graph projection refuses duplicate IDs and unknown application endpoints
+ok 57 - standalone graph projection refuses duplicate IDs and unknown application endpoints
+  ---
+  duration_ms: 0.35289
+  type: 'test'
+  ...
+# (node:2532) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: migration 0007 adds the Live causal-history and frontier store without rewriting shipped migrations
+ok 58 - migration 0007 adds the Live causal-history and frontier store without rewriting shipped migrations
+  ---
+  duration_ms: 16.639381
+  type: 'test'
+  ...
+# Subtest: Live migration keeps foreign keys and append-only frontier history enforceable
+ok 59 - Live migration keeps foreign keys and append-only frontier history enforceable
+  ---
+  duration_ms: 1.731456
+  type: 'test'
+  ...
+# Subtest: Live UI is an interactive exact-record workbench, not decorative graph theatre
+ok 60 - Live UI is an interactive exact-record workbench, not decorative graph theatre
+  ---
+  duration_ms: 6.278314
+  type: 'test'
+  ...
+# Subtest: hosted MCP page explains endpoint, auth, scopes, protocol, and transport boundaries
+ok 61 - hosted MCP page explains endpoint, auth, scopes, protocol, and transport boundaries
+  ---
+  duration_ms: 1.605391
+  type: 'test'
+  ...
+# Subtest: shared chrome and immutable-build adapters expose Live and hosted MCP without duplicating semantic authority
+ok 62 - shared chrome and immutable-build adapters expose Live and hosted MCP without duplicating semantic authority
+  ---
+  duration_ms: 2.371172
+  type: 'test'
+  ...
+# Subtest: required real-Chrome gate covers Live and MCP on mobile and desktop
+ok 63 - required real-Chrome gate covers Live and MCP on mobile and desktop
+  ---
+  duration_ms: 1.329866
+  type: 'test'
+  ...
+# Subtest: Live status is public only on the Live surface and publishes exact authority boundaries
+ok 64 - Live status is public only on the Live surface and publishes exact authority boundaries
+  ---
+  duration_ms: 24.335873
+  type: 'test'
+  ...
+# Subtest: Live browser routes require Access identity and exact same-origin mutation proof
+ok 65 - Live browser routes require Access identity and exact same-origin mutation proof
+  ---
+  duration_ms: 3.39792
+  type: 'test'
+  ...
+# Subtest: authenticated browser can create a project, populate its exact graph, and bind a Universe View
+ok 66 - authenticated browser can create a project, populate its exact graph, and bind a Universe View
+  ---
+  duration_ms: 11.713061
+  type: 'test'
+  ...
+# Subtest: API tokens with live scopes can manage only their subject-owned projects
+ok 67 - API tokens with live scopes can manage only their subject-owned projects
+  ---
+  duration_ms: 10.745844
+  type: 'test'
+  ...
+# Subtest: modern hosted MCP is stateless, authenticated, discoverable, and cacheable
+ok 68 - modern hosted MCP is stateless, authenticated, discoverable, and cacheable
+  ---
+  duration_ms: 31.931199
+  type: 'test'
+  ...
+# Subtest: tools/list is deterministic and keeps operation names as tool relations, not graph edge kinds
+ok 69 - tools/list is deterministic and keeps operation names as tool relations, not graph edge kinds
+  ---
+  duration_ms: 4.12009
+  type: 'test'
+  ...
+# Subtest: tools/call delegates to one authenticated Live service and an exact fixed analysis upstream
+ok 70 - tools/call delegates to one authenticated Live service and an exact fixed analysis upstream
+  ---
+  duration_ms: 6.484891
+  type: 'test'
+  ...
+# Subtest: hosted MCP rejects missing scopes, unsafe origins, mismatched routing headers, oversized bodies, and arbitrary upstreams
+ok 71 - hosted MCP rejects missing scopes, unsafe origins, mismatched routing headers, oversized bodies, and arbitrary upstreams
+  ---
+  duration_ms: 6.719769
+  type: 'test'
+  ...
+# Subtest: legacy initialize remains compatible without creating a server session
+ok 72 - legacy initialize remains compatible without creating a server session
+  ---
+  duration_ms: 2.011148
+  type: 'test'
+  ...
+# Subtest: global chrome exposes bounded world, registry, and Universe projections
+ok 73 - global chrome exposes bounded world, registry, and Universe projections
+  ---
+  duration_ms: 5.642296
+  type: 'test'
+  ...
+# Subtest: shared mobile chrome replaces the overflowing product strip before it can obscure content
+ok 74 - shared mobile chrome replaces the overflowing product strip before it can obscure content
+  ---
+  duration_ms: 1.803681
+  type: 'test'
+  ...
+# Subtest: homepage is a static semantic Studio rather than a post-load product rewrite
+ok 75 - homepage is a static semantic Studio rather than a post-load product rewrite
+  ---
+  duration_ms: 2.380499
+  type: 'test'
+  ...
+# Subtest: Lib preserves mobile list/detail navigation and exact home boundary
+ok 76 - Lib preserves mobile list/detail navigation and exact home boundary
+  ---
+  duration_ms: 1.622162
+  type: 'test'
+  ...
+# Subtest: build publishes one non-authoritative Lib/world product-boundary projection
+ok 77 - build publishes one non-authoritative Lib/world product-boundary projection
+  ---
+  duration_ms: 102.734329
+  type: 'test'
+  ...
+# Subtest: Access JWT validation verifies signature, issuer, audience, expiry, and exact owner email
+ok 78 - Access JWT validation verifies signature, issuer, audience, expiry, and exact owner email
+  ---
+  duration_ms: 146.695872
+  type: 'test'
+  ...
+# Subtest: Access JWT validation rejects wrong audience, owner email, expiry, future issue time, and algorithm
+ok 79 - Access JWT validation rejects wrong audience, owner email, expiry, future issue time, and algorithm
+  ---
+  duration_ms: 248.33257
+  type: 'test'
+  ...
+# Subtest: Access JWT input is bounded and domain fallback remains explicit
+ok 80 - Access JWT input is bounded and domain fallback remains explicit
+  ---
+  duration_ms: 32.185104
+  type: 'test'
+  ...
+# Subtest: API token material is prefix-addressable, random, digest-only, and scoped
+ok 81 - API token material is prefix-addressable, random, digest-only, and scoped
+  ---
+  duration_ms: 2.190494
+  type: 'test'
+  ...
+# Subtest: platform service creates profiles, updates display data, and audits mutations
+ok 82 - platform service creates profiles, updates display data, and audits mutations
+  ---
+  duration_ms: 4.763944
+  type: 'test'
+  ...
+# Subtest: API tokens are returned once, stored by digest, listed without secret, audited, and revocable
+ok 83 - API tokens are returned once, stored by digest, listed without secret, audited, and revocable
+  ---
+  duration_ms: 9.725649
+  type: 'test'
+  ...
+# Subtest: expired tokens and missing scopes fail closed
+ok 84 - expired tokens and missing scopes fail closed
+  ---
+  duration_ms: 2.551088
+  type: 'test'
+  ...
+# Subtest: Platform adapters publish Programs L and M as live and Program N as preview live
+ok 85 - Platform adapters publish Programs L and M as live and Program N as preview live
+  ---
+  duration_ms: 8.183395
+  type: 'test'
+  ...
+# Subtest: repository token controls use the singular scope name consumed by submission
+ok 86 - repository token controls use the singular scope name consumed by submission
+  ---
+  duration_ms: 2.896734
+  type: 'test'
+  ...
+# Subtest: platform status is public only on the Platform surface
+ok 87 - platform status is public only on the Platform surface
+  ---
+  duration_ms: 25.494469
+  type: 'test'
+  ...
+# Subtest: browser session requires independently verified Access identity
+ok 88 - browser session requires independently verified Access identity
+  ---
+  duration_ms: 0.92045
+  type: 'test'
+  ...
+# Subtest: Access login initializes the profile and redirects to the account console
+ok 89 - Access login initializes the profile and redirects to the account console
+  ---
+  duration_ms: 1.176098
+  type: 'test'
+  ...
+# Subtest: authenticated browser can create profile and manage digest-only tokens
+ok 90 - authenticated browser can create profile and manage digest-only tokens
+  ---
+  duration_ms: 16.277503
+  type: 'test'
+  ...
+# Subtest: browser mutations require same-origin custom-header CSRF evidence
+ok 91 - browser mutations require same-origin custom-header CSRF evidence
+  ---
+  duration_ms: 0.849127
+  type: 'test'
+  ...
+# Subtest: private platform routes fail closed when D1 is not bound
+ok 92 - private platform routes fail closed when D1 is not bound
+  ---
+  duration_ms: 0.474266
+  type: 'test'
+  ...
+# Subtest: production verification treats Worlds as a 308 compatibility alias to canonical Lib
+ok 93 - production verification treats Worlds as a 308 compatibility alias to canonical Lib
+  ---
+  duration_ms: 4.468442
+  type: 'test'
+  ...
+# Subtest: platform provisioning creates missing D1 and exact-owner Access resources idempotently
+ok 94 - platform provisioning creates missing D1 and exact-owner Access resources idempotently
+  ---
+  duration_ms: 29.209062
+  type: 'test'
+  ...
+# Subtest: platform provisioning upgrades the known browser-only Access destination set
+ok 95 - platform provisioning upgrades the known browser-only Access destination set
+  ---
+  duration_ms: 1.430344
+  type: 'test'
+  ...
+# Subtest: platform provisioning repairs missing or different allowed identity providers
+ok 96 - platform provisioning repairs missing or different allowed identity providers
+  ---
+  duration_ms: 4.712888
+  type: 'test'
+  ...
+# Subtest: platform provisioning repairs required Access application setting drift
+ok 97 - platform provisioning repairs required Access application setting drift
+  ---
+  duration_ms: 5.794931
+  type: 'test'
+  ...
+# Subtest: platform provisioning refuses unrelated Access destination drift
+ok 98 - platform provisioning refuses unrelated Access destination drift
+  ---
+  duration_ms: 1.311441
+  type: 'test'
+  ...
+# Subtest: generated production Wrangler config binds D1, Access, and immutable web identity without secrets
+ok 99 - generated production Wrangler config binds D1, Access, and immutable web identity without secrets
+  ---
+  duration_ms: 0.329616
+  type: 'test'
+  ...
+# Subtest: one authority projection owns installers, Worker identity, Cloudflare config, and emitted manifests
+ok 100 - one authority projection owns installers, Worker identity, Cloudflare config, and emitted manifests
+  ---
+  duration_ms: 8.156417
+  type: 'test'
+  ...
+# Subtest: version, health, and browser config read the immutable authority asset instead of an environment fallback
+ok 101 - version, health, and browser config read the immutable authority asset instead of an environment fallback
+  ---
+  duration_ms: 28.047631
+  type: 'test'
+  ...
+# Subtest: product prose and controls use sans while exact code and semantic identities use Iosevka
+ok 102 - product prose and controls use sans while exact code and semantic identities use Iosevka
+  ---
+  duration_ms: 3.603014
+  type: 'test'
+  ...
+# Subtest: a Wasm file is never admitted from path existence alone
+ok 103 - a Wasm file is never admitted from path existence alone
+  ---
+  duration_ms: 100.963946
+  type: 'test'
+  ...
+# Subtest: every authored Idol source carries explicit compiler and source-law provenance
+ok 104 - every authored Idol source carries explicit compiler and source-law provenance
+  ---
+  duration_ms: 7.621184
+  type: 'test'
+  ...
+# Subtest: CI detects upstream authority drift and verifies the deployed multi-surface identity after every main push
+ok 105 - CI detects upstream authority drift and verifies the deployed multi-surface identity after every main push
+  ---
+  duration_ms: 1.767153
+  type: 'test'
+  ...
+# Subtest: research specification and Idol Live projections retain exact input hashes without becoming authority
+ok 106 - research specification and Idol Live projections retain exact input hashes without becoming authority
+  ---
+  duration_ms: 4.901207
+  type: 'test'
+  ...
+# Subtest: public API examples come only from the authority-pinned example projection
+ok 107 - public API examples come only from the authority-pinned example projection
+  ---
+  duration_ms: 1.142004
+  type: 'test'
+  ...
+# Subtest: every Worker hostname has an explicit deployment route
+ok 108 - every Worker hostname has an explicit deployment route
+  ---
+  duration_ms: 1.60522
+  type: 'test'
+  ...
+# Subtest: recovery policy states the enforceable future invariant without an impossible bug-free claim
+ok 109 - recovery policy states the enforceable future invariant without an impossible bug-free claim
+  ---
+  duration_ms: 1.133859
+  type: 'test'
+  ...
+# Subtest: repository Access is exact-owner, destination-bounded, and idempotent
+ok 110 - repository Access is exact-owner, destination-bounded, and idempotent
+  ---
+  duration_ms: 26.932797
+  type: 'test'
+  ...
+# Subtest: repository Access repairs drift in the named owner policy
+ok 111 - repository Access repairs drift in the named owner policy
+  ---
+  duration_ms: 1.988917
+  type: 'test'
+  ...
+# Subtest: repository Access rejects unrelated allow policies
+ok 112 - repository Access rejects unrelated allow policies
+  ---
+  duration_ms: 1.206305
+  type: 'test'
+  ...
+# Subtest: repository Access refuses destination drift rather than inheriting authority
+ok 113 - repository Access refuses destination drift rather than inheriting authority
+  ---
+  duration_ms: 0.608357
+  type: 'test'
+  ...
+# Subtest: production config receives only repository Access audience
+ok 114 - production config receives only repository Access audience
+  ---
+  duration_ms: 0.265817
+  type: 'test'
+  ...
+# Subtest: one immutable build packages repository workbench and bootstrap installers
+ok 115 - one immutable build packages repository workbench and bootstrap installers
+  ---
+  duration_ms: 112.837205
+  type: 'test'
+  ...
+# Subtest: D1 commits repository records and audit events in one database batch
+ok 116 - D1 commits repository records and audit events in one database batch
+  ---
+  duration_ms: 2.431344
+  type: 'test'
+  ...
+# Subtest: D1 observation lists return bounded summaries without selecting full documents
+ok 117 - D1 observation lists return bounded summaries without selecting full documents
+  ---
+  duration_ms: 1.040195
+  type: 'test'
+  ...
+# Subtest: follow-up migration stores and backfills every bounded observation summary field
+ok 118 - follow-up migration stores and backfills every bounded observation summary field
+  ---
+  duration_ms: 5.426102
+  type: 'test'
+  ...
+# Subtest: provider default branches are bounded before revision lookup or persistence
+ok 119 - provider default branches are bounded before revision lookup or persistence
+  ---
+  duration_ms: 24.277044
+  type: 'test'
+  ...
+# Subtest: root installer endpoints and protected repository navigation are edge assets
+ok 120 - root installer endpoints and protected repository navigation are edge assets
+  ---
+  duration_ms: 25.682279
+  type: 'test'
+  ...
+# Subtest: installer is not exposed as an arbitrary-host file
+ok 121 - installer is not exposed as an arbitrary-host file
+  ---
+  duration_ms: 1.970212
+  type: 'test'
+  ...
+# Subtest: applied repository migration 0002 remains byte-for-byte immutable
+ok 122 - applied repository migration 0002 remains byte-for-byte immutable
+  ---
+  duration_ms: 4.492547
+  type: 'test'
+  ...
+# Subtest: follow-up migration 0003 adds and backfills every bounded observation summary field
+ok 123 - follow-up migration 0003 adds and backfills every bounded observation summary field
+  ---
+  duration_ms: 1.759698
+  type: 'test'
+  ...
+# Subtest: repository API preserves invalid-token status instead of converting it to 500
+ok 124 - repository API preserves invalid-token status instead of converting it to 500
+  ---
+  duration_ms: 23.971162
+  type: 'test'
+  ...
+# Subtest: repository browser preserves platform session validation status
+ok 125 - repository browser preserves platform session validation status
+  ---
+  duration_ms: 0.800095
+  type: 'test'
+  ...
+# Subtest: repository browser does not reuse the IDE Access audience
+ok 126 - repository browser does not reuse the IDE Access audience
+  ---
+  duration_ms: 0.573261
+  type: 'test'
+  ...
+# Subtest: repository coordinates are provider-admitted and exact
+ok 127 - repository coordinates are provider-admitted and exact
+  ---
+  duration_ms: 2.251317
+  type: 'test'
+  ...
+# Subtest: observation pins a revision and scaffold remains review-only
+ok 128 - observation pins a revision and scaffold remains review-only
+  ---
+  duration_ms: 31.735393
+  type: 'test'
+  ...
+# Subtest: build packages protected repository workbench and honest installers
+ok 129 - build packages protected repository workbench and honest installers
+  ---
+  duration_ms: 107.583785
+  type: 'test'
+  ...
+# Subtest: Bitbucket observation requests a bounded recursive source projection
+ok 130 - Bitbucket observation requests a bounded recursive source projection
+  ---
+  duration_ms: 25.695264
+  type: 'test'
+  ...
+# Subtest: scaffolding refuses an incomplete provider inventory before asserting path absence
+ok 131 - scaffolding refuses an incomplete provider inventory before asserting path absence
+  ---
+  duration_ms: 0.450191
+  type: 'test'
+  ...
+# Subtest: repository service commits each record and its audit event through one store operation
+ok 132 - repository service commits each record and its audit event through one store operation
+  ---
+  duration_ms: 1.512987
+  type: 'test'
+  ...
+# Subtest: D1 record and audit writes use one transactional batch
+ok 133 - D1 record and audit writes use one transactional batch
+  ---
+  duration_ms: 0.699267
+  type: 'test'
+  ...
+# Subtest: D1 observation lists select bounded summary columns instead of full documents
+ok 134 - D1 observation lists select bounded summary columns instead of full documents
+  ---
+  duration_ms: 0.57236
+  type: 'test'
+  ...
+# Subtest: follow-up migration stores the canonical bounded observation summary facts
+ok 135 - follow-up migration stores the canonical bounded observation summary facts
+  ---
+  duration_ms: 7.8384
+  type: 'test'
+  ...
+# Subtest: repository provider requests time out through the admitted AbortSignal
+ok 136 - repository provider requests time out through the admitted AbortSignal
+  ---
+  duration_ms: 11.741775
+  type: 'test'
+  ...
+# Subtest: repository POST bodies are streamed and cancelled above the byte limit
+ok 137 - repository POST bodies are streamed and cancelled above the byte limit
+  ---
+  duration_ms: 28.567142
+  type: 'test'
+  ...
+# Subtest: local Wrangler repository shell and browser API preserve one local context
+ok 138 - local Wrangler repository shell and browser API preserve one local context
+  ---
+  duration_ms: 12.671117
+  type: 'test'
+  ...
+# (node:2807) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: scaffold summaries exclude generated files and patches
+ok 139 - scaffold summaries exclude generated files and patches
+  ---
+  duration_ms: 1.515953
+  type: 'test'
+  ...
+# Subtest: repository service projects bounded scaffold fields into the atomic record
+ok 140 - repository service projects bounded scaffold fields into the atomic record
+  ---
+  duration_ms: 1.74441
+  type: 'test'
+  ...
+# Subtest: D1 scaffold lists select bounded columns rather than full documents
+ok 141 - D1 scaffold lists select bounded columns rather than full documents
+  ---
+  duration_ms: 0.569926
+  type: 'test'
+  ...
+# Subtest: memory histories retain newest records when timestamps tie
+ok 142 - memory histories retain newest records when timestamps tie
+  ---
+  duration_ms: 11.627762
+  type: 'test'
+  ...
+# Subtest: forward migration 0004 adds and backfills bounded scaffold history fields
+ok 143 - forward migration 0004 adds and backfills bounded scaffold history fields
+  ---
+  duration_ms: 7.940371
+  type: 'test'
+  ...
+# Subtest: forward migration 0004 tolerates malformed historical scaffold JSON
+ok 144 - forward migration 0004 tolerates malformed historical scaffold JSON
+  ---
+  duration_ms: 1.595121
+  type: 'test'
+  ...
+# Subtest: repository service commits each observation with its audit event atomically
+ok 145 - repository service commits each observation with its audit event atomically
+  ---
+  duration_ms: 1.889211
+  type: 'test'
+  ...
+# Subtest: repository service commits each scaffold with its audit event atomically
+ok 146 - repository service commits each scaffold with its audit event atomically
+  ---
+  duration_ms: 1.316861
+  type: 'test'
+  ...
+# Subtest: repository service propagates an atomic storage failure without a second audit path
+ok 147 - repository service propagates an atomic storage failure without a second audit path
+  ---
+  duration_ms: 0.653662
+  type: 'test'
+  ...
+# Subtest: repository service never crosses subject ownership
+ok 148 - repository service never crosses subject ownership
+  ---
+  duration_ms: 0.447286
+  type: 'test'
+  ...
+# Subtest: scaffold deep links load the full observation instead of reusing a bounded list summary
+ok 149 - scaffold deep links load the full observation instead of reusing a bounded list summary
+  ---
+  duration_ms: 4.665039
+  type: 'test'
+  ...
+# Subtest: Repository Observatory publishes a responsive fourth transformation lens
+ok 150 - Repository Observatory publishes a responsive fourth transformation lens
+  ---
+  duration_ms: 5.21688
+  type: 'test'
+  ...
+# Subtest: Platform and build projections describe preview authority without execution claims
+ok 151 - Platform and build projections describe preview authority without execution claims
+  ---
+  duration_ms: 2.123289
+  type: 'test'
+  ...
+# Subtest: browser creates and reads a non-executing derived-world transformation preview
+ok 152 - browser creates and reads a non-executing derived-world transformation preview
+  ---
+  duration_ms: 25.392939
+  type: 'test'
+  ...
+# Subtest: API transformation write requires repository:transform while reads remain repository:read
+ok 153 - API transformation write requires repository:transform while reads remain repository:read
+  ---
+  duration_ms: 1.223547
+  type: 'test'
+  ...
+# Subtest: repository status publishes preview-only Program N boundaries
+ok 154 - repository status publishes preview-only Program N boundaries
+  ---
+  duration_ms: 0.686483
+  type: 'test'
+  ...
+# Subtest: transformation preview isolates one derived world and hashes the selected exact delta
+ok 155 - transformation preview isolates one derived world and hashes the selected exact delta
+  ---
+  duration_ms: 8.920342
+  type: 'test'
+  ...
+# Subtest: transformation preview refuses a scaffold that never produced a lawful patch
+ok 156 - transformation preview refuses a scaffold that never produced a lawful patch
+  ---
+  duration_ms: 0.597125
+  type: 'test'
+  ...
+# Subtest: repository service commits transformation preview and audit atomically
+ok 157 - repository service commits transformation preview and audit atomically
+  ---
+  duration_ms: 2.934044
+  type: 'test'
+  ...
+# Subtest: memory transformation history is subject-owned, bounded, and summary-only
+ok 158 - memory transformation history is subject-owned, bounded, and summary-only
+  ---
+  duration_ms: 0.732399
+  type: 'test'
+  ...
+# Subtest: D1 transformation history selects bounded columns and migration creates an isolated table
+ok 159 - D1 transformation history selects bounded columns and migration creates an isolated table
+  ---
+  duration_ms: 2.433008
+  type: 'test'
+  ...
+# Subtest: Program N transport scope is admitted without granting a world capability
+ok 160 - Program N transport scope is admitted without granting a world capability
+  ---
+  duration_ms: 0.171872
+  type: 'test'
+  ...
+# Subtest: repository status is public only on Platform and names exact boundaries
+ok 161 - repository status is public only on Platform and names exact boundaries
+  ---
+  duration_ms: 23.702029
+  type: 'test'
+  ...
+# Subtest: browser observe requires Access and same-origin proof before provider fetch
+ok 162 - browser observe requires Access and same-origin proof before provider fetch
+  ---
+  duration_ms: 5.324672
+  type: 'test'
+  ...
+# Subtest: browser scaffold is preview-only and bound to the subject observation
+ok 163 - browser scaffold is preview-only and bound to the subject observation
+  ---
+  duration_ms: 3.271925
+  type: 'test'
+  ...
+# Subtest: API token routes require operation-specific repository scopes
+ok 164 - API token routes require operation-specific repository scopes
+  ---
+  duration_ms: 2.674669
+  type: 'test'
+  ...
+# Subtest: repository transport refuses unadmitted provider hosts without network access
+ok 165 - repository transport refuses unadmitted provider hosts without network access
+  ---
+  duration_ms: 0.88839
+  type: 'test'
+  ...
+# Subtest: repository locator admits only exact public provider coordinates
+ok 166 - repository locator admits only exact public provider coordinates
+  ---
+  duration_ms: 2.411717
+  type: 'test'
+  ...
+# Subtest: repository inventory reports observed evidence without claiming behavior
+ok 167 - repository inventory reports observed evidence without claiming behavior
+  ---
+  duration_ms: 10.119784
+  type: 'test'
+  ...
+# Subtest: public GitHub observation is revision-pinned, bounded, and identity-safe
+ok 168 - public GitHub observation is revision-pinned, bounded, and identity-safe
+  ---
+  duration_ms: 23.330876
+  type: 'test'
+  ...
+# Subtest: Bitbucket observation requests bounded recursion and retains nested files
+ok 169 - Bitbucket observation requests bounded recursion and retains nested files
+  ---
+  duration_ms: 1.839778
+  type: 'test'
+  ...
+# Subtest: scaffold generates review-only files and a deterministic add patch
+ok 170 - scaffold generates review-only files and a deterministic add patch
+  ---
+  duration_ms: 2.848724
+  type: 'test'
+  ...
+# Subtest: scaffold refuses path conflicts rather than overwriting
+ok 171 - scaffold refuses path conflicts rather than overwriting
+  ---
+  duration_ms: 0.275164
+  type: 'test'
+  ...
+# Subtest: scaffold refuses incomplete inventories before claiming paths are unused
+ok 172 - scaffold refuses incomplete inventories before claiming paths are unused
+  ---
+  duration_ms: 0.196728
+  type: 'test'
+  ...
+# Subtest: sparse compiler token projections preserve every uncovered lexical source segment
+ok 173 - sparse compiler token projections preserve every uncovered lexical source segment
+  ---
+  duration_ms: 3.907122
+  type: 'test'
+  ...
+# Subtest: compiler tokenization can replace multiple browser tokens without index coupling
+ok 174 - compiler tokenization can replace multiple browser tokens without index coupling
+  ---
+  duration_ms: 0.670453
+  type: 'test'
+  ...
+# Subtest: lexical preview keeps every token clickable without publishing semantic identity
+ok 175 - lexical preview keeps every token clickable without publishing semantic identity
+  ---
+  duration_ms: 2.155779
+  type: 'test'
+  ...
+# Subtest: remote bundle preserves compiler-published exact identity and lowering facts as strings
+ok 176 - remote bundle preserves compiler-published exact identity and lowering facts as strings
+  ---
+  duration_ms: 1.97438
+  type: 'test'
+  ...
+# Subtest: remote graph without an exact token projection never upgrades heuristic lexical bindings
+ok 177 - remote graph without an exact token projection never upgrades heuristic lexical bindings
+  ---
+  duration_ms: 0.450302
+  type: 'test'
+  ...
+# Subtest: ambiguous compiler binding remains ambiguous and does not select one identity
+ok 178 - ambiguous compiler binding remains ambiguous and does not select one identity
+  ---
+  duration_ms: 0.326119
+  type: 'test'
+  ...
+# Subtest: exact token projections reject overlap duplicate ids invalid spans and unsafe numeric identities
+ok 179 - exact token projections reject overlap duplicate ids invalid spans and unsafe numeric identities
+  ---
+  duration_ms: 0.984319
+  type: 'test'
+  ...
+# Subtest: authority and graph collection mismatches fail closed
+ok 180 - authority and graph collection mismatches fail closed
+  ---
+  duration_ms: 0.30515
+  type: 'test'
+  ...
+# Subtest: token selection is bounded and immutable
+ok 181 - token selection is bounded and immutable
+  ---
+  duration_ms: 0.342801
+  type: 'test'
+  ...
+# Subtest: semantic index links exact compiler IDs across tokens, graph, worlds, projections, derivations, and realization
+ok 182 - semantic index links exact compiler IDs across tokens, graph, worlds, projections, derivations, and realization
+  ---
+  duration_ms: 9.961828
+  type: 'test'
+  ...
+# Subtest: definitions and references are never inferred from spelling or node names
+ok 183 - definitions and references are never inferred from spelling or node names
+  ---
+  duration_ms: 1.141854
+  type: 'test'
+  ...
+# Subtest: unknown and unsafe explicit links fail closed instead of selecting a nearby record
+ok 184 - unknown and unsafe explicit links fail closed instead of selecting a nearby record
+  ---
+  duration_ms: 2.154327
+  type: 'test'
+  ...
+# Subtest: Semantic Observatory uses the exact semantic bundle and synchronized source, graph, and rail surfaces
+ok 185 - Semantic Observatory uses the exact semantic bundle and synchronized source, graph, and rail surfaces
+  ---
+  duration_ms: 6.960529
+  type: 'test'
+  ...
+# Subtest: Observatory compatibility face is bound to the exported lossless lexical segmenter
+ok 186 - Observatory compatibility face is bound to the exported lossless lexical segmenter
+  ---
+  duration_ms: 2.681171
+  type: 'test'
+  ...
+# Subtest: Observatory never presents same spelling, paths, or names as definitions or semantic references
+ok 187 - Observatory never presents same spelling, paths, or names as definitions or semantic references
+  ---
+  duration_ms: 1.821555
+  type: 'test'
+  ...
+# Subtest: canonical graph rendering never fabricates application edges
+ok 188 - canonical graph rendering never fabricates application edges
+  ---
+  duration_ms: 1.294099
+  type: 'test'
+  ...
+# Subtest: mobile Observatory exposes full-width source, graph, and facts modes without horizontal document overflow
+ok 189 - mobile Observatory exposes full-width source, graph, and facts modes without horizontal document overflow
+  ---
+  duration_ms: 1.863523
+  type: 'test'
+  ...
+# Subtest: every lexical token renders as an expandable keyboard-focusable source object
+ok 190 - every lexical token renders as an expandable keyboard-focusable source object
+  ---
+  duration_ms: 3.027247
+  type: 'test'
+  ...
+# Subtest: compiler-published source faces control highlighting without spelling inference
+ok 191 - compiler-published source faces control highlighting without spelling inference
+  ---
+  duration_ms: 1.987314
+  type: 'test'
+  ...
+# Subtest: unknown source faces remain visible and exact instead of falling into a guessed class
+ok 192 - unknown source faces remain visible and exact instead of falling into a guessed class
+  ---
+  duration_ms: 0.609138
+  type: 'test'
+  ...
+# Subtest: rendering escapes exact source bytes and never injects compiler records as HTML
+ok 193 - rendering escapes exact source bytes and never injects compiler records as HTML
+  ---
+  duration_ms: 0.309339
+  type: 'test'
+  ...
+# Subtest: registry parsing preserves exact graph identities
+ok 194 - registry parsing preserves exact graph identities
+  ---
+  duration_ms: 0.967959
+  type: 'test'
+  ...
+# Subtest: identical registry facts create byte-identical snapshot documents
+ok 195 - identical registry facts create byte-identical snapshot documents
+  ---
+  duration_ms: 1.636819
+  type: 'test'
+  ...
+# Subtest: retained snapshot preserves exact published evidence without claiming a new revision
+ok 196 - retained snapshot preserves exact published evidence without claiming a new revision
+  ---
+  duration_ms: 7.845744
+  type: 'test'
+  ...
+# Subtest: retained snapshot rejects another source instead of laundering its provenance
+ok 197 - retained snapshot rejects another source instead of laundering its provenance
+  ---
+  duration_ms: 0.527656
+  type: 'test'
+  ...
+# Subtest: retained snapshot rejects missing source revision
+ok 198 - retained snapshot rejects missing source revision
+  ---
+  duration_ms: 0.252562
+  type: 'test'
+  ...
+# Subtest: retained snapshot rejects malformed world evidence
+ok 199 - retained snapshot rejects malformed world evidence
+  ---
+  duration_ms: 0.202348
+  type: 'test'
+  ...
+# Subtest: homepage and Observatory obtain examples from one authority-pinned manifest
+ok 200 - homepage and Observatory obtain examples from one authority-pinned manifest
+  ---
+  duration_ms: 7.00392
+  type: 'test'
+  ...
+# Subtest: every public native markdown fence is canonical or moved to a non-native text fence
+ok 201 - every public native markdown fence is canonical or moved to a non-native text fence
+  ---
+  duration_ms: 5.116152
+  type: 'test'
+  ...
+# Subtest: browser preview segments source without owning a shadow grammar or inferring semantic identity
+ok 202 - browser preview segments source without owning a shadow grammar or inferring semantic identity
+  ---
+  duration_ms: 2.313413
+  type: 'test'
+  ...
+# Subtest: web authority and source-law projections pin current Idol authority exactly
+ok 203 - web authority and source-law projections pin current Idol authority exactly
+  ---
+  duration_ms: 2.805504
+  type: 'test'
+  ...
+# Subtest: Specification blueprint and Idol Live are public but cannot impersonate language authority or implementation
+ok 204 - Specification blueprint and Idol Live are public but cannot impersonate language authority or implementation
+  ---
+  duration_ms: 2.103542
+  type: 'test'
+  ...
+# Subtest: the public repository makes no fabricated Program P or Program Q completion claim
+ok 205 - the public repository makes no fabricated Program P or Program Q completion claim
+  ---
+  duration_ms: 1.812858
+  type: 'test'
+  ...
+# Subtest: only content-addressed assets qualify for immutable caching
+ok 206 - only content-addressed assets qualify for immutable caching
+  ---
+  duration_ms: 1.005469
+  type: 'test'
+  ...
+# Subtest: stable shared assets revalidate while content-addressed assets are immutable
+ok 207 - stable shared assets revalidate while content-addressed assets are immutable
+  ---
+  duration_ms: 23.872197
+  type: 'test'
+  ...
+# Subtest: Platform Access admits the private Universe manager and browser API
+ok 208 - Platform Access admits the private Universe manager and browser API
+  ---
+  duration_ms: 0.816456
+  type: 'test'
+  ...
+# Subtest: Universe status and public Worlds transport remain outside the private Access destination set
+ok 209 - Universe status and public Worlds transport remain outside the private Access destination set
+  ---
+  duration_ms: 0.172873
+  type: 'test'
+  ...
+# Subtest: Universe workspace is packaged for authenticated Platform and contextual public Lib routes
+ok 210 - Universe workspace is packaged for authenticated Platform and contextual public Lib routes
+  ---
+  duration_ms: 7.074041
+  type: 'test'
+  ...
+# Subtest: public Universe mode follows the routing query and canonical Lib projection
+ok 211 - public Universe mode follows the routing query and canonical Lib projection
+  ---
+  duration_ms: 2.766991
+  type: 'test'
+  ...
+# Subtest: Universe UI is mobile-first, touch-accessible, and typography-safe
+ok 212 - Universe UI is mobile-first, touch-accessible, and typography-safe
+  ---
+  duration_ms: 1.296834
+  type: 'test'
+  ...
+# Subtest: Universe presentation names exact non-semantic boundaries
+ok 213 - Universe presentation names exact non-semantic boundaries
+  ---
+  duration_ms: 1.92126
+  type: 'test'
+  ...
+# Subtest: Universe documentation and additive migration are present
+ok 214 - Universe documentation and additive migration are present
+  ---
+  duration_ms: 1.589691
+  type: 'test'
+  ...
+# Subtest: universe views resolve exact origin-qualified worlds without fabricating identity
+ok 215 - universe views resolve exact origin-qualified worlds without fabricating identity
+  ---
+  duration_ms: 1.988847
+  type: 'test'
+  ...
+# Subtest: unknown and duplicate selections fail closed before a view can be published
+ok 216 - unknown and duplicate selections fail closed before a view can be published
+  ---
+  duration_ms: 0.81305
+  type: 'test'
+  ...
+# Subtest: policy violations are explicit refusals rather than compatibility or authority claims
+ok 217 - policy violations are explicit refusals rather than compatibility or authority claims
+  ---
+  duration_ms: 0.901004
+  type: 'test'
+  ...
+# Subtest: bounded and public projections omit full resolved and owner-private state
+ok 218 - bounded and public projections omit full resolved and owner-private state
+  ---
+  duration_ms: 0.621201
+  type: 'test'
+  ...
+# Subtest: memory universe storage is subject-owned, bounded, and public only by visibility
+ok 219 - memory universe storage is subject-owned, bounded, and public only by visibility
+  ---
+  duration_ms: 8.373079
+  type: 'test'
+  ...
+# Subtest: universe status exposes one-universe and no-authority boundary on Platform
+ok 220 - universe status exposes one-universe and no-authority boundary on Platform
+  ---
+  duration_ms: 23.261606
+  type: 'test'
+  ...
+# Subtest: browser view creation and update require Access, same-origin proof, and stable identity
+ok 221 - browser view creation and update require Access, same-origin proof, and stable identity
+  ---
+  duration_ms: 3.248872
+  type: 'test'
+  ...
+# Subtest: private views never cross into the public Worlds transport
+ok 222 - private views never cross into the public Worlds transport
+  ---
+  duration_ms: 2.842272
+  type: 'test'
+  ...
+# Subtest: API routes require operation-specific universe scopes
+ok 223 - API routes require operation-specific universe scopes
+  ---
+  duration_ms: 1.932742
+  type: 'test'
+  ...
+# Subtest: Universe transport refuses wrong hosts without leaking private state
+ok 224 - Universe transport refuses wrong hosts without leaking private state
+  ---
+  duration_ms: 0.400419
+  type: 'test'
+  ...
+# Subtest: host map uses one graph application for graph and architecture aliases
+ok 225 - host map uses one graph application for graph and architecture aliases
+  ---
+  duration_ms: 1.939575
+  type: 'test'
+  ...
+# Subtest: Worlds is a Lib compatibility host while Platform remains originless
+ok 226 - Worlds is a Lib compatibility host while Platform remains originless
+  ---
+  duration_ms: 0.272289
+  type: 'test'
+  ...
+# Subtest: root serves the site shell with security headers
+ok 227 - root serves the site shell with security headers
+  ---
+  duration_ms: 24.561675
+  type: 'test'
+  ...
+# Subtest: graph aliases receive the graph shell
+ok 228 - graph aliases receive the graph shell
+  ---
+  duration_ms: 1.318073
+  type: 'test'
+  ...
+# Subtest: Worlds navigation preserves its path and query through the Lib compatibility alias
+ok 229 - Worlds navigation preserves its path and query through the Lib compatibility alias
+  ---
+  duration_ms: 0.90939
+  type: 'test'
+  ...
+# Subtest: Platform IDE navigation receives the IDE shell without changing other host applications
+ok 230 - Platform IDE navigation receives the IDE shell without changing other host applications
+  ---
+  duration_ms: 3.641606
+  type: 'test'
+  ...
+# Subtest: config reports the precise host surface and authority
+ok 231 - config reports the precise host surface and authority
+  ---
+  duration_ms: 1.468084
+  type: 'test'
+  ...
+# Subtest: api requests preserve the existing tunnel origin
+ok 232 - api requests preserve the existing tunnel origin
+  ---
+  duration_ms: 1.120755
+  type: 'test'
+  ...
+# Subtest: originless Platform refuses dynamic proxy paths instead of recursing
+ok 233 - originless Platform refuses dynamic proxy paths instead of recursing
+  ---
+  duration_ms: 0.685541
+  type: 'test'
+  ...
+# Subtest: conditional static asset responses survive originless routing
+ok 234 - conditional static asset responses survive originless routing
+  ---
+  duration_ms: 0.872841
+  type: 'test'
+  ...
+# Subtest: legacy health remains the compiler origin while edge health is explicit
+ok 235 - legacy health remains the compiler origin while edge health is explicit
+  ---
+  duration_ms: 2.082923
+  type: 'test'
+  ...
+# Subtest: local development can select every surface without DNS
+ok 236 - local development can select every surface without DNS
+  ---
+  duration_ms: 1.948331
+  type: 'test'
+  ...
+# Subtest: unknown hosts fail closed
+ok 237 - unknown hosts fail closed
+  ---
+  duration_ms: 0.3425
+  type: 'test'
+  ...
+# Subtest: workspace restoration rejects missing or null workspace identities
+ok 238 - workspace restoration rejects missing or null workspace identities
+  ---
+  duration_ms: 1.313805
+  type: 'test'
+  ...
+# Subtest: workspace restoration rejects missing or null file identities
+ok 239 - workspace restoration rejects missing or null file identities
+  ---
+  duration_ms: 0.364752
+  type: 'test'
+  ...
+# Subtest: workspace mutations are immutable and select the first file
+ok 240 - workspace mutations are immutable and select the first file
+  ---
+  duration_ms: 1.727438
+  type: 'test'
+  ...
+# Subtest: workspace paths reject traversal absolute forms and collisions
+ok 241 - workspace paths reject traversal absolute forms and collisions
+  ---
+  duration_ms: 1.991813
+  type: 'test'
+  ...
+# Subtest: rename write select and removal preserve deterministic active selection
+ok 242 - rename write select and removal preserve deterministic active selection
+  ---
+  duration_ms: 0.643402
+  type: 'test'
+  ...
+# Subtest: workspace enforces file count file size and snapshot size bounds
+ok 243 - workspace enforces file count file size and snapshot size bounds
+  ---
+  duration_ms: 104.980416
+  type: 'test'
+  ...
+# Subtest: snapshot ordering and restore are deterministic and validated
+ok 244 - snapshot ordering and restore are deterministic and validated
+  ---
+  duration_ms: 8.404426
+  type: 'test'
+  ...
+# Subtest: memory store round trips clones and sorts by updated time
+ok 245 - memory store round trips clones and sorts by updated time
+  ---
+  duration_ms: 0.910159
+  type: 'test'
+  ...
+# Subtest: browser store persists validated snapshots without exposing internal records
+ok 246 - browser store persists validated snapshots without exposing internal records
+  ---
+  duration_ms: 8.559783
+  type: 'test'
+  ...
+# Subtest: browser persistence reports storage-unavailable explicitly
+ok 247 - browser persistence reports storage-unavailable explicitly
+  ---
+  duration_ms: 0.354104
+  type: 'test'
+  ...
+# Subtest: world qualifications are presentation facts derived from published provenance
+ok 248 - world qualifications are presentation facts derived from published provenance
+  ---
+  duration_ms: 0.952678
+  type: 'test'
+  ...
+# Subtest: normalisation preserves exact published identities as strings
+ok 249 - normalisation preserves exact published identities as strings
+  ---
+  duration_ms: 0.737831
+  type: 'test'
+  ...
+# Subtest: world search spans identity, provenance, tags, version and graph facts
+ok 250 - world search spans identity, provenance, tags, version and graph facts
+  ---
+  duration_ms: 1.369878
+  type: 'test'
+  ...
+# Subtest: comparison reports published field differences without compatibility claims
+ok 251 - comparison reports published field differences without compatibility claims
+  ---
+  duration_ms: 0.383818
+  type: 'test'
+  ...
+# Subtest: world links and coordinates encode display provenance safely
+ok 252 - world links and coordinates encode display provenance safely
+  ---
+  duration_ms: 0.283924
+  type: 'test'
+  ...
+1..252
+# tests 252
+# suites 0
+# pass 252
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5655.575779
+
+> idol-id@0.2.0 build
+> node scripts/build.mjs
+
+built 10 idol.id host projections plus protected IDE, repository, derived-preview, and Universe View workbenches at 2d7dcc2e30191b873713c5c17177b244af079e44
+foreign candidates: 6 · revision program-j-public-read-v1
+idol wasm: not admitted
+extended immutable deployment with Live and MCP at 2d7dcc2e30191b873713c5c17177b244af079e44

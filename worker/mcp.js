@@ -114,7 +114,7 @@ async function appendToolAudit(env, dependencies, principal, toolName, args) {
   const repository = dependencies.platformRepository || (env.PLATFORM_DB?.prepare ? createD1PlatformRepository(env.PLATFORM_DB) : null);
   if (!repository?.appendAudit) return;
   const metadata = { tool: toolName };
-  if (toolName === "idsem.analyze") {
+  if (toolName === "idol.analyze") {
     metadata.source_bytes = textBytes(args.source || "");
     metadata.source_hash = await sha256(args.source || "");
   }
@@ -164,24 +164,24 @@ async function executeTool(name, args, principal, request, env, dependencies) {
   const input = args && typeof args === "object" && !Array.isArray(args) ? args : {};
   let result;
   switch (name) {
-    case "idsem.authority": result = await assetJson(request, env, "/runtime/authority.json"); break;
-    case "idsem.profile": result = principal; break;
-    case "idsem.worlds.list": result = {
+    case "idol.authority": result = await assetJson(request, env, "/runtime/authority.json"); break;
+    case "idol.profile": result = principal; break;
+    case "idol.worlds.list": result = {
       published: await assetJson(request, env, "/runtime/worlds.json"),
       foreign: await assetJson(request, env, "/runtime/foreign.json"),
       authority_grant: "none",
     }; break;
-    case "idsem.universe.list": result = { views: await (await universe(request, env, dependencies)).listViews(principal, Number(input.limit || 50)) }; break;
-    case "idsem.live.projects.list": result = { projects: await (await live(request, env, dependencies)).listProjects(principal, Number(input.limit || 50)) }; break;
-    case "idsem.live.project.create": result = await (await live(request, env, dependencies)).createProject(principal, input); break;
-    case "idsem.live.project.get": result = await (await live(request, env, dependencies)).getProject(principal, input.project_id); break;
-    case "idsem.live.graph.get": result = await (await live(request, env, dependencies)).graph(principal, input.project_id); break;
-    case "idsem.live.node.create": result = await (await live(request, env, dependencies)).createNode(principal, input.project_id, input); break;
-    case "idsem.live.application.create": result = await (await live(request, env, dependencies)).createApplication(principal, input.project_id, input); break;
-    case "idsem.live.event.append": result = await (await live(request, env, dependencies)).appendEvent(principal, input.project_id, input); break;
-    case "idsem.live.frontier.set": result = await (await live(request, env, dependencies)).setFrontier(principal, input.project_id, input); break;
-    case "idsem.live.world.bind": result = await (await live(request, env, dependencies)).bindUniverseView(principal, input.project_id, input.universe_view_id); break;
-    case "idsem.analyze": result = await analyze(input.source, dependencies); break;
+    case "idol.universe.list": result = { views: await (await universe(request, env, dependencies)).listViews(principal, Number(input.limit || 50)) }; break;
+    case "idol.live.projects.list": result = { projects: await (await live(request, env, dependencies)).listProjects(principal, Number(input.limit || 50)) }; break;
+    case "idol.live.project.create": result = await (await live(request, env, dependencies)).createProject(principal, input); break;
+    case "idol.live.project.get": result = await (await live(request, env, dependencies)).getProject(principal, input.project_id); break;
+    case "idol.live.graph.get": result = await (await live(request, env, dependencies)).graph(principal, input.project_id); break;
+    case "idol.live.node.create": result = await (await live(request, env, dependencies)).createNode(principal, input.project_id, input); break;
+    case "idol.live.application.create": result = await (await live(request, env, dependencies)).createApplication(principal, input.project_id, input); break;
+    case "idol.live.event.append": result = await (await live(request, env, dependencies)).appendEvent(principal, input.project_id, input); break;
+    case "idol.live.frontier.set": result = await (await live(request, env, dependencies)).setFrontier(principal, input.project_id, input); break;
+    case "idol.live.world.bind": result = await (await live(request, env, dependencies)).bindUniverseView(principal, input.project_id, input.universe_view_id); break;
+    case "idol.analyze": result = await analyze(input.source, dependencies); break;
     default: throw Object.assign(new Error(`unknown tool: ${name}`), { code: "MCP_TOOL_NOT_FOUND", status: 404 });
   }
   await appendToolAudit(env, dependencies, principal, name, input);
@@ -217,7 +217,7 @@ export async function handleMcpTransport(request, env, pathname, info, dependenc
     if (document.method === "server/discover") return rpcResult(id, mcpDiscovery());
     if (document.method === "initialize") {
       if (protocol === MCP_CURRENT_PROTOCOL) return rpcError(id, -32601, "initialize is not used by MCP 2026-07-28");
-      return rpcResult(id, { protocolVersion: protocol, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "idsem-hosted-mcp", version: "0.1.0" } });
+      return rpcResult(id, { protocolVersion: protocol, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "idol-hosted-mcp", version: "0.1.0" } });
     }
     if (document.method === "notifications/initialized") return new Response(null, { status: 202, headers: { "cache-control": "no-store" } });
     if (document.method === "ping") return rpcResult(id, {});
