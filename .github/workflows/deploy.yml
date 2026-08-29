@@ -71,10 +71,7 @@ jobs:
       - name: Validate Worker bundle
         run: npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
       - name: Browser interaction and responsive semantic QA
-        run: |
-          node scripts/browser-smoke.mjs
-          node scripts/studio-browser-smoke.mjs
-          node scripts/live-mcp-browser-smoke.mjs
+        run: node scripts/run-browser-smoke.mjs
       - name: Upload browser interaction evidence
         if: always()
         uses: actions/upload-artifact@v4
