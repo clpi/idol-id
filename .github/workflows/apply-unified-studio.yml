@@ -63,5 +63,12 @@ jobs:
             .artifacts/unified-studio
             .artifacts/browser-smoke
             .wrangler-dry-run
+            apps/site/index.html
+            apps/*/index.html
+            shared/shell.js
+            shared/studio.css
+            shared/studio-app.js
+            shared/web.js
+            test/idol-current-surface.test.mjs
           if-no-files-found: warn
           retention-days: 30
