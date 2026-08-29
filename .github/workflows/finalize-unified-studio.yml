@@ -61,6 +61,21 @@ jobs:
               raise SystemExit('Studio GraphView initialization boundary missing')
           app.write_text(source.replace(needle, replacement, 1))
 
+          # A translated fixed drawer extended the document by its own width
+          # while closed at tablet sizes. Fade it in place so hidden chrome can
+          # never manufacture horizontal document overflow.
+          css = Path('shared/studio.css')
+          source = css.read_text()
+          source = source.replace(
+              '  transform: translateX(102%);\n  transition: transform var(--idol-ease);',
+              '  transform: translateY(7px);\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  transition: transform var(--idol-ease), opacity var(--idol-fast), visibility var(--idol-fast);',
+          )
+          source = source.replace(
+              '.idol-drawer.open { transform: translateX(0); }',
+              '.idol-drawer.open { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }',
+          )
+          css.write_text(source)
+
           smoke = Path('scripts/studio-browser-smoke.mjs')
           smoke.write_text(smoke.read_text().replace('.idol-brand-word', '.idol-brand span:last-child'))
 
@@ -71,10 +86,11 @@ jobs:
           const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
           test("deployment admits the Studio across the complete responsive viewport range", async () => {
-            const [deploy, smoke, app] = await Promise.all([
+            const [deploy, smoke, app, css] = await Promise.all([
               read(".github/workflows/deploy.yml"),
               read("scripts/studio-browser-smoke.mjs"),
               read("shared/studio-app.js"),
+              read("shared/studio.css"),
             ]);
             assert.match(deploy, /node scripts\\/studio-browser-smoke\\.mjs/);
             assert.match(deploy, /\\.artifacts\\/studio-browser-smoke/);
@@ -89,6 +105,7 @@ jobs:
             assert.match(smoke, /Page\\.captureScreenshot/);
             assert.match(app, /const graphEmpty = graphView\\.empty/);
             assert.doesNotMatch(app, /const graphEmpty = q\\("#studio-graph-empty"\\)/);
+            assert.doesNotMatch(css, /translateX\\(102%\\)/);
           });
           ''')
           PY
