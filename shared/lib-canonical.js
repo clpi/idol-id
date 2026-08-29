@@ -34,23 +34,8 @@
   }
 
   function convergeAtlas() {
-    const atlas = document.querySelector("main.atlas");
-    if (!atlas) return;
-    stylesheet("/shared/worlds-canonical.css");
-    document.title = "Worlds — Idol";
-    const eyebrow = document.querySelector(".atlas-head .eyebrow");
-    const heading = document.querySelector(".atlas-head h1");
-    const lede = document.querySelector(".atlas-head p");
-    if (eyebrow) eyebrow.textContent = "@ · compiler-published projection";
-    if (heading) heading.textContent = "Worlds";
-    if (lede) lede.textContent = "Published world facts and provenance-qualified foreign candidates. This surface exposes explicit uncertainty, obligations, evidence, and refusal; it does not mint semantic identity, equivalence, or authority.";
-    const actions = document.querySelector(".atlas-head-actions");
-    if (actions && !actions.querySelector(".canonical-route")) {
-      const route = document.createElement("div");
-      route.className = "canonical-route";
-      route.textContent = "canonical: lib.idol.id/atlas · worlds.idol.id remains a path-preserving compatibility alias";
-      actions.insertAdjacentElement("afterend", route);
-    }
+    // Worlds title/H1/boundary/canonical route are now static in apps/worlds/index.html;
+    // this stub preserves an idempotent data attribute only.
     document.documentElement.dataset.idolProduct = "compiler-published-world-projection";
   }
 

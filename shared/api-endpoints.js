@@ -28,7 +28,7 @@ export const API_ENDPOINTS = Object.freeze([
   endpoint({ group: "published records", id: "publish", method: "POST", path: "/api/publish", owner: "compiler-origin", title: "Publish world", description: "Request publication through the configured origin. Requires an admitted write token and does not receive authority from this console.", auth: "bearer", source: true, body: { name: "example", version: "0.1.0", source: "", summary: "example" } }),
 
   endpoint({ group: "world boundary", id: "foreign-worlds", method: "GET", path: "/v1/world/foreign", owner: "edge", title: "Foreign candidates", description: "Provenance-qualified foreign candidates with explicit uncertainty and no fabricated semantic identity." }),
-  endpoint({ group: "world boundary", id: "integration", method: "GET", path: "/v1/world/:slug/integration", owner: "edge", title: "Integration obligations", description: "One exact foreign candidate and its unfulfilled or evidenced integration obligations.", pathValues: { slug: "c" } }),
+  endpoint({ group: "world boundary", id: "integration", method: "GET", path: "/v1/world/:slug/integration", owner: "edge", title: "Integration obligations", description: "One exact foreign candidate and its unfulfilled or evidenced integration obligations.", pathValues: { slug: "c17" } }),
   endpoint({ group: "world boundary", id: "import-plan", method: "POST", path: "/v1/world/import-plan", owner: "edge", title: "Plan foreign ingress", description: "Create one deterministic, plan-only record. No fetch, execution, transform, publication, equivalence, or authority grant occurs.", body: { kind: "repository", locator: "https://example.invalid/project", version: "exact-revision" } }),
 ]);
 

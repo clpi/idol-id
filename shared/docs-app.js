@@ -66,7 +66,9 @@ function escapeHtml(value) {
 
 function safeHref(value) {
   const href = String(value || "").trim();
-  if (/^(?:https:\/\/|\/|\?|#)/.test(href)) return href;
+  // Reject protocol-relative (//), backslash, javascript:, data: URIs.
+  if (/^\/\//.test(href) || /^[\\/]/.test(href) || /^(javascript|data):/i.test(href)) return "#";
+  if (/^(https:\/\/|\/|\?|#)/.test(href)) return href;
   return "#";
 }
 
@@ -207,11 +209,16 @@ function renderNavigation(filter = "") {
 }
 
 async function sourceFor(entry) {
+  // Delete rejected promises so transient network/cache failures can retry on next call.
+  if (cache.has(entry.id)) {
+    try { await cache.get(entry.id); } catch { cache.delete(entry.id); }
+  }
   if (!cache.has(entry.id)) {
-    cache.set(entry.id, fetch(`/content/docs/${entry.id}.md`, { headers: { accept: "text/markdown,text/plain" }, cache: "no-store" }).then(async (response) => {
+    const promise = fetch(`/content/docs/${entry.id}.md`, { headers: { accept: "text/markdown,text/plain" }, cache: "no-store" }).then(async (response) => {
       if (!response.ok) throw new Error(`${entry.name} returned HTTP ${response.status}`);
       return response.text();
-    }));
+    });
+    cache.set(entry.id, promise);
   }
   return cache.get(entry.id);
 }

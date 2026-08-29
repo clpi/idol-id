@@ -25,8 +25,18 @@ function prettyResponse(value, type) {
 
 function bounded(value) {
   const source = text(value);
-  if (new TextEncoder().encode(source).byteLength <= MAX_RENDER_BYTES) return source;
-  return `${source.slice(0, MAX_RENDER_BYTES)}\n\n[response display truncated by the browser console]`;
+  const encoded = new TextEncoder().encode(source);
+  if (encoded.byteLength <= MAX_RENDER_BYTES) return source;
+  // Stop at byte boundary: decode progressively until adding the next byte would exceed limit.
+  for (let size = MAX_RENDER_BYTES; size > 0; size--) {
+    try {
+      const chunk = encoded.slice(0, size);
+      if (new TextDecoder().decode(chunk).length === chunk.length ||
+          !chunk.some((b, i) => b >= 0xC0)) return new TextDecoder().decode(chunk);
+    } catch { /* skip */ }
+  }
+  const decoded = new TextDecoder().decode(encoded.slice(0, MAX_RENDER_BYTES));
+  return `${decoded}\n\n[response display truncated by the browser console]`;
 }
 
 function field(label, value = "", options = {}) {

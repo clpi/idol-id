@@ -1,0 +1,3 @@
+ReferenceError: WebSocket is not defined
+    at main (file:///workspace/clpi/idol-id/scripts/browser-smoke.mjs:301:20)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)

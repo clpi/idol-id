@@ -49,7 +49,7 @@ test("API inventory is unique, owner-explicit, editable, and includes the exact 
     assert.ok(API_ENDPOINTS.some((record) => record.path === path), `missing ${path}`);
   }
   const integration = API_ENDPOINTS.find((record) => record.id === "integration");
-  assert.equal(resolveEndpointPath(integration), "/v1/world/c/integration");
+  assert.equal(resolveEndpointPath(integration), "/v1/world/c17/integration");
 
   const [html, script, css] = await Promise.all([
     read("apps/api/index.html"),
@@ -102,17 +102,22 @@ test("MCP publishes and accepts only canonical Idol tool coordinates", async () 
 });
 
 test("Worlds converge on canonical Lib routes and state the non-authority boundary", async () => {
-  const [canonical, css, docs, web] = await Promise.all([
+  const [canonical, css, html, docs, web] = await Promise.all([
     read("shared/lib-canonical.js"),
     read("shared/worlds-canonical.css"),
+    read("apps/worlds/index.html"),
     read("content/docs/worlds.md"),
     read("shared/web.js"),
   ]);
   assert.match(web, /host === "lib\.idol\.id"[\s\S]*?lib-canonical\.js/);
   assert.match(canonical, /atlas\.href = "\/atlas"/);
   assert.match(canonical, /universe\.href = "\/universe"/);
-  assert.match(canonical, /compiler-published projection/);
-  assert.match(canonical, /does not mint semantic identity, equivalence, or authority/i);
+  // Worlds title/H1/boundary/CSS/static canonical route are now static in apps/worlds/index.html;
+  // lib-canonical.js preserves an idempotent data attribute only.
+  assert.match(canonical, /idempotent data attribute/i);
+  assert.match(canonical, /compiler-published-world-projection/);
+  assert.match(html, /compiler-published projection/);
+  assert.match(html, /does not mint semantic identity, equivalence, or authority/i);
   assert.match(css, /min-height:\s*44px/);
   assert.match(docs, /https:\/\/lib\.idol\.id\/atlas/);
   assert.match(docs, /path-preserving compatibility alias/i);
