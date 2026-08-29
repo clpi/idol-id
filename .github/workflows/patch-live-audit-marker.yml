@@ -1,0 +1,41 @@
+name: patch live audit marker matching
+
+on:
+  push:
+    branches: [fix/public-surface-admission-v2-20260828]
+    paths:
+      - .github/workflows/patch-live-audit-marker.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/public-surface-admission-v2-20260828
+          fetch-depth: 0
+      - name: Patch and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('scripts/audit-live-surfaces.mjs')
+          source=path.read_text()
+          old='marker:${JSON.stringify(surface.marker || "")}?text.includes(${JSON.stringify(surface.marker || "")}):true,'
+          new='marker:${JSON.stringify(surface.marker || "")}?text.toLowerCase().includes(${JSON.stringify((surface.marker || "").toLowerCase())}):true,'
+          if old not in source:
+            if 'text.toLowerCase().includes' in source: raise SystemExit(0)
+            raise SystemExit('marker comparison insertion point missing')
+          path.write_text(source.replace(old,new))
+          PY
+          node --test test/live-surface-audit-contract.test.mjs
+          git config user.name "idol public admission"
+          git config user.email "actions@idol.id"
+          git add scripts/audit-live-surfaces.mjs
+          git commit -m 'fix: match live surface markers case-insensitively'
+          git push origin HEAD:fix/public-surface-admission-v2-20260828
