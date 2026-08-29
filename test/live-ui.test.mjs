@@ -10,22 +10,19 @@ test("Live UI is an interactive exact-record workbench, not decorative graph the
     read("shared/live-app.js"),
     read("shared/live-app.css"),
   ]);
-  assert.match(html, /id="project-form"/);
-  assert.match(html, /data-live-view="catalog"/);
-  assert.match(html, /data-live-view="graph"/);
-  assert.match(html, /data-live-view="history"/);
-  assert.match(html, /data-live-view="facts"/);
-  assert.match(html, /id="world-view-form"/);
-  assert.match(html, /id="frontier-form"/);
-  assert.match(html, /id="application-form"/);
-  assert.match(html, /id="event-form"/);
+  for (const id of ["live-project-form", "live-node-form", "live-application-form", "live-event-form", "live-frontier-form", "live-world-form"]) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  for (const view of ["projects", "graph", "history", "facts"]) assert.match(html, new RegExp(`data-mobile-view="${view}"`));
   assert.doesNotMatch(html + script, /Math\.random\(/);
   assert.doesNotMatch(html, /<canvas\b/i);
-  assert.match(script, /\/v1\/live\/browser\/projects/);
+  assert.match(script, /const API = "\/v1\/live\/browser"/);
   assert.match(script, /application\.relation/);
   assert.match(script, /edge\.role/);
-  assert.match(script, /semantic identity not published/i);
-  assert.match(script, /authority grant[^\n]*none/i);
+  assert.match(script, /edge\.source/);
+  assert.match(script, /edge\.target/);
+  assert.match(script, /semantic id[\s\S]*?not published/i);
+  assert.match(script, /none granted by this view/i);
   assert.match(script, /addEventListener\("keydown"/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /min-height:\s*44px/);
@@ -41,35 +38,38 @@ test("hosted MCP page explains endpoint, auth, scopes, protocol, and transport b
   assert.match(html, /mcp:connect/);
   assert.match(html, /API token/i);
   assert.match(html, /stateless/i);
-  assert.match(html, /transport projection/i);
+  assert.match(html, /HTTP projection/i);
   assert.match(html, /semantic authority/i);
   assert.match(html, /platform\.idol\.id/);
+  assert.match(html, /localStorage/);
+  assert.match(html, /sessionStorage/);
 });
 
-test("shared product chrome and root/platform surfaces expose Live and hosted MCP without duplicating semantic authority", async () => {
-  const [shell, site, platform] = await Promise.all([
+test("shared chrome and immutable-build adapters expose Live and hosted MCP without duplicating semantic authority", async () => {
+  const [shell, platformEntry, siteEntry, buildLive] = await Promise.all([
     read("shared/shell.js"),
-    read("apps/site/index.html"),
-    read("apps/platform/index.html"),
+    read("shared/platform-live-entry.js"),
+    read("shared/site-live-entry.js"),
+    read("scripts/build-live.mjs"),
   ]);
   assert.match(shell, /id:\s*"live"[\s\S]*?https:\/\/live\.idol\.id\//);
-  assert.match(shell, /id:\s*"mcp"[\s\S]*?https:\/\/mcp\.idol\.id\//);
-  assert.match(site, /Live/);
-  assert.match(site, /MCP/);
-  assert.match(platform, /live:read/);
-  assert.match(platform, /live:write/);
-  assert.match(platform, /mcp:connect/);
-  assert.match(platform, /world:write/);
+  assert.match(shell, /https:\/\/mcp\.idol\.id\//);
+  for (const scope of ["live:read", "live:write", "mcp:connect", "world:write"]) assert.match(platformEntry, new RegExp(scope.replace(":", "\\:")));
+  assert.match(siteEntry, /Live/);
+  assert.match(siteEntry, /MCP/);
+  assert.match(buildLive, /platform-live-entry\.js/);
+  assert.match(buildLive, /site-live-entry\.js/);
 });
 
-test("required browser gate covers Live and MCP on mobile and desktop", async () => {
-  const smoke = await read("scripts/browser-smoke.mjs");
+test("required real-Chrome gate covers Live and MCP on mobile and desktop", async () => {
+  const smoke = await read("scripts/live-mcp-browser-smoke.mjs");
   assert.match(smoke, /live-mobile\.png/);
   assert.match(smoke, /live-desktop\.png/);
   assert.match(smoke, /mcp-mobile\.png/);
+  assert.match(smoke, /mcp-desktop\.png/);
   assert.match(smoke, /390, 844/);
   assert.match(smoke, /1440, 900/);
   assert.match(smoke, /scrollWidth/);
-  assert.match(smoke, /height < 44/);
+  assert.match(smoke, /height\s*<\s*44|height<44/);
   assert.match(smoke, /Runtime\.exceptionThrown/);
 });

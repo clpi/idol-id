@@ -1,0 +1,38 @@
+{
+  "schema": "idol.web.live.contract.v1",
+  "authority": {
+    "language": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
+    "native": "ad438a856daa8786e77ac9f033d38deb9e8f5c29",
+    "source_law": "95e70291b13062881ebc6c96005c5ad02230bf5b5a7e62ced4f6e8787ab4993b"
+  },
+  "semantic_authority": false,
+  "collaboration_truth": true,
+  "identity_status": "not-published",
+  "semantic_universes": 1,
+  "accepted_frontiers_per_project": 1,
+  "dispatcher_access": false,
+  "implementation": "host-reference",
+  "idol_source_present": true,
+  "idol_execution_admitted": false,
+  "history": {
+    "cardinality": "one-per-project",
+    "mutation": "append-only"
+  },
+  "frontier": {
+    "cardinality": "one-per-project",
+    "mutation": "append-only-decisions",
+    "causal_closure": true
+  },
+  "graph": {
+    "operations_are_relation_identities": true,
+    "structural_roles_are_derived": true,
+    "reverse_traversal": "derived-index",
+    "name_matching_is_identity": false
+  },
+  "worlds": {
+    "binding": "universe-view-reference",
+    "source_world_mutation": false,
+    "authority_grant": "none"
+  },
+  "deletion_gate": "Replace the host reference only after an artifact-bound Idol/Wasm realization, authority pins, digest, correspondence witness, differential evidence, and production performance evidence are admitted."
+}

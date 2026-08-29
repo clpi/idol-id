@@ -40,14 +40,16 @@ test("immutable build contains Live, hosted MCP, exact routes, and honest implem
   assert.ok(sourcePaths.includes("live/projection.id"));
   assert.match(await readFile("dist/apps/live/index.html", "utf8"), /Live/);
   assert.match(await readFile("dist/apps/mcp/index.html", "utf8"), /mcp\.idol\.id\/mcp/);
+  assert.match(await readFile("dist/apps/platform/index.html", "utf8"), /platform-live-entry\.js/);
+  assert.match(await readFile("dist/apps/site/index.html", "utf8"), /site-live-entry\.js/);
 });
 
-test("Worker, Wrangler, Access, navigation, and production verifier all own the two new surfaces", async () => {
+test("Worker, Wrangler, Access, navigation, verification, and CI own the two new surfaces", async () => {
   const [worker, entry, wrangler, provision, verify, shell, workflow] = await Promise.all([
     read("worker/index.js"),
     read("worker/entry.js"),
     read("wrangler.jsonc"),
-    read("scripts/platform-provision-lib.mjs"),
+    read("scripts/provision-live-access.mjs"),
     read("scripts/verify-production.mjs"),
     read("shared/shell.js"),
     read(".github/workflows/deploy.yml"),
@@ -58,15 +60,15 @@ test("Worker, Wrangler, Access, navigation, and production verifier all own the 
   assert.match(entry, /handleMcpTransport/);
   assert.match(wrangler, /"pattern": "live\.idol\.id"[\s\S]*?"custom_domain": true/);
   assert.match(wrangler, /"pattern": "mcp\.idol\.id"[\s\S]*?"custom_domain": true/);
-  assert.match(provision, /live\.idol\.id/);
-  assert.match(provision, /\/v1\/live\/browser\/\*/);
+  assert.match(provision, /live\.idol\.id\/\*/);
   assert.match(verify, /live\.idol\.id/);
   assert.match(verify, /mcp\.idol\.id/);
   assert.match(verify, /server\/discover/);
   assert.match(shell, /https:\/\/live\.idol\.id\//);
   assert.match(shell, /https:\/\/mcp\.idol\.id\//);
-  assert.match(workflow, /Live/);
-  assert.match(workflow, /MCP/);
+  assert.match(workflow, /scripts\/browser-smoke\.mjs/);
+  assert.match(workflow, /scripts\/live-mcp-browser-smoke\.mjs/);
+  assert.match(workflow, /scripts\/provision-platform\.mjs/);
 });
 
 test("Idol Live source bridge is admitted only as exact authored source, never as the executing implementation", async () => {

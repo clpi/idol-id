@@ -1,0 +1,23 @@
+# Lawful Live graph projection model. Host execution is not claimed.
+
+application = (id, relation, subject, target, operand, result, world, witness, demand, provenance)
+    {
+        id = id
+        relation = relation
+        subject = subject
+        target = target
+        operand = operand
+        result = result
+        world = world
+        witness = witness
+        demand = demand
+        provenance = provenance
+    }
+
+edge = (application, role, target, ordinal)
+    {
+        application = application
+        role = role
+        target = target
+        ordinal = ordinal
+    }
