@@ -1,0 +1,41 @@
+name: patch public smoke example readiness
+
+on:
+  push:
+    branches: [fix/compiler-first-public-reset-20260828]
+    paths:
+      - .github/workflows/patch-public-smoke-race.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/compiler-first-public-reset-20260828
+          fetch-depth: 0
+      - name: Patch and verify the race regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('scripts/public-browser-smoke.mjs')
+          source=path.read_text()
+          needle='  if (!baseline.h1?.includes("Dynamic by default") || baseline.stale || baseline.scrollWidth > baseline.clientWidth || baseline.short.length || !baseline.install) throw new Error(`baseline failed at ${width}x${height}: ${JSON.stringify(baseline)}`);\n  if (width <= 900) {'
+          replacement='  if (!baseline.h1?.includes("Dynamic by default") || baseline.stale || baseline.scrollWidth > baseline.clientWidth || baseline.short.length || !baseline.install) throw new Error(`baseline failed at ${width}x${height}: ${JSON.stringify(baseline)}`);\n  await waitExpression(cdp, `document.querySelector("#source-editor").value.includes("Hello")`);\n  if (width <= 900) {'
+          if needle not in source:
+              if '#source-editor").value.includes("Hello")' in source: raise SystemExit(0)
+              raise SystemExit('public smoke readiness insertion point missing')
+          path.write_text(source.replace(needle,replacement))
+          PY
+          node --test test/compiler-first-public-reset.test.mjs
+          git config user.name "idol public reset"
+          git config user.email "actions@idol.id"
+          git add scripts/public-browser-smoke.mjs
+          git commit -m 'fix: wait for verified example before browser execution'
+          git push origin HEAD:fix/compiler-first-public-reset-20260828
