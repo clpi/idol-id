@@ -5,13 +5,15 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("deployment admits the Studio across the complete responsive viewport range", async () => {
-  const [deploy, smoke, app, css] = await Promise.all([
+  const [deploy, orchestrator, smoke, app, css] = await Promise.all([
     read(".github/workflows/deploy.yml"),
+    read("scripts/run-browser-smoke.mjs"),
     read("scripts/studio-browser-smoke.mjs"),
     read("shared/studio-app.js"),
     read("shared/studio.css"),
   ]);
-  assert.match(deploy, /node scripts\/studio-browser-smoke\.mjs/);
+  assert.match(deploy, /node scripts\/run-browser-smoke\.mjs/);
+  assert.match(orchestrator, /scripts\/studio-browser-smoke\.mjs/);
   assert.match(deploy, /\.artifacts\/studio-browser-smoke/);
   for (const viewport of ["[320, 568]", "[390, 844]", "[430, 932]", "[768, 1024]", "[1440, 900]"]) {
     assert.match(smoke, new RegExp(viewport.replace(/[\[\]]/g, "\\$&")));
