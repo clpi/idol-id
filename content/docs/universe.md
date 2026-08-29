@@ -4,9 +4,10 @@ Universe Views are saved **operational projections** over exact world records in
 
 ## Product surfaces
 
-- `platform.idol.id/universe` manages private and public views under an independently verified Platform identity.
-- `worlds.idol.id/universe/:id` renders a public view as an immutable read-only projection.
-- `api.idol.id/v1/universe/api/*` provides scoped token transport.
+- `https://platform.idol.id/universe` manages private and public views under an independently verified Platform identity.
+- `https://lib.idol.id/universe/:id` renders a public view as an immutable read-only projection.
+- `https://worlds.idol.id/universe/:id` is a path-preserving compatibility alias to the canonical Lib route; it is not an independent product or authority.
+- `https://api.idol.id/v1/universe/api/*` provides scoped token transport.
 
 The same `clpi/idol-id/main` build packages and deploys these routes with every other Idol surface.
 
@@ -62,7 +63,7 @@ A zero-refusal view does not prove compatibility or composition. It only means n
 
 ## Visibility
 
-Private records are owned by the authenticated Platform subject and never appear through the Worlds public transport. A public view exposes only the bounded public projection; subject, email, audit metadata, and private operational data are omitted.
+Private records are owned by the authenticated Platform subject and never appear through the canonical Lib public transport. A public view exposes only the bounded public projection; subject, email, audit metadata, and private operational data are omitted.
 
 Public visibility is not semantic publication. Universe View identities keep:
 
@@ -106,4 +107,4 @@ Program O does not add:
 - agent dispatch;
 - a second universe ontology.
 
-Grok remains the independent canonical 24/7 agent dispatcher. Hermes, Telegram, ntfy, polling ownership, and dispatcher topology are outside Program O and are not modified by Universe View deployment.
+Agent dispatch, Hermes, Telegram, ntfy, polling ownership, and dispatcher topology are outside the Universe View semantic boundary and are not modified by this surface.
