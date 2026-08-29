@@ -25,6 +25,7 @@ const backdrop = document.getElementById("docs-backdrop");
 const cache = new Map();
 let searchGeneration = 0;
 let documentGeneration = 0;
+let searchTimer;
 
 Shell.boot("docs", { title: "Docs", keys: [["/", "search"], ["Esc", "close navigation"]] });
 
@@ -245,7 +246,13 @@ function enhanceIdolCode() {
   }
 }
 
+function invalidateSearch() {
+  clearTimeout(searchTimer);
+  searchGeneration += 1;
+}
+
 async function loadDocument() {
+  invalidateSearch();
   const generation = ++documentGeneration;
   const entry = currentDocument();
   renderNavigation(search.value);
@@ -325,7 +332,6 @@ async function searchAll(query) {
   searchHint.textContent = `${results.length} document${results.length === 1 ? "" : "s"} matched.`;
 }
 
-let searchTimer;
 search.addEventListener("input", () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => searchAll(search.value), 120);
