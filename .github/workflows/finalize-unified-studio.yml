@@ -42,6 +42,9 @@ jobs:
               raise SystemExit('Studio browser admission was not installed')
           deploy.write_text(source)
 
+          smoke = Path('scripts/studio-browser-smoke.mjs')
+          smoke.write_text(smoke.read_text().replace('.idol-brand-word', '.idol-brand span:last-child'))
+
           Path('test/studio-browser-admission.test.mjs').write_text('''import test from "node:test";
           import assert from "node:assert/strict";
           import { readFile } from "node:fs/promises";
