@@ -104,7 +104,8 @@ if mobile_test.exists():
   assert.match(site, /data-action="analyze"/);
   assert.match(site, /https:\\/\\/lib\\.idol\\.id\\/atlas/);
   assert.doesNotMatch(web, /site-product-convergence\\.js/);
-  assert.match(studio, /No semantic graph is inferred in the browser/);
+  assert.match(site, /No semantic graph is inferred in the browser/);
+  assert.match(studio, /analysis refused/);
 });
 
 ''',
@@ -113,8 +114,16 @@ if mobile_test.exists():
     )
     mobile_test.write_text(current)
 
-# Universe is now an explicit cross-explorable projection rather than hidden
-# beneath an undifferentiated Lib label. Preserve both public and managed views.
+# Build and Universe contracts now expose Worlds and public Universe directly,
+# rather than testing their absence from the old collapsed Lib hierarchy.
+build_test = root / "test/build.test.mjs"
+if build_test.exists():
+    current = build_test.read_text().replace(
+        '  assert.doesNotMatch(shellJs, /id:\\s*"worlds"/);\n  assert.doesNotMatch(shellJs, /id:\\s*"universe"/);',
+        '  assert.match(shellJs, /id:\\s*"worlds"/);\n  assert.match(shellJs, /id:\\s*"universe"/);',
+    )
+    build_test.write_text(current)
+
 universe_test = root / "test/universe-ui.test.mjs"
 if universe_test.exists():
     current = universe_test.read_text()
