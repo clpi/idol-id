@@ -7,12 +7,13 @@ import { MCP_TOOLS } from "../shared/mcp.js";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Docs keep document identity in the query, heading identity in the hash, and search every deployed projection", async () => {
-  const [html, script, css, apiDoc, mcpDoc] = await Promise.all([
+  const [html, script, css, apiDoc, mcpDoc, universeDoc] = await Promise.all([
     read("apps/docs/index.html"),
     read("shared/docs-app.js"),
     read("shared/docs-app.css"),
     read("content/docs/api.md"),
     read("content/docs/mcp.md"),
+    read("content/docs/universe.md"),
   ]);
   assert.match(html, /id="docs-search"/);
   assert.match(html, /shared\/docs-app\.js/);
@@ -24,6 +25,11 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(script, /Promise\.all\(DOCUMENTS\.map/);
   assert.match(script, /id: "api"/);
   assert.match(script, /id: "mcp"/);
+  assert.match(script, /let documentGeneration = 0/);
+  assert.match(script, /const generation = \+\+documentGeneration/);
+  assert.match(script, /if \(generation !== documentGeneration\) return/);
+  assert.match(script, /function decodedHash\(\)/);
+  assert.match(script, /try \{ return decodeURIComponent\(raw\); \} catch \{ return ""; \}/);
   assert.match(css, /@media\s*\(max-width:\s*820px\)/);
   assert.match(css, /min-height:\s*44px/);
   assert.doesNotMatch(css, /\.docs-nav\s*\{[^}]*overflow-x:\s*auto/);
@@ -31,6 +37,8 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(apiDoc, /semantic authority/i);
   assert.match(mcpDoc, /idol\.analyze/);
   assert.match(mcpDoc, /Only exact canonical coordinates are accepted/i);
+  assert.match(universeDoc, /https:\/\/lib\.idol\.id\/universe\/?:id|https:\/\/lib\.idol\.id\/universe\/:id/);
+  assert.match(universeDoc, /worlds\.idol\.id[\s\S]{0,180}path-preserving compatibility alias/i);
 });
 
 test("API inventory is unique, owner-explicit, editable, and includes the exact world boundary", async () => {
@@ -81,6 +89,9 @@ test("MCP publishes and accepts only canonical Idol tool coordinates", async () 
   assert.match(html, /shared\/studio\.css/);
   assert.match(controller, /runtime\/mcp-tools\.json/);
   assert.match(controller, /textContent/);
+  assert.match(controller, /MAX_RENDER_BYTES/);
+  assert.match(controller, /new TextEncoder/);
+  assert.match(controller, /response display truncated/);
   assert.doesNotMatch(controller, /innerHTML/);
   assert.doesNotMatch(controller, /localStorage|sessionStorage|document\.cookie|indexedDB/);
   assert.match(worker, /case "idol\.analyze"/);
