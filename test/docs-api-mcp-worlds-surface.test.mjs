@@ -47,6 +47,12 @@ test("Docs keep document identity in the query, heading identity in the hash, an
   assert.match(universeDoc, /worlds\.idol\.id[\s\S]{0,180}path-preserving compatibility alias/i);
 });
 
+test("API documentation uses the exact published foreign candidate coordinate", async () => {
+  const apiDoc = await read("content/docs/api.md");
+  assert.match(apiDoc, /v1\/world\/c17\/integration/);
+  assert.doesNotMatch(apiDoc, /v1\/world\/c\/integration/);
+});
+
 test("API inventory is unique, owner-explicit, editable, byte-bounded, and terminating", async () => {
   const ids = API_ENDPOINTS.map((record) => record.id);
   assert.equal(new Set(ids).size, ids.length);
@@ -86,6 +92,20 @@ test("API inventory is unique, owner-explicit, editable, byte-bounded, and termi
   assert.doesNotMatch(endpointsSource, /\blegacy\b/i);
   assert.match(css, /min-height:\s*44px/);
   assert.doesNotMatch(html + script, /r2-canonical/i);
+});
+
+test("API Forget aborts active requests and invalidates stale completions", async () => {
+  const controller = await read("shared/api-console.js");
+  assert.match(controller, /let requestGeneration = 0/);
+  assert.match(controller, /const activeRequests = new Set\(\)/);
+  assert.match(controller, /const generation = requestGeneration/);
+  assert.match(controller, /const request = new AbortController\(\)/);
+  assert.match(controller, /activeRequests\.add\(request\)/);
+  assert.match(controller, /AbortSignal\.any\(\[request\.signal, AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)\]\)/);
+  assert.match(controller, /if \(generation !== requestGeneration\) return/);
+  assert.match(controller, /requestGeneration \+= 1/);
+  assert.match(controller, /for \(const request of activeRequests\) request\.abort\(\)/);
+  assert.match(controller, /activeRequests\.clear\(\)/);
 });
 
 test("MCP publishes and accepts only canonical Idol tool coordinates", async () => {
@@ -159,4 +179,12 @@ test("Worlds converge on canonical Lib routes and state the non-authority bounda
   assert.match(docs, /https:\/\/lib\.idol\.id\/atlas/);
   assert.match(docs, /path-preserving compatibility alias/i);
   assert.match(docs, /does not mint semantic identity/i);
+});
+
+test("Lib registry and Atlas retain distinct presentation product identities", async () => {
+  const canonical = await read("shared/lib-canonical.js");
+  assert.match(canonical, /function convergeRegistry\(\)[\s\S]*?return true;/);
+  assert.match(canonical, /function convergeAtlas\(\) \{\s*if \(!document\.querySelector\("\.atlas"\)\) return false;/);
+  assert.match(canonical, /function apply\(\) \{\s*if \(!convergeRegistry\(\)\) convergeAtlas\(\);\s*\}/);
+  assert.doesNotMatch(canonical, /function apply\(\) \{\s*convergeRegistry\(\);\s*convergeAtlas\(\);\s*\}/);
 });
