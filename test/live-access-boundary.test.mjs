@@ -44,8 +44,12 @@ function readyState(overrides = {}) {
       id: "live-policy",
       name: LIVE_ACCESS_POLICY_NAME,
       decision: "allow",
+      session_duration: "24h",
       include: [{ email: { email: "chris@pecunies.com" } }],
+      require: [],
+      exclude: [],
     },
+    extraPolicies: [],
     ...overrides,
   };
 }
@@ -67,7 +71,10 @@ function liveFetcher(state, calls) {
       state.live = { ...body, id: "live-app", aud: "live-aud" };
       return response(state.live);
     }
-    if (path.endsWith("/access/apps/live-app/policies") && method === "GET") return response(state.policy ? [state.policy] : []);
+    if (path.endsWith("/access/apps/live-app/policies") && method === "GET") return response([
+      ...(state.policy ? [state.policy] : []),
+      ...(state.extraPolicies || []),
+    ]);
     if (path.endsWith("/access/apps/live-app/policies") && method === "POST") {
       state.policy = { id: "live-policy", ...body };
       return response(state.policy);
@@ -125,6 +132,29 @@ test("Live Access refuses unrelated destination drift before updating anything",
 
   await assert.rejects(() => provision(state, calls), /unknown destination/);
   assert.equal(calls.some((call) => call.method === "PUT"), false);
+});
+
+test("Live Access refuses broadened or unrelated allow policies", async () => {
+  const broadened = readyState({
+    policy: {
+      ...readyState().policy,
+      include: [
+        { email: { email: "chris@pecunies.com" } },
+        { everyone: {} },
+      ],
+    },
+  });
+  await assert.rejects(() => provision(broadened), /different admission rule/);
+
+  const unrelated = readyState({
+    extraPolicies: [{
+      id: "broad-policy",
+      name: "Broad access",
+      decision: "allow",
+      include: [{ everyone: {} }],
+    }],
+  });
+  await assert.rejects(() => provision(unrelated), /unrelated allow policy/);
 });
 
 test("Live Access repairs admitted application drift without broadening its destination", async () => {
