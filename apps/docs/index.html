@@ -1,201 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Docs — idol.id</title>
-<link rel="stylesheet" href="/shared/theme.css">
-<script src="/config.js"></script>
-<style>
-  body { overflow: auto; }
-  .doc-shell { display: flex; min-height: 100vh; }
-  .doc-nav { width: 246px; flex: none; border-right: 1px solid var(--rule); padding: 22px 0 60px; position: sticky; top: 0; height: 100vh; overflow: auto; }
-  .doc-nav .group { padding: 18px 22px 6px; color: var(--ink-5); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
-  .doc-nav .item { display: block; padding: 8px 22px; color: var(--ink-3); cursor: pointer; font-size: 12px; transition: color var(--t), background var(--t); min-height: 38px; }
-  .doc-nav .item:hover { color: var(--ink); background: var(--bg-hover); }
-  .doc-nav .item.here { color: var(--ink); box-shadow: inset 2px 0 0 var(--signal); background: var(--signal-dim); }
-  .doc-nav .item .status { display: block; margin-top: 2px; color: var(--ink-5); font-size: 9px; }
-  .doc-main { flex: 1; min-width: 0; padding: 38px 52px 140px; max-width: 1040px; }
-  .authority-banner { margin-bottom: 28px; padding: 12px 14px; border: 1px solid var(--rule-2); border-left-color: var(--signal); border-radius: 5px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; line-height: 1.65; }
-  .authority-banner strong { color: var(--ink); font-weight: 550; }
-  .doc-main h1 { font-family: var(--sans); font-size: 28px; font-weight: 620; margin-bottom: 8px; letter-spacing: -.025em; }
-  .doc-main h2 { font-family: var(--sans); font-size: 18px; margin: 38px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
-  .doc-main h3 { font-family: var(--sans); font-size: 14px; margin: 26px 0 9px; color: var(--ink); }
-  .doc-main p { color: var(--ink-2); font-family: var(--sans); font-size: 13px; margin: 11px 0; max-width: 82ch; line-height: 1.75; }
-  .doc-main ul, .doc-main ol { margin: 11px 0 11px 23px; color: var(--ink-2); font-family: var(--sans); font-size: 13px; line-height: 1.72; }
-  .doc-main li { margin: 4px 0; }
-  .doc-main code { font-family: var(--mono); background: var(--bg-raise); border: 1px solid var(--rule); padding: 1px 5px; border-radius: 2px; font-size: 11.5px; color: var(--ink-2); }
-  .doc-main pre { background: var(--bg-raise); border: 1px solid var(--rule); border-radius: 5px; padding: 14px 16px; overflow: auto; margin: 13px 0 18px; }
-  .doc-main pre code { background: none; border: 0; padding: 0; font-size: 12.5px; }
-  .doc-main table { border-collapse: collapse; margin: 14px 0; font-size: 12px; max-width: 100%; display: block; overflow: auto; }
-  .doc-main th, .doc-main td { border: 1px solid var(--rule); padding: 7px 12px; color: var(--ink-2); text-align: left; vertical-align: top; }
-  .doc-main th { color: var(--ink); font-weight: 500; }
-  .doc-main blockquote { border-left: 2px solid var(--signal); padding: 8px 0 8px 15px; color: var(--ink-3); margin: 13px 0; background: linear-gradient(90deg,var(--signal-dim),transparent); }
-  .doc-main blockquote p { margin: 0; }
-  .doc-main .anchor { color: var(--ink-5); text-decoration: none; border: 0; margin-left: 8px; font-size: 11px; }
-  .doc-main .anchor:hover { color: var(--ink-3); }
-  .doc-main .tk[data-i] { cursor: pointer; }
-  .doc-main .tk[data-i]:hover { background: rgba(255,255,255,.09); color: var(--ink); }
-  .statusbar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); }
-  @media (max-width: 760px) {
-    .doc-shell { display: block; }
-    .doc-nav { width: auto; height: auto; position: static; display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 0; }
-    .doc-nav .group { display: none; }
-    .doc-nav .item { flex: none; padding: 11px 14px; }
-    .doc-nav .item.here { box-shadow: inset 0 -2px 0 var(--signal); }
-    .doc-nav .item .status { display: none; }
-    .doc-main { padding: 28px 18px 110px; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050607">
+  <meta name="description" content="Exact authority mirrors, operational interfaces, and explicitly bounded product and research projections for Idol.">
+  <title>Docs — Idol</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/shared/docs-app.css">
   <link rel="stylesheet" href="/shared/studio.css">
+  <script src="/config.js"></script>
 </head>
 <body>
-<div class="app">
-  <div class="topbar"></div>
-  <div class="doc-shell">
-    <nav class="doc-nav" id="nav" aria-label="Documentation"></nav>
-    <main class="doc-main" id="main"></main>
+  <div class="app docs-app" id="docs-app">
+    <header class="topbar"></header>
+    <div class="docs-toolbar">
+      <button id="docs-menu" type="button" aria-expanded="false" aria-controls="docs-nav" aria-label="Open documentation navigation">menu</button>
+      <strong id="docs-mobile-title">Docs</strong>
+    </div>
+
+    <div class="docs-shell">
+      <aside class="docs-nav" id="docs-nav" aria-label="Documentation">
+        <div class="docs-search">
+          <input id="docs-search" type="search" placeholder="Search deployed docs…" autocomplete="off" spellcheck="false" aria-label="Search all Idol documents">
+          <div class="docs-search-hint" id="docs-search-hint">Press / or ⌘K to search all documents.</div>
+        </div>
+        <nav class="docs-nav-list" id="docs-nav-list"></nav>
+      </aside>
+
+      <main class="docs-main">
+        <div class="docs-authority" id="docs-authority"><strong>Loading authority boundary.</strong></div>
+        <article class="docs-content docs-loading" id="docs-content">Loading exact document projection…</article>
+      </main>
+    </div>
+
+    <button class="docs-backdrop" id="docs-backdrop" type="button" aria-label="Close documentation navigation"></button>
+    <footer class="statusbar"></footer>
   </div>
-  <div class="statusbar"></div>
-</div>
-<script src="/shared/idol.js"></script>
-<script src="/shared/shell.js"></script>
-<script>
-(() => {
-  Shell.boot("docs", { title: "Docs", keys: [["hover", "source span"], ["/", "search docs"]] });
-  IdolShell.crumbs([{ label: "docs" }, { label: "…" }]);
 
-  const DOCS = [
-    { group: "authority", id: "law", name: "the compact law", status: "exact mirror" },
-    { group: "authority", id: "faces", name: "source faces", status: "bounded projection" },
-    { group: "authority", id: "graph", name: "semantic graph", status: "bounded projection" },
-    { group: "authority", id: "worlds", name: "worlds", status: "bounded projection" },
-    { group: "blueprints", id: "spec", name: "specification blueprint", status: "non-authoritative" },
-    { group: "blueprints", id: "live", name: "Idol Live", status: "product thesis" },
-    { group: "product", id: "platform", name: "platform", status: "operational projection" },
-    { group: "research", id: "synthesis", name: "research synthesis", status: "historical until evidenced" },
-  ];
-
-  const nav = document.getElementById("nav");
-  const main = document.getElementById("main");
-  const known = new Set(DOCS.map((document) => document.id));
-  let here = known.has(location.hash.slice(1)) ? location.hash.slice(1) : "law";
-  let group = null;
-
-  for (const document of DOCS) {
-    if (document.group !== group) {
-      group = document.group;
-      const label = document.createElement ? null : window.document.createElement("div");
-      label.className = "group";
-      label.textContent = group;
-      nav.appendChild(label);
-    }
-    const item = window.document.createElement("button");
-    item.type = "button";
-    item.className = `item${document.id === here ? " here" : ""}`;
-    item.innerHTML = `<span>${document.name}</span><span class="status">${document.status}</span>`;
-    item.addEventListener("click", () => { location.hash = document.id; });
-    item.dataset.id = document.id;
-    nav.appendChild(item);
-  }
-
-  addEventListener("hashchange", () => {
-    const requested = location.hash.slice(1);
-    here = known.has(requested) ? requested : "law";
-    nav.querySelectorAll(".item").forEach((item) => item.classList.toggle("here", item.dataset.id === here));
-    load();
-  });
-
-  const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  const markdown = (source) => {
-    const output = [];
-    const lines = source.split("\n");
-    let index = 0;
-    let code = false;
-    let codeBuffer = [];
-    let codeLanguage = "";
-    let list = null;
-    const closeList = () => { if (list) { output.push(`</${list}>`); list = null; } };
-    const inline = (value) => escapeHtml(value)
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-
-    while (index < lines.length) {
-      const line = lines[index];
-      if (line.startsWith("```")) {
-        if (!code) {
-          closeList();
-          code = true;
-          codeBuffer = [];
-          codeLanguage = line.slice(3).trim();
-        } else {
-          code = false;
-          output.push(`<pre data-lang="${escapeHtml(codeLanguage)}"><code>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
-        }
-        index += 1;
-        continue;
-      }
-      if (code) { codeBuffer.push(line); index += 1; continue; }
-      if (/^#{1,4} /.test(line)) {
-        closeList();
-        const level = line.match(/^#+/)[0].length;
-        const text = line.slice(level + 1).trim();
-        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        const tag = Math.min(level + 1, 4);
-        output.push(`<h${tag} id="${id}">${inline(text)}<a class="anchor" href="?doc=${here}#${id}">§</a></h${tag}>`);
-        index += 1;
-        continue;
-      }
-      if (/^(- |\* |\d+\. )/.test(line)) {
-        const mode = /^\d/.test(line) ? "ol" : "ul";
-        if (list !== mode) { closeList(); output.push(`<${mode}>`); list = mode; }
-        output.push(`<li>${inline(line.replace(/^(- |\* |\d+\. )/, ""))}</li>`);
-        index += 1;
-        continue;
-      }
-      if (/^\|/.test(line) && lines[index + 1] && /^\|[-| :]+\|/.test(lines[index + 1])) {
-        closeList();
-        const headings = line.split("|").slice(1, -1).map((value) => value.trim());
-        index += 2;
-        const rows = [];
-        while (index < lines.length && lines[index].startsWith("|")) {
-          rows.push(lines[index].split("|").slice(1, -1).map((value) => value.trim()));
-          index += 1;
-        }
-        output.push(`<table><thead><tr>${headings.map((heading) => `<th>${inline(heading)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
-        continue;
-      }
-      if (!line.trim()) { closeList(); index += 1; continue; }
-      if (line.startsWith("> ")) { closeList(); output.push(`<blockquote><p>${inline(line.slice(2))}</p></blockquote>`); index += 1; continue; }
-      closeList();
-      output.push(`<p>${inline(line)}</p>`);
-      index += 1;
-    }
-    closeList();
-    return output.join("\n");
-  };
-
-  const load = async () => {
-    const document = DOCS.find((candidate) => candidate.id === here) || DOCS[0];
-    IdolShell.crumbs([{ label: "docs" }, { label: document.name }]);
-    main.innerHTML = `<div style="padding:40px 0"><span class="spin"></span></div>`;
-    try {
-      const raw = await Idol.api.text(`/content/docs/${document.id}.md`);
-      main.innerHTML = `<div class="authority-banner"><strong>${document.status}.</strong> The compact law in <code>clpi/idol</code> remains the sole semantic authority. Browser highlighting is lexical provenance only until exact compiler source spans and identities are published.</div>${markdown(raw)}`;
-      main.querySelectorAll("pre[data-lang='id'], pre[data-lang='idol']").forEach((pre) => {
-        const holder = window.document.createElement("div");
-        const source = pre.querySelector("code").textContent;
-        pre.replaceWith(holder);
-        Idol.doccode(holder, { source });
-      });
-    } catch (error) {
-      main.innerHTML = `<div class="empty"><div class="glyph">×</div><div>${escapeHtml(error.message)}</div></div>`;
-    }
-  };
-
-  load();
-})();
-</script>
+  <script src="/shared/idol.js"></script>
+  <script src="/shared/shell.js"></script>
+  <script type="module" src="/shared/docs-app.js"></script>
 </body>
 </html>

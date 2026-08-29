@@ -114,13 +114,13 @@ async function requestHandler(request, response) {
   if (request.method === "POST" && url.pathname === "/mcp") {
     const document = await readBody(request);
     if (document.method === "server/discover") {
-      sendJson(response, { jsonrpc: "2.0", id: document.id, result: { protocolVersion: "2026-07-28", supportedProtocolVersions: ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"], serverInfo: { name: "idsem-hosted-mcp", version: "browser-smoke" }, capabilities: { tools: { listChanged: false } }, cacheScope: "private", ttlMs: 30000, semanticAuthority: false } });
+      sendJson(response, { jsonrpc: "2.0", id: document.id, result: { protocolVersion: "2026-07-28", supportedProtocolVersions: ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"], serverInfo: { name: "idol-hosted-mcp", version: "browser-smoke" }, capabilities: { tools: { listChanged: false } }, cacheScope: "private", ttlMs: 30000, toolNamespace: "idol", semanticAuthority: false } });
       return;
     }
     if (document.method === "tools/list") {
       sendJson(response, { jsonrpc: "2.0", id: document.id, result: { tools: [
-        { name: "idsem.live.projects.list", description: "List subject-owned projects.", requiredScopes: ["mcp:connect", "live:read"], inputSchema: { type: "object" } },
-        { name: "idsem.live.project.create", description: "Create one project.", requiredScopes: ["mcp:connect", "live:write"], inputSchema: { type: "object" } },
+        { name: "idol.live.projects.list", description: "List subject-owned projects.", requiredScopes: ["mcp:connect", "live:read"], inputSchema: { type: "object" } },
+        { name: "idol.live.project.create", description: "Create one project.", requiredScopes: ["mcp:connect", "live:write"], inputSchema: { type: "object" } },
       ], cacheScope: "private", ttlMs: 30000 } });
       return;
     }

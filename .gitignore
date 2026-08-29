@@ -12,3 +12,4 @@ dist/
 runtime/*.wasm
 
 .wrangler-dry-run/
+.artifacts/

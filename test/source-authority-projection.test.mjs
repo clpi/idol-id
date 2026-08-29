@@ -148,7 +148,8 @@ test("web authority and source-law projections pin current Idol authority exactl
 test("Specification blueprint and Idol Live are public but cannot impersonate language authority or implementation", async () => {
   const spec = await read("content/docs/spec.md");
   const live = await read("content/docs/live.md");
-  const docs = await read("apps/docs/index.html");
+  const docsShell = await read("apps/docs/index.html");
+  const docsCatalog = await read("shared/docs-app.js");
 
   assert.match(spec, /non-authoritative architecture blueprint/i);
   assert.match(spec, /compact law[\s\S]{0,160}\bwins\b/i);
@@ -162,8 +163,9 @@ test("Specification blueprint and Idol Live are public but cannot impersonate la
   assert.match(live, /implementation is not claimed/i);
   assert.match(live, /History H[\s\S]*Frontier F[\s\S]*State S/);
 
-  assert.match(docs, /id:\s*"spec"/);
-  assert.match(docs, /id:\s*"live"/);
+  assert.match(docsShell, /shared\/docs-app\.js/);
+  assert.match(docsCatalog, /id:\s*"spec"/);
+  assert.match(docsCatalog, /id:\s*"live"/);
 });
 
 test("the public repository makes no fabricated Program P or Program Q completion claim", async () => {

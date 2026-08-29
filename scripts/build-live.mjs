@@ -2,6 +2,7 @@ import { access, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { MCP_CURRENT_PROTOCOL, MCP_PROTOCOLS, MCP_TOOLS, mcpToolPublic } from "../shared/mcp.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -24,6 +25,8 @@ for (const [path, label] of [
   [join(dist, "apps", "mcp", "index.html"), "MCP application shell"],
   [join(dist, "shared", "live-app.js"), "Live application controller"],
   [join(dist, "shared", "live-app.css"), "Live application styles"],
+  [join(dist, "shared", "mcp-console.js"), "MCP application controller"],
+  [join(dist, "shared", "mcp-console.css"), "MCP application styles"],
   [join(root, "runtime", "live-contract.json"), "Live runtime contract"],
   [join(root, "live", "model.id"), "Live lawful source model"],
   [join(root, "live", "projection.id"), "Live lawful projection model"],
@@ -49,18 +52,31 @@ const deploy = await readJson(deployPath);
 const product = await readJson(productPath);
 const contract = await readJson(join(dist, "runtime", "live-contract.json"));
 
+const publicTools = MCP_TOOLS.map(mcpToolPublic);
+const toolProjection = {
+  schema: "idol.web.mcp.tools.v1",
+  semantic_authority: false,
+  namespace: "idol",
+  count: publicTools.length,
+  tools: publicTools,
+  rule: "Tool coordinates expose transport operations only. Semantic identities and graph facts remain owned by their producers."
+};
+
 runtime.live = "/runtime/live-contract.json";
 runtime.mcp = {
   schema: "idol.web.mcp.runtime.v1",
   endpoint: "https://mcp.idol.id/mcp",
   transport: "streamable-http-stateless",
-  protocol: "2026-07-28",
-  compatibility: ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"],
+  protocol: MCP_CURRENT_PROTOCOL,
+  compatibility: MCP_PROTOCOLS.filter((protocol) => protocol !== MCP_CURRENT_PROTOCOL),
   authentication: "platform-api-token",
   required_scope: "mcp:connect",
   session_state: false,
   semantic_authority: false,
-  delegation: "existing-authority-bound-services"
+  delegation: "existing-authority-bound-services",
+  server_name: "idol-hosted-mcp",
+  tool_namespace: "idol",
+  tools: "/runtime/mcp-tools.json"
 };
 
 deploy.surfaces["live.idol.id"] = "live";
@@ -82,10 +98,12 @@ product.surfaces.mcp = {
   kind: "tool-transport-projection",
   canonical: "https://mcp.idol.id/mcp",
   semantic_authority: false,
-  session_state: false
+  session_state: false,
+  tool_namespace: "idol"
 };
 
 await writeJson(join(dist, "runtime", "mcp.json"), runtime.mcp);
+await writeJson(join(dist, "runtime", "mcp-tools.json"), toolProjection);
 await writeJson(productPath, product);
 await writeJson(runtimePath, runtime);
 await writeJson(deployPath, deploy);

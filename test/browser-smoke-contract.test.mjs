@@ -4,15 +4,23 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("verified builds execute a real Chrome semantic-interaction gate", async () => {
-  const [workflow, smoke] = await Promise.all([
+test("verified builds execute every real Chrome gate through the collision-free orchestrator", async () => {
+  const [workflow, orchestrator, smoke] = await Promise.all([
     read(".github/workflows/deploy.yml"),
+    read("scripts/run-browser-smoke.mjs"),
     read("scripts/browser-smoke.mjs"),
   ]);
 
-  assert.match(workflow, /node scripts\/browser-smoke\.mjs/);
+  assert.match(workflow, /node scripts\/run-browser-smoke\.mjs/);
+  assert.doesNotMatch(workflow, /node scripts\/(?:browser-smoke|studio-browser-smoke|live-mcp-browser-smoke)\.mjs/);
   assert.match(workflow, /idol-browser-smoke-\$\{\{ github\.run_id \}\}/);
   assert.match(workflow, /\.artifacts\/browser-smoke/);
+  assert.match(orchestrator, /async function ephemeralPort\(\)/);
+  assert.match(orchestrator, /IDOL_BROWSER_DEBUG_PORT/);
+  assert.match(orchestrator, /IDOL_STUDIO_DEBUG_PORT/);
+  assert.match(orchestrator, /IDOL_LIVE_BROWSER_DEBUG_PORT/);
+  assert.match(orchestrator, /MAX_ATTEMPTS = 3/);
+  assert.match(orchestrator, /Chrome stderr/);
   assert.match(smoke, /390, 844/);
   assert.match(smoke, /1440, 900/);
   assert.match(smoke, /\.semantic-token/);
