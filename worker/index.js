@@ -22,6 +22,12 @@ const SHARED_PREFIXES = ["/shared/", "/content/", "/runtime/", "/apps/"];
 const PASSTHROUGH_PREFIXES = ["/api/"];
 const PASSTHROUGH_PATHS = new Set(["/health", "/info", "/origin-health", "/origin-info"]);
 const CACHEABLE_EXT = /\.(?:css|js|mjs|json|md|txt|svg|png|jpe?g|gif|webp|ico|woff2?|wasm|map)$/i;
+const CONTENT_ADDRESSED_ASSET = /(?:[.-])[0-9a-f]{8,64}(?=\.[^.]+$)/i;
+
+export function isContentAddressedPath(pathname) {
+  const name = String(pathname || "").split("/").pop() || "";
+  return CONTENT_ADDRESSED_ASSET.test(name);
+}
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const IMPORT_BODY_LIMIT = 32 * 1024;
 
@@ -63,7 +69,7 @@ function secure(response, options = {}) {
   headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=()");
   headers.set("strict-transport-security", "max-age=31536000; includeSubDomains; preload");
   headers.set("content-security-policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: wss:; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
-  if (options.html) headers.set("cache-control", "no-cache, must-revalidate");
+  if (options.html || options.revalidate) headers.set("cache-control", "no-cache, must-revalidate");
   else if (options.immutable) headers.set("cache-control", "public, max-age=31536000, immutable");
   else if (!headers.has("cache-control")) headers.set("cache-control", "public, max-age=300, stale-while-revalidate=86400");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -183,7 +189,7 @@ export async function handle(request, env, dependencies = {}) {
     if (url.pathname === "/__idol/health") return json({ status: "healthy", edge: true, ...identity });
     return secure(new Response(configSource(info, host, commit, authority), { headers: { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store" } }));
   }
-  if (url.pathname === "/__idol/manifest") return asset(env, request, "/manifest.json", { immutable: false });
+  if (url.pathname === "/__idol/manifest") return asset(env, request, "/manifest.json", { revalidate: true });
 
   const ideResponse = await handleIdeTransport(request, env, url.pathname, info, dependencies);
   if (ideResponse) return secure(ideResponse);
@@ -197,13 +203,15 @@ export async function handle(request, env, dependencies = {}) {
     return proxyOrigin(request);
   }
   if (SHARED_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
-    const response = await asset(env, request, url.pathname, { immutable: CACHEABLE_EXT.test(url.pathname) });
+    const immutable = isContentAddressedPath(url.pathname);
+    const response = await asset(env, request, url.pathname, { immutable, revalidate: !immutable });
     if (assetFound(response)) return response;
   }
   if (CACHEABLE_EXT.test(url.pathname)) {
-    let response = await asset(env, request, url.pathname, { immutable: true });
+    const immutable = isContentAddressedPath(url.pathname);
+    let response = await asset(env, request, url.pathname, { immutable, revalidate: !immutable });
     if (assetFound(response)) return response;
-    response = await asset(env, request, `/apps/${info.app}${url.pathname}`, { immutable: true });
+    response = await asset(env, request, `/apps/${info.app}${url.pathname}`, { immutable, revalidate: !immutable });
     if (assetFound(response)) return response;
     if (originless(info)) return noOrigin(info);
     return secure(await fetch(request));

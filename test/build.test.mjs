@@ -47,8 +47,8 @@ test("build emits Lib-owned world projections, foreign integrations, authenticat
   assert.match(shellJs, /platform\.idol\.id\/ide/);
   assert.match(shellJs, /lib\.idol\.id\/atlas/);
   assert.match(shellJs, /lib\.idol\.id\/universe/);
-  assert.doesNotMatch(shellJs, /id:\s*"worlds"/);
-  assert.doesNotMatch(shellJs, /id:\s*"universe"/);
+  assert.match(shellJs, /id:\s*"worlds"/);
+  assert.match(shellJs, /id:\s*"universe"/);
   assert.equal(productModel.semantic_universes, 1);
   assert.equal(productModel.surfaces.lib.kind, "admitted-world-registry-projection");
   assert.equal(productModel.surfaces.worlds.kind, "compatibility-alias");

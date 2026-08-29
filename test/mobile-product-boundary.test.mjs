@@ -5,18 +5,16 @@ import { spawnSync } from "node:child_process";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("global chrome presents Lib once and keeps world and Universe views contextual", async () => {
+test("global chrome exposes bounded world, registry, and Universe projections", async () => {
   const shell = await read("shared/shell.js");
+  assert.match(shell, /id:\s*"worlds"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/atlas"/);
   assert.match(shell, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
-  assert.doesNotMatch(shell, /id:\s*"worlds"/);
-  assert.doesNotMatch(shell, /id:\s*"universe"/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/atlas/);
+  assert.match(shell, /https:\/\/lib\.idol\.id\/\?set=homes/);
   assert.match(shell, /https:\/\/lib\.idol\.id\/universe/);
   assert.match(shell, /https:\/\/platform\.idol\.id\/universe/);
   assert.match(shell, /https:\/\/platform\.idol\.id\/repo/);
-  assert.match(shell, /class="nav-toggle"/);
-  assert.match(shell, /aria-expanded="false"/);
-  assert.match(shell, /aria-controls="idol-nav-panel"/);
+  assert.match(shell, /className = "idol-drawer"/);
+  assert.match(shell, /aria-expanded/);
   assert.match(shell, /event\.key === "Escape"/);
 });
 
@@ -30,16 +28,17 @@ test("shared mobile chrome replaces the overflowing product strip before it can 
   assert.doesNotMatch(surface, /\.topbar \.nav\s*\{[^}]*overflow-x:\s*auto/);
 });
 
-test("homepage removes pseudo-semantic decoration and converges Atlas beneath the Lib product", async () => {
-  const [site, convergence, web] = await Promise.all([read("apps/site/index.html"), read("shared/site-product-convergence.js"), read("shared/web.js")]);
+test("homepage is a static semantic Studio rather than a post-load product rewrite", async () => {
+  const [site, web, studio] = await Promise.all([read("apps/site/index.html"), read("shared/web.js"), read("shared/studio-app.js")]);
   assert.doesNotMatch(site, /<canvas\b/i);
   assert.doesNotMatch(site, /Math\.random\(/);
-  assert.match(convergence, /Library worlds/);
-  assert.match(convergence, /https:\/\/lib\.idol\.id\/atlas/);
-  assert.match(convergence, /atlas\?\.remove\(\)/);
-  assert.match(convergence, /package coordinates remain provenance/i);
-  assert.match(web, /site-product-convergence\.js/);
-  assert.match(site, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.cell-a[\s\S]*?min-height:\s*0/);
+  assert.match(site, /One graph\. Every <em>projection\.<\/em>/);
+  assert.match(site, /data-source-manifest="\/content\/source-examples\.json"/);
+  assert.match(site, /data-action="analyze"/);
+  assert.match(site, /https:\/\/lib\.idol\.id\/atlas/);
+  assert.doesNotMatch(web, /site-product-convergence\.js/);
+  assert.match(site, /No semantic graph is inferred in the browser/);
+  assert.match(studio, /analysis refused/);
 });
 
 test("Lib preserves mobile list/detail navigation and exact home boundary", async () => {

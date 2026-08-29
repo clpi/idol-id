@@ -17,6 +17,7 @@
   @media(max-width:820px){.hero,.console{grid-template-columns:1fr}.connect{border-right:0;border-bottom:1px solid var(--rule)}.docs{grid-template-columns:1fr}.tools{grid-template-columns:1fr}.wrap{padding-bottom:80px}h1{font-size:68px}.endpoint{margin-top:8px}}
   @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
+  <link rel="stylesheet" href="/shared/studio.css">
 </head>
 <body class="app mcp">
 <header class="topbar"></header>
@@ -25,7 +26,7 @@
     <div>
       <div class="eyebrow">hosted tool transport</div>
       <h1>MCP</h1>
-      <p class="lede">A stateless Streamable HTTP projection of Idsem tools. It validates MCP framing and delegates to existing authority-bound services; it does not parse source, invent graph meaning, or become a second semantic authority.</p>
+      <p class="lede">A stateless Streamable HTTP projection of Idol tools. It validates MCP framing and delegates to existing authority-bound services; it does not parse source, invent graph meaning, or become a second semantic authority.</p>
       <div class="boundary"><span>transport only</span><span>semantic authority false</span><span>session state none</span><span>API token scoped</span></div>
     </div>
     <div class="endpoint">
@@ -50,10 +51,10 @@
     <div class="results">
       <div class="section-title"><h2>Exact response</h2><span class="status">JSON-RPC 2.0</span></div>
       <div id="mcp-tool-grid" class="tools" aria-live="polite">
-        <div class="tool"><code>idsem.live.projects.list</code><p>List subject-owned Live projects.</p><div class="scope">mcp:connect + live:read</div></div>
-        <div class="tool"><code>idsem.live.project.create</code><p>Create a project with one history and one frontier.</p><div class="scope">mcp:connect + live:write</div></div>
-        <div class="tool"><code>idsem.live.graph.query</code><p>Read exact nodes, applications, derived roles, history, and frontier.</p><div class="scope">mcp:connect + live:read</div></div>
-        <div class="tool"><code>idsem.worlds.list</code><p>Read published and foreign-origin world projections.</p><div class="scope">mcp:connect + world:read</div></div>
+        <div class="tool"><code>idol.live.projects.list</code><p>List subject-owned Live projects.</p><div class="scope">mcp:connect + live:read</div></div>
+        <div class="tool"><code>idol.live.project.create</code><p>Create a project with one history and one frontier.</p><div class="scope">mcp:connect + live:write</div></div>
+        <div class="tool"><code>idol.live.graph.query</code><p>Read exact nodes, applications, derived roles, history, and frontier.</p><div class="scope">mcp:connect + live:read</div></div>
+        <div class="tool"><code>idol.worlds.list</code><p>Read published and foreign-origin world projections.</p><div class="scope">mcp:connect + world:read</div></div>
       </div>
       <pre id="mcp-raw" class="raw">No request yet.</pre>
     </div>

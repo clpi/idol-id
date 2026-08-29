@@ -48,12 +48,10 @@ test("Lib owns Atlas and public Universe lenses while Platform keeps private Uni
   assert.equal(await response.text(), "<html>universe</html>");
 });
 
-test("global chrome exposes one Lib product and contextual Atlas, homes, and Universe projections", async () => {
+test("global chrome exposes Worlds and Registry as bounded projections over one semantic universe", async () => {
   const shell = await read("shared/shell.js");
+  assert.match(shell, /id:\s*"worlds"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/atlas"/);
   assert.match(shell, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
-  assert.doesNotMatch(shell, /id:\s*"worlds"/);
-  assert.doesNotMatch(shell, /id:\s*"universe"/);
-  assert.match(shell, /https:\/\/lib\.idol\.id\/atlas/);
   assert.match(shell, /https:\/\/lib\.idol\.id\/\?set=homes/);
   assert.match(shell, /https:\/\/lib\.idol\.id\/universe/);
   assert.match(shell, /https:\/\/platform\.idol\.id\/universe/);

@@ -1,228 +1,103 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Idsem — semantic identity, exact facts, lawful realization</title>
-<meta name="description" content="Idsem is Lua progressively specialized into native execution through one semantic graph, exact demand, lawful transformation, and late physical realization.">
-<link rel="stylesheet" href="/shared/theme.css">
-<script src="/config.js"></script>
-<style>
-  body { overflow: auto; }
-  .site { min-height: 100vh; display: flex; flex-direction: column; }
-  .hero { display: flex; align-items: center; padding: clamp(46px,8vw,92px) 8vw clamp(38px,6vw,72px); position: relative; overflow: hidden; border-bottom: 1px solid var(--rule); }
-  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, transparent 0 7.9vw, var(--rule) 8vw, transparent calc(8vw + 1px)), linear-gradient(0deg, transparent 0 53%, rgba(230,180,80,.08) 53%, transparent calc(53% + 1px)); }
-  .hero .inner { position: relative; width: min(1040px, 100%); }
-  .eyebrow { display: flex; gap: 9px; align-items: center; margin-bottom: 18px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-  .eyebrow .authority { color: var(--signal); }
-  .hero h1 { font-family: var(--sans); font-size: clamp(64px,12vw,164px); font-weight: 670; letter-spacing: -.065em; line-height: .85; color: var(--ink); }
-  .hero h1 .sigil { color: var(--signal); }
-  .hero .tag { margin-top: 24px; color: var(--ink-2); font-family: var(--sans); font-size: clamp(15px,1.7vw,20px); max-width: 760px; line-height: 1.55; letter-spacing: -.012em; }
-  .hero .tag strong { color: var(--ink); font-weight: 560; }
-  .lawline { display: flex; gap: 8px; margin-top: 26px; flex-wrap: wrap; }
-  .lawface { display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: baseline; border: 1px solid var(--rule-2); padding: 9px 12px; min-height: 44px; border-radius: 7px; background: rgba(0,0,0,.38); }
-  .lawface code { color: var(--signal); font-size: 14px; }
-  .lawface span { color: var(--ink-3); font-family: var(--sans); font-size: 11px; }
-  .source-panel { margin-top: 30px; max-width: 760px; border: 1px solid var(--rule-2); background: rgba(4,4,4,.86); border-radius: 9px; overflow: hidden; }
-  .source-head { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
-  .source-head .title { color: var(--ink); font-family: var(--sans); font-weight: 530; }
-  .source-head .status { margin-left: auto; padding: 4px 7px; border: 1px solid rgba(230,180,80,.34); border-radius: 999px; color: var(--signal); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
-  .source-head .pin { color: var(--ink-4); font-size: 9px; }
-  .source-note { padding: 0 14px 13px; color: var(--ink-3); font-family: var(--sans); font-size: 11px; line-height: 1.6; }
-  .hero-code pre { max-height: 210px; overflow: auto; padding: 14px; }
-  .source-failure { padding: 17px; color: var(--danger); font-family: var(--sans); }
-  .corpus { display: flex; gap: 26px; padding: 13px 8vw; color: var(--ink-4); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; flex-wrap: wrap; border-bottom: 1px solid var(--rule); }
-  .corpus b { color: var(--ink); font-weight: 500; }
-  .corpus .sig { color: var(--signal); }
-  .grid { display: grid; grid-template-columns: repeat(12,minmax(0,1fr)); border-bottom: 1px solid var(--rule); }
-  .cell-a { grid-column: span 4; border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 28px 30px 32px; position: relative; overflow: hidden; cursor: pointer; transition: background var(--t); min-height: 174px; }
-  .cell-a.wide { grid-column: span 6; }
-  .cell-a.hero-card { grid-column: span 12; min-height: 150px; }
-  .cell-a:hover { background: var(--bg-hover); }
-  .cell-a .n { color: var(--ink); font-family: var(--sans); font-size: 17px; margin-bottom: 6px; }
-  .cell-a .u { color: var(--ink-4); font-size: 10px; letter-spacing: .08em; margin-bottom: 12px; }
-  .cell-a .d { color: var(--ink-3); font-family: var(--sans); font-size: 12px; line-height: 1.7; max-width: 62ch; }
-  .cell-a .d strong { color: var(--ink-2); font-weight: 550; }
-  .cell-a .arrow { position: absolute; right: 22px; top: 24px; color: var(--ink-5); transition: color var(--t), transform var(--t); }
-  .cell-a:hover .arrow { color: var(--ink); transform: translate(2px,-2px); }
-  .lens-links { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
-  .lens-links span { padding: 5px 8px; border: 1px solid var(--rule-2); border-radius: 999px; color: var(--ink-4); font: 10px/1 var(--mono); }
-  .boundary { padding: 28px 8vw 32px; display: grid; grid-template-columns: minmax(0,1.1fr) minmax(260px,.9fr); gap: 36px; }
-  .boundary h2 { font-family: var(--sans); font-size: 20px; margin-bottom: 9px; }
-  .boundary p, .boundary li { color: var(--ink-3); font-family: var(--sans); font-size: 12px; line-height: 1.75; }
-  .boundary ul { list-style: none; display: grid; gap: 5px; }
-  .boundary li::before { content: "—"; color: var(--signal); margin-right: 8px; }
-  footer { padding: 18px 8vw; color: var(--ink-5); font-size: 10px; letter-spacing: .08em; display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--rule); }
-  footer a { color: var(--ink-4); border: 0; }
-  @media (max-width: 960px) {
-    .cell-a, .cell-a.wide { grid-column: span 6; }
-    .cell-a.hero-card { grid-column: span 12; }
-  }
-  @media (max-width: 699px) {
-    .hero { padding: 34px 16px 30px; align-items: flex-start; }
-    .hero::before { background: linear-gradient(0deg, transparent 0 49%, rgba(230,180,80,.07) 49%, transparent calc(49% + 1px)); }
-    .hero h1 { font-size: clamp(58px,24vw,96px); }
-    .hero .tag { margin-top: 18px; }
-    .lawline { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 20px; }
-    .lawface { padding: 8px 10px; gap: 8px; }
-    .source-panel { margin-top: 22px; }
-    .source-head { align-items: flex-start; flex-wrap: wrap; }
-    .source-head .status { margin-left: 0; }
-    .corpus { padding: 12px 16px; gap: 12px 20px; }
-    .grid { display: block; }
-    .cell-a, .cell-a.wide, .cell-a.hero-card { min-height: 0; padding: 23px 18px 25px; border-right: 0; }
-    .cell-a .d { font-size: 13px; line-height: 1.62; }
-    .boundary { padding: 24px 18px 28px; grid-template-columns: 1fr; gap: 20px; }
-    footer { padding-left: 18px; padding-right: 18px; }
-  }
-  @media (max-width: 370px) {
-    .lawline { grid-template-columns: 1fr; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Idol — semantic compiler studio</title>
+  <meta name="description" content="Inspect one compiler-published semantic graph across source, applications, demand, transformations, realization, worlds, and machine evidence.">
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/shared/observatory-syntax.css">
+  <link rel="stylesheet" href="/shared/studio.css">
+  <script src="/config.js"></script>
 </head>
 <body>
-<div class="app">
-  <div class="topbar"></div>
-  <main class="site">
-    <section class="hero">
-      <div class="inner">
-        <div class="eyebrow"><span class="authority">current law projection</span><span>·</span><span id="law-edition">loading exact authority</span></div>
-        <h1>IDSEM</h1>
-        <p class="tag"><strong>Semantic identity persists. Representation changes.</strong> Idsem keeps one graph of exact meaning, projects occurrence demand, admits witnessed transformations, and chooses physical realization only when observation requires it.</p>
-        <div class="lawline" aria-label="Permanent delimiter meanings">
-          <div class="lawface"><code>()</code><span>ordinary application</span></div>
-          <div class="lawface"><code>[]</code><span>computed projection</span></div>
-          <div class="lawface"><code>{}</code><span>structured pack</span></div>
-          <div class="lawface"><code>.</code><span>one static projection</span></div>
-          <div class="lawface"><code>:</code><span>subject relation</span></div>
-          <div class="lawface"><code>@</code><span>current world</span></div>
-        </div>
-        <section class="source-panel" aria-labelledby="source-title">
-          <div class="source-head">
-            <span class="title" id="source-title">Subject and projection specialization</span>
-            <span class="pin" id="source-pin"></span>
-            <span class="status" id="source-status">authority loading</span>
-          </div>
-          <div id="hero-code" class="hero-code" data-source-manifest="/content/source-examples.json"></div>
-          <p class="source-note" id="source-note">This surface projects semantic law. It does not claim that the current production parser, lowering path, or machine backend realizes every lawful face.</p>
-        </section>
-      </div>
-    </section>
+<div class="app studio-root" id="idol-studio" data-studio-mode="source" data-facts-open="false">
+  <header class="topbar"></header>
 
-    <div class="corpus" id="corpus"><span>published projections loading</span></div>
-
-    <nav class="grid" aria-label="Idsem product surfaces">
-      <a class="cell-a hero-card" href="https://graph.idol.id/">
-        <div class="n">Semantic Observatory</div>
-        <div class="u">GRAPH.IDOL.ID</div>
-        <div class="d">Inspect exact compiler-published source spans, graph identities, structural roles, facts, demand, transformations, and realization evidence. Browser lexical preview remains visibly non-semantic.</div>
-        <div class="arrow">↗</div>
-      </a>
-
-      <a class="cell-a wide" href="https://lib.idol.id/">
-        <div class="n">Registry</div>
-        <div class="u">LIB.IDOL.ID</div>
-        <div class="d"><strong>Published records, source, versions, artifacts, and package provenance.</strong> Package provenance and registry coordinates do not manufacture world identity, semantic identity, reach, or authority. Source homes remain a separate reach/provenance lens.</div>
-        <div class="lens-links"><span>published</span><span>homes</span><span>source</span><span>versions</span></div>
-        <div class="arrow">↗</div>
-      </a>
-
-      <a class="cell-a wide" href="https://worlds.idol.id/">
-        <div class="n">World Atlas</div>
-        <div class="u">WORLDS.IDOL.ID</div>
-        <div class="d"><strong>Canonical public exploration of world projections and foreign-origin candidates.</strong> The Atlas preserves origin, uncertainty, exact witnesses, and authority boundaries; it does not reinterpret a package or home as a world.</div>
-        <div class="lens-links"><span>atlas</span><span>foreign</span><span>compare</span><span>universe views</span></div>
-        <div class="arrow">↗</div>
-      </a>
-
-      <a class="cell-a" href="https://docs.idol.id/">
-        <div class="n">Law and blueprints</div>
-        <div class="u">DOCS.IDOL.ID</div>
-        <div class="d">Compact law, bounded source projections, the non-authoritative specification blueprint, and the separate Idsem Live product thesis.</div>
-        <div class="arrow">↗</div>
-      </a>
-
-      <a class="cell-a" href="https://platform.idol.id/">
-        <div class="n">Platform</div>
-        <div class="u">PLATFORM.IDOL.ID</div>
-        <div class="d">Authenticated operational projections, including private Universe View management, over the same semantic universe. Product records never become language authority.</div>
-        <div class="arrow">↗</div>
-      </a>
-
-      <a class="cell-a" href="https://api.idol.id/">
-        <div class="n">Semantic API</div>
-        <div class="u">API.IDOL.ID</div>
-        <div class="d">Transport projections of published facts and explicitly bounded operations. HTTP routes are not language identities.</div>
-        <div class="arrow">↗</div>
-      </a>
-    </nav>
-
-    <section class="boundary">
+  <main class="studio-main">
+    <section class="studio-intro" aria-labelledby="studio-title">
       <div>
-        <h2>One authority, one universe, many projections</h2>
-        <p><code>clpi/idol</code> owns language and semantic law. This web repository owns presentation and transport only. Registry records, world projections, source homes, Atlas results, and Universe Views remain distinct facts or views; none may mint a duplicate semantic identity.</p>
+        <h1 id="studio-title">One graph. Every <em>projection.</em></h1>
+        <p class="studio-intro-copy"><strong>Idol is a Lua-derived native compiler whose meaning survives every lowering.</strong> Edit source, request the current compiler projection, select exact identities, and follow demand into realization without a second frontend-owned ontology.</p>
       </div>
-      <ul>
-        <li>home is reach and provenance, not world identity or subjecthood</li>
-        <li>package provenance is not semantic authority</li>
-        <li>structural roles come only from compiler-published graph facts</li>
-        <li>operation words remain relation identities, never edge kinds</li>
-        <li>foreign source retains exact foreign law and origin</li>
-      </ul>
+      <div class="studio-authority" aria-label="Pinned compiler authority">
+        <div><span>authority</span><code id="studio-authority">loading</code></div>
+        <div><span>native</span><code id="studio-native">loading</code></div>
+        <div><span>law</span><code id="studio-law">loading</code></div>
+        <div><span>corpus</span><code id="studio-corpus">loading</code></div>
+      </div>
     </section>
 
-    <footer>
-      <span>IDSEM · .ID</span>
-      <a href="https://github.com/clpi/idol">language authority</a>
-      <a href="https://github.com/clpi/idol-native">native evidence</a>
-      <a href="https://docs.idol.id/law">compact law</a>
-      <a href="https://docs.idol.id/spec">specification blueprint</a>
-      <a href="https://docs.idol.id/live">Idsem Live</a>
-      <span style="margin-left:auto" id="auth-edition"></span>
-    </footer>
+    <div class="studio-toolbar" aria-label="Semantic projection controls">
+      <div class="studio-toolbar-group">
+        <select id="studio-sample" data-source-manifest="/content/source-examples.json" aria-label="Authority-pinned source projection"></select>
+      </div>
+      <div class="studio-toolbar-group">
+        <button class="primary" type="button" data-action="analyze">analyze</button>
+        <button type="button" data-action="lower">lower</button>
+        <button type="button" data-action="reset">reset</button>
+      </div>
+      <div class="grow"></div>
+      <div class="studio-capability" id="studio-capability">loading current authority</div>
+      <div class="studio-toolbar-group">
+        <button type="button" data-action="fit">fit</button>
+        <button type="button" data-action="facts">facts</button>
+      </div>
+    </div>
+
+    <div class="studio-workspace">
+      <section class="studio-pane studio-source" aria-label="Idol source">
+        <div class="studio-pane-head"><span>source</span><span class="grow">current law projection · explicit analysis</span></div>
+        <textarea id="studio-editor" class="studio-editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Editable Idol source"></textarea>
+      </section>
+
+      <section class="studio-pane studio-graph" aria-label="Compiler-published semantic graph">
+        <div class="studio-pane-head"><span>graph</span><span class="grow">identity · relation · subject · pack · result</span></div>
+        <div class="studio-graph-host" id="studio-graph">
+          <div class="studio-graph-empty" id="studio-graph-empty">No semantic graph is inferred in the browser.<br>Analyze source to request exact compiler-published identities and structural edges.</div>
+        </div>
+      </section>
+
+      <aside class="studio-pane studio-facts" aria-label="Exact semantic facts">
+        <div class="studio-pane-head"><span>facts</span><span class="grow">selected exact record</span></div>
+        <div class="studio-fact-scroll" id="studio-facts-body"></div>
+      </aside>
+
+      <section class="studio-pane studio-projection" aria-label="Demand, transformation, realization, and machine projections">
+        <div class="studio-pane-head">
+          <nav class="studio-projection-tabs" aria-label="Lowering projections">
+            <button class="here" type="button" data-projection="demand">demand</button>
+            <button type="button" data-projection="transform">transform</button>
+            <button type="button" data-projection="realization">realization</button>
+            <button type="button" data-projection="machine">machine</button>
+          </nav>
+        </div>
+        <div class="studio-projection-body" id="studio-projection-body"></div>
+      </section>
+    </div>
+
+    <nav class="studio-dock" aria-label="Idol product projections">
+      <a href="https://graph.idol.id/"><strong>Graph</strong><span>exact observatory</span></a>
+      <a href="https://lib.idol.id/atlas"><strong>Worlds</strong><span>atlas and foreign</span></a>
+      <a href="https://lib.idol.id/"><strong>Registry</strong><span>records and artifacts</span></a>
+      <a href="https://platform.idol.id/ide"><strong>IDE</strong><span>workspace and analysis</span></a>
+      <a href="https://live.idol.id/"><strong>Live</strong><span>causal project truth</span></a>
+      <a href="https://docs.idol.id/"><strong>Law</strong><span>current documentation</span></a>
+    </nav>
   </main>
-  <div class="statusbar"></div>
+
+  <nav class="studio-mobile-tabs" aria-label="Studio mobile projections">
+    <button class="here" type="button" data-studio-mode="source">source</button>
+    <button type="button" data-studio-mode="graph">graph</button>
+    <button type="button" data-studio-mode="facts">facts</button>
+    <button type="button" data-studio-mode="projection">lowering</button>
+  </nav>
+  <footer class="statusbar"></footer>
 </div>
 
 <script src="/shared/idol.js"></script>
+<script src="/shared/graph.js"></script>
 <script src="/shared/shell.js"></script>
-<script>
-(() => {
-  "use strict";
-  Shell.boot("site", { title: "Idsem" });
-
-  Promise.all([
-    fetch("/runtime/source-law.json", { cache: "no-store" }).then((response) => {
-      if (!response.ok) throw new Error(`source law ${response.status}`);
-      return response.json();
-    }),
-    fetch("/content/source-examples.json", { cache: "no-store" }).then((response) => {
-      if (!response.ok) throw new Error(`source examples ${response.status}`);
-      return response.json();
-    }),
-  ]).then(([law, manifest]) => {
-    const example = manifest.examples.find((candidate) => candidate.id === "declaration-specialization");
-    if (!example) throw new Error("authority example absent");
-    Idol.doccode(document.getElementById("hero-code"), { source: example.source, maxH: "210px" });
-    document.getElementById("source-status").textContent = example.status.replaceAll("-", " ");
-    document.getElementById("source-pin").textContent = manifest.authority.commit.slice(0, 8);
-    document.getElementById("law-edition").textContent = `${law.source_law.schema} · ${law.source_law.sha256.slice(0, 12)}`;
-    document.getElementById("auth-edition").textContent = `law ${law.authority.commit.slice(0, 8)} · web projection`;
-  }).catch((error) => {
-    document.getElementById("hero-code").innerHTML = `<div class="source-failure">Source authority unavailable: ${String(error.message || error)}</div>`;
-    document.getElementById("source-status").textContent = "refused";
-  });
-
-  Promise.all([
-    fetch("/api/libs").then((response) => response.json()).catch(() => ({ libs: [] })),
-    fetch("/api/worlds").then((response) => response.json()).catch(() => ({ worlds: [] })),
-  ]).then(([homeDocument, worldDocument]) => {
-    const homes = homeDocument.libs || [];
-    const worlds = worldDocument.worlds || [];
-    const lines = homes.reduce((sum, value) => sum + Number(value.lines || 0), 0);
-    document.getElementById("corpus").innerHTML = `<span><b class="sig">${worlds.length}</b> published world projections</span><span><b>${homes.length}</b> source homes</span><span><b>${lines.toLocaleString()}</b> source lines</span><span>live registry evidence</span>`;
-  });
-})();
-</script>
+<script type="module" src="/shared/studio-app.js"></script>
 </body>
 </html>
