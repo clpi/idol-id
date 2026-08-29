@@ -23,12 +23,27 @@ jobs:
           node-version: 22
       - name: Apply unified Studio source
         run: python scripts/apply-unified-studio.py
-      - name: Verify repository, Worker, and browser contracts
+      - name: Run repository admission
+        shell: bash
         run: |
-          npm run check
-          npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run
-          node scripts/browser-smoke.mjs
-          node scripts/live-mcp-browser-smoke.mjs
+          mkdir -p .artifacts/unified-studio
+          set -o pipefail
+          npm run check 2>&1 | tee .artifacts/unified-studio/repository.log
+      - name: Validate Worker bundle
+        shell: bash
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4.125.0 deploy --dry-run --outdir .wrangler-dry-run 2>&1 | tee .artifacts/unified-studio/worker.log
+      - name: Run semantic browser admission
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/browser-smoke.mjs 2>&1 | tee .artifacts/unified-studio/browser.log
+      - name: Run Live and MCP browser admission
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/live-mcp-browser-smoke.mjs 2>&1 | tee .artifacts/unified-studio/live-mcp-browser.log
       - name: Commit admitted source and retire transfer payload
         shell: bash
         run: |
@@ -43,8 +58,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unified-idol-studio-${{ github.run_id }}
+          name: unified-idol-studio-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            .artifacts/unified-studio
             .artifacts/browser-smoke
             .wrangler-dry-run
           if-no-files-found: warn
