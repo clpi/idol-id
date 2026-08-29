@@ -40,6 +40,14 @@ async function verifyHost(host) {
     assert(response.status === 308 && String(location || "").startsWith("https://idol.id"), `${host} redirect mismatch`);
     return { host, status: response.status, redirect: location };
   }
+  if (host === "worlds.idol.id") {
+    const path = "/__idol/version";
+    const { response } = await document(`https://${host}${path}`);
+    const location = response.headers.get("location");
+    assert(response.status === 308, `${host} compatibility redirect ${response.status}`);
+    assert(location === `https://lib.idol.id${path}`, `${host} redirect mismatch: ${location}`);
+    return { host, status: response.status, redirect: location, alias: "lib.idol.id" };
+  }
   if (host === "live.idol.id") {
     const { response } = await document("https://live.idol.id/");
     assert([301, 302, 303, 307, 401, 403].includes(response.status), `Live Access boundary returned ${response.status}`);
