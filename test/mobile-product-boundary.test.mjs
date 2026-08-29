@@ -5,9 +5,13 @@ import { spawnSync } from "node:child_process";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("global chrome presents Lib once and keeps world and Universe views contextual", async () => {
+test("global chrome keeps the compiler primary and Lib, world, and Universe views contextual", async () => {
   const shell = await read("shared/shell.js");
-  assert.match(shell, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
+  const primary = shell.match(/const APPS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
+  const contextual = shell.match(/const CONTEXTUAL = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
+  assert.match(primary, /id:\s*"site"[\s\S]*?label:\s*"compiler"/);
+  assert.doesNotMatch(primary, /id:\s*"lib"/);
+  assert.match(contextual, /id:\s*"lib"[\s\S]*?href:\s*"https:\/\/lib\.idol\.id\/"/);
   assert.doesNotMatch(shell, /id:\s*"worlds"/);
   assert.doesNotMatch(shell, /id:\s*"universe"/);
   assert.match(shell, /https:\/\/lib\.idol\.id\/atlas/);
@@ -30,16 +34,17 @@ test("shared mobile chrome replaces the overflowing product strip before it can 
   assert.doesNotMatch(surface, /\.topbar \.nav\s*\{[^}]*overflow-x:\s*auto/);
 });
 
-test("homepage removes pseudo-semantic decoration and converges Atlas beneath the Lib product", async () => {
-  const [site, convergence, web] = await Promise.all([read("apps/site/index.html"), read("shared/site-product-convergence.js"), read("shared/web.js")]);
+test("homepage is compiler-first and is not rewritten after load by a convergence patch", async () => {
+  const [site, home, web] = await Promise.all([read("apps/site/index.html"), read("shared/site-home.css"), read("shared/web.js")]);
   assert.doesNotMatch(site, /<canvas\b/i);
   assert.doesNotMatch(site, /Math\.random\(/);
-  assert.match(convergence, /Library worlds/);
-  assert.match(convergence, /https:\/\/lib\.idol\.id\/atlas/);
-  assert.match(convergence, /atlas\?\.remove\(\)/);
-  assert.match(convergence, /package coordinates remain provenance/i);
-  assert.match(web, /site-product-convergence\.js/);
-  assert.match(site, /@media\s*\(max-width:\s*699px\)[\s\S]*?\.cell-a[\s\S]*?min-height:\s*0/);
+  assert.match(site, /Dynamic by default\./);
+  assert.match(site, /Native when known\./);
+  assert.match(site, /id="install"/);
+  assert.doesNotMatch(site, /current law projection/i);
+  assert.doesNotMatch(web, /site-product-convergence\.js/);
+  assert.match(home, /@media\s*\(max-width:\s*680px\)/);
+  assert.match(home, /overflow-x:\s*hidden/);
 });
 
 test("Lib preserves mobile list/detail navigation and exact home boundary", async () => {

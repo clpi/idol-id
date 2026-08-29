@@ -4,13 +4,18 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("verified builds execute a real Chrome semantic-interaction gate", async () => {
-  const [workflow, smoke] = await Promise.all([
+test("verified builds execute real Chrome gates for the homepage and semantic products", async () => {
+  const [workflow, runner, smoke, home] = await Promise.all([
     read(".github/workflows/deploy.yml"),
+    read("scripts/run-browser-smoke.mjs"),
     read("scripts/browser-smoke.mjs"),
+    read("scripts/home-browser-smoke.mjs"),
   ]);
 
-  assert.match(workflow, /node scripts\/browser-smoke\.mjs/);
+  assert.match(workflow, /node scripts\/run-browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/live-mcp-browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/home-browser-smoke\.mjs/);
   assert.match(workflow, /idol-browser-smoke-\$\{\{ github\.run_id \}\}/);
   assert.match(workflow, /\.artifacts\/browser-smoke/);
   assert.match(smoke, /390, 844/);
@@ -27,6 +32,16 @@ test("verified builds execute a real Chrome semantic-interaction gate", async ()
   assert.match(smoke, /Runtime\.exceptionThrown/);
   assert.match(smoke, /observatory-mobile\.png/);
   assert.match(smoke, /observatory-desktop\.png/);
+
+  for (const viewport of ["320, 568", "390, 844", "430, 932", "768, 1024", "1440, 900"]) assert.match(home, new RegExp(viewport.replace(" ", "\\s*")));
+  assert.match(home, /Dynamic by default/);
+  assert.match(home, /Native when known/);
+  assert.match(home, /content\/source-examples\.json/);
+  assert.match(home, /current-law/);
+  assert.match(home, /scrollWidth/);
+  assert.match(home, /height<44/);
+  assert.match(home, /Runtime\.exceptionThrown/);
+  assert.match(home, /homepage-\$\{width\}x\$\{height\}\.png/);
 });
 
 test("browser smoke closes Chrome before deleting its profile", async () => {

@@ -45,7 +45,7 @@ test("immutable build contains Live, hosted MCP, exact routes, and honest implem
 });
 
 test("Worker, Wrangler, Access, navigation, verification, and CI own the two new surfaces", async () => {
-  const [worker, entry, wrangler, provision, access, verify, shell, workflow] = await Promise.all([
+  const [worker, entry, wrangler, provision, access, verify, shell, workflow, runner] = await Promise.all([
     read("worker/index.js"),
     read("worker/entry.js"),
     read("wrangler.jsonc"),
@@ -54,6 +54,7 @@ test("Worker, Wrangler, Access, navigation, verification, and CI own the two new
     read("scripts/verify-production.mjs"),
     read("shared/shell.js"),
     read(".github/workflows/deploy.yml"),
+    read("scripts/run-browser-smoke.mjs"),
   ]);
   assert.match(worker, /"live\.idol\.id"/);
   assert.match(worker, /"mcp\.idol\.id"/);
@@ -68,8 +69,10 @@ test("Worker, Wrangler, Access, navigation, verification, and CI own the two new
   assert.match(verify, /server\/discover/);
   assert.match(shell, /https:\/\/live\.idol\.id\//);
   assert.match(shell, /https:\/\/mcp\.idol\.id\//);
-  assert.match(workflow, /scripts\/browser-smoke\.mjs/);
-  assert.match(workflow, /scripts\/live-mcp-browser-smoke\.mjs/);
+  assert.match(workflow, /scripts\/run-browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/live-mcp-browser-smoke\.mjs/);
+  assert.match(runner, /scripts\/home-browser-smoke\.mjs/);
   assert.match(workflow, /scripts\/provision-platform\.mjs/);
 });
 

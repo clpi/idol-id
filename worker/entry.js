@@ -5,6 +5,9 @@ import { handleLiveTransport } from "./live.js";
 import { handleMcpTransport } from "./mcp.js";
 
 const LOCAL = new Set(["localhost", "127.0.0.1", "::1"]);
+const STATIC_ASSET = /\.(?:css|js|mjs|json|md|txt|svg|png|jpe?g|gif|webp|ico|woff2?|wasm|map)$/i;
+const CONTENT_ADDRESSED = /(?:^|[._-])[0-9a-f]{12,}(?=\.[^.]+$)/i;
+
 function secure(response, options = {}) {
   if (response.webSocket || response.status === 101) return response;
   const headers = new Headers(response.headers);
@@ -20,6 +23,15 @@ function secure(response, options = {}) {
   else if (!headers.has("cache-control")) headers.set("cache-control", "public, max-age=300, stale-while-revalidate=86400");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
+
+function enforceStaticAssetCache(response, pathname) {
+  if (response.webSocket || response.status === 101 || !STATIC_ASSET.test(pathname)) return response;
+  const headers = new Headers(response.headers);
+  if (CONTENT_ADDRESSED.test(pathname)) headers.set("cache-control", "public, max-age=31536000, immutable");
+  else headers.set("cache-control", "no-cache, must-revalidate");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function localRepositoryPath(pathname) { return pathname === "/repo" || pathname === "/repo/" || pathname.startsWith("/repo/observation/") || pathname.startsWith("/repo/scaffold/") || pathname.startsWith("/v1/repository/browser/") || pathname === "/v1/repository/status"; }
 function localUniversePath(pathname) { return pathname === "/universe" || pathname === "/universe/" || /^\/universe\/uv_[A-Za-z0-9_-]{12,}\/?$/.test(pathname) || pathname.startsWith("/v1/universe/"); }
 function localLivePath(pathname) { return pathname === "/live" || pathname === "/live/" || pathname.startsWith("/v1/live/"); }
@@ -81,6 +93,6 @@ export async function handle(request, env, dependencies = {}) {
     if (info.surface === "live" && rootNavigation(request, url.pathname)) return asset(env, request, "/apps/live/index.html", { html: true });
     if (info.surface === "mcp" && rootNavigation(request, url.pathname)) return asset(env, request, "/apps/mcp/index.html", { html: true });
   }
-  return baseHandle(request, env, dependencies);
+  return enforceStaticAssetCache(await baseHandle(request, env, dependencies), url.pathname);
 }
 export default { fetch(request, env) { return handle(request, env); } };
