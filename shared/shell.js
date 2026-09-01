@@ -10,6 +10,7 @@ const SURFACES = Object.freeze([
   { id: "worlds", label: "worlds", href: "https://lib.idol.id/atlas", title: "World Atlas", detail: "world and foreign projections" },
   { id: "lib", label: "registry", href: "https://lib.idol.id/", title: "Registry", detail: "published records and artifacts" },
   { id: "docs", label: "docs", href: "https://docs.idol.id/", title: "Law and documentation", detail: "current authority projection" },
+  { id: "book", label: "book", href: "https://book.idol.id/", title: "Idol book", detail: "semantic graph · runnable source · cross-refs" },
   { id: "platform", label: "platform", href: "https://platform.idol.id/", title: "Platform", detail: "authenticated management" },]);
 
 const CONTEXTUAL = Object.freeze([
@@ -54,6 +55,7 @@ function currentSurface(app) {
   if (host === "idol.id" || host === "www.idol.id") return "site";
   if (["graph.idol.id", "r8a.idol.id", "r8b.idol.id", "r16.idol.id"].includes(host)) return "graph";
   if (host === "docs.idol.id") return "docs";
+  if (host === "book.idol.id") return "book";
   if (host === "api.idol.id") return "api";
   if (host === "live.idol.id") return "live";
   if (host === "mcp.idol.id") return "mcp";

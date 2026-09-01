@@ -1,0 +1,6 @@
+book = (source, graph)
+    source:read()
+        @graph
+
+open = book@{ stage = read }
+current = @member

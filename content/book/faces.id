@@ -1,0 +1,6 @@
+value = table[key]
+table[key] = replacement
+encoded = codec.encode(source)
+read = source:read()
+current = @member
+compiled = thing@{ stage = compile }

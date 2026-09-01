@@ -1,0 +1,77 @@
+/* book.idol.id — understated, highly linked. No mdBook chrome. */
+.book-app { min-height: 100vh; background: var(--bg); color: var(--ink); }
+.book-stage {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) minmax(220px, 32vw);
+  min-height: calc(100vh - 72px);
+}
+.book-spine {
+  border-right: 1px solid var(--rule);
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.book-spine a {
+  color: var(--ink-3);
+  text-decoration: none;
+  font: 12px/1.4 var(--sans);
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  letter-spacing: 0.02em;
+}
+.book-spine a:hover { color: var(--ink); background: var(--bg-hover); }
+.book-spine a.here { color: var(--ink); }
+.book-page { padding: 28px 36px 80px; overflow: auto; }
+.book-meta {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 22px; color: var(--ink-3);
+  font: 11px/1 var(--sans); letter-spacing: 0.08em; text-transform: lowercase;
+}
+.book-run {
+  margin-left: auto; background: transparent; color: var(--ink-2);
+  border: 1px solid var(--rule-2); padding: 4px 10px; cursor: pointer;
+  font: 11px var(--sans); letter-spacing: 0.08em; text-transform: lowercase;
+  transition: border-color var(--t), color var(--t);
+}
+.book-run:hover { color: var(--ink); border-color: var(--rule-3); }
+.book-source {
+  font: 14px/1.7 var(--mono); white-space: pre-wrap; word-break: break-word;
+  color: var(--ink-2);
+}
+.book-source .tok { cursor: pointer; color: var(--ink); border-bottom: 1px solid transparent; transition: border-color var(--t), color var(--t); }
+.book-source .tok:hover, .book-source .tok.here { border-bottom-color: var(--ink); }
+.book-source .kw { color: var(--ink-3); cursor: default; border: 0; }
+.book-source .str, .book-source .num { color: var(--ink-2); cursor: default; border: 0; }
+.book-source .punct { color: var(--ink-4); cursor: default; border: 0; }
+.book-out {
+  margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rule);
+  font: 12px/1.6 var(--mono); color: var(--signal); white-space: pre-wrap;
+}
+.book-graph {
+  border-left: 1px solid var(--rule);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.book-graph-head {
+  display: flex; justify-content: space-between; padding: 10px 12px;
+  font: 11px var(--sans); color: var(--ink-3); letter-spacing: 0.08em;
+  text-transform: lowercase; border-bottom: 1px solid var(--rule);
+}
+.book-graph svg { flex: 1; width: 100%; min-height: 240px; }
+.book-graph .n { fill: var(--bg); stroke: var(--ink-3); cursor: pointer; }
+.book-graph .n.here { stroke: var(--ink); fill: var(--bg-active); }
+.book-graph .e { stroke: var(--ink-5); fill: none; }
+.book-graph .e.here { stroke: var(--ink-2); }
+.book-graph .nl { fill: var(--ink-3); font: 10px var(--sans); pointer-events: none; }
+.book-rail {
+  border-top: 1px solid var(--rule); padding: 12px; color: var(--ink-3);
+  font: 12px/1.5 var(--sans); min-height: 120px;
+}
+.book-rail a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule-2); }
+.book-rail a:hover { border-bottom-color: var(--ink); }
+.book-rail .edge { color: var(--ink-2); }
+@media (max-width: 900px) {
+  .book-stage { grid-template-columns: 1fr; }
+  .book-spine { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--rule); }
+  .book-graph { border-left: 0; border-top: 1px solid var(--rule); min-height: 320px; }
+}
