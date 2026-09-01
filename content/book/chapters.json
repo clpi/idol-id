@@ -1,0 +1,11 @@
+{
+  "title": "Idol book",
+  "native": true,
+  "generator": "idol-id ci",
+  "not": "mdbook",
+  "chapters": [
+    { "id": "open", "name": "open", "language": "idol", "source": "/content/book/open.id" },
+    { "id": "faces", "name": "faces", "language": "idol", "source": "/content/book/faces.id" },
+    { "id": "languages", "name": "languages", "language": "idol", "source": "/content/book/languages.id" }
+  ]
+}
