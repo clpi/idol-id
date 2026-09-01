@@ -1,0 +1,6 @@
+host = (language)
+    language:graph()
+        @exact
+
+idol = host("idol")
+any = host(@language)
