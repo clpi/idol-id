@@ -6,6 +6,7 @@ export const hostMap = Object.freeze({
   "idol.id": { app: "site", surface: "site", origin: true },
   "www.idol.id": { app: "site", surface: "site", origin: true, redirect: "https://idol.id" },
   "docs.idol.id": { app: "docs", surface: "docs", origin: true },
+  "book.idol.id": { app: "docs", surface: "docs", origin: true },
   "lib.idol.id": { app: "lib", surface: "lib", origin: true },
   "api.idol.id": { app: "api", surface: "api", origin: true },
   "graph.idol.id": { app: "graph", surface: "graph", origin: true },
