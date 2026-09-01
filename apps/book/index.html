@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Idol book: explorable source, semantic graph, dynamic cross-references. Native, not mdBook.">
+  <title>Book — idol.id</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/shared/studio.css">
+  <link rel="stylesheet" href="/shared/observatory-syntax.css">
+  <link rel="stylesheet" href="/shared/book-app.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+  <div class="app book-app" id="book-app">
+    <header class="topbar"></header>
+    <div class="book-stage">
+      <nav class="book-spine" id="spine" aria-label="Chapters"></nav>
+      <main class="book-page">
+        <div class="book-meta">
+          <span id="chapter-kicker">book</span>
+          <span id="chapter-lang"></span>
+          <button type="button" id="run" class="book-run">run</button>
+        </div>
+        <pre class="book-source" id="source" aria-label="Chapter source"></pre>
+        <pre class="book-out" id="out" hidden></pre>
+      </main>
+      <aside class="book-graph" id="graph-pane" aria-label="Semantic graph">
+        <div class="book-graph-head"><span id="graph-label">graph</span><span id="graph-state">idle</span></div>
+        <svg id="graph" viewBox="0 0 320 480" role="img" aria-label="Cross-reference graph"></svg>
+        <div class="book-rail" id="rail">Select any token.</div>
+      </aside>
+    </div>
+    <footer class="statusbar"></footer>
+  </div>
+  <script src="/shared/idol.js"></script>
+  <script src="/shared/shell.js"></script>
+  <script type="module" src="/shared/book-app.js"></script>
+</body>
+</html>
