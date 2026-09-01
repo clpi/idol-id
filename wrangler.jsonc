@@ -13,6 +13,7 @@
     { "pattern": "idol.id/*", "zone_name": "idol.id" },
     { "pattern": "www.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "docs.idol.id/*", "zone_name": "idol.id" },
+    { "pattern": "book.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "lib.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "api.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "graph.idol.id/*", "zone_name": "idol.id" },
