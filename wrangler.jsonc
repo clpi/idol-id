@@ -10,20 +10,9 @@
     "run_worker_first": true
   },
   "routes": [
-    { "pattern": "idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "www.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "docs.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "book.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "lib.idol.id/*", "zone_name": "idol.id" },
     { "pattern": "api.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "graph.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "worlds.idol.id", "custom_domain": true },
-    { "pattern": "platform.idol.id", "custom_domain": true },
-    { "pattern": "live.idol.id", "custom_domain": true },
-    { "pattern": "mcp.idol.id", "custom_domain": true },
-    { "pattern": "r8a.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "r8b.idol.id/*", "zone_name": "idol.id" },
-    { "pattern": "r16.idol.id/*", "zone_name": "idol.id" }
+    { "pattern": "mcp.idol.id", "custom_domain": true }
   ],
   "vars": {
     "IDOL_AUTHORITY": "cb2199dff026c1b2d3fbd0caa04d6d323370a9e8",
