@@ -1,0 +1,64 @@
+name: Hermes ingress precedence diagnostic
+on:
+  push:
+    branches: [ops/hermes-readonly-diagnostic-20260904]
+    paths: [.github/workflows/hermes-ingress-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 3
+    steps:
+      - name: Read relevant ingress matches without modifying routes or testing passwords
+        env:
+          CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.error, urllib.parse, urllib.request
+          from html.parser import HTMLParser
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs): return None
+          opener=urllib.request.build_opener(NoRedirect())
+          def read(url,headers=None):
+              try: r=opener.open(urllib.request.Request(url,headers=headers or {},method='GET'),timeout=12)
+              except urllib.error.HTTPError as e: r=e
+              with r: return r.status,r.read(2000000)
+          def emit(kind,**data): print(json.dumps({'kind':kind,**data},sort_keys=True),flush=True)
+          account=os.environ['CLOUDFLARE_ACCOUNT_ID']
+          token=os.environ['CLOUDFLARE_API_TOKEN']
+          tunnels=('ca26286a-3fbc-4f5d-9d04-72dc8d715903','7bdd234f-8ed1-415c-bf69-8ba37ead86d4','88f6065d-bd0e-44f2-beb0-a6b0613d02db','f43607fc-f26b-4fdc-b3b0-85f1bfc006e1','d31743c1-3bc9-43c1-bb7c-a45e7fc4a733')
+          for tid in tunnels:
+              try:
+                  status,raw=read('https://api.cloudflare.com/client/v4/accounts/'+account+'/cfd_tunnel/'+tid+'/configurations',{'Authorization':'Bearer '+token})
+                  data=json.loads(raw)
+                  if status!=200 or not data.get('success'):
+                      emit('config_unavailable',tunnel=tid,status=status); continue
+                  result=data['result']
+                  emit('config',tunnel=tid,source=result.get('source'),version=result.get('version'))
+                  for index,rule in enumerate(result.get('config',{}).get('ingress',[])):
+                      value=rule.get('service','')
+                      parsed=urllib.parse.urlsplit(value)
+                      service=(parsed.scheme+'://'+str(parsed.hostname)+(':'+str(parsed.port) if parsed.port else '')) if parsed.hostname else value
+                      emit('rule',tunnel=tid,index=index,hostname=rule.get('hostname'),path=rule.get('path'),service=service,http_host_header=rule.get('originRequest',{}).get('httpHostHeader'))
+              except Exception as exc: emit('config_error',tunnel=tid,error_type=type(exc).__name__)
+          class Forms(HTMLParser):
+              def __init__(self): super().__init__(); self.forms=[]; self.current=None
+              def handle_starttag(self,tag,attrs):
+                  attrs=dict(attrs)
+                  if tag=='form': self.current={'method':attrs.get('method','get'),'action':attrs.get('action',''),'inputs':[]}; self.forms.append(self.current)
+                  if tag=='input' and self.current is not None: self.current['inputs'].append({'name':attrs.get('name'),'type':attrs.get('type')})
+              def handle_endtag(self,tag):
+                  if tag=='form': self.current=None
+          for host in ('hermes-gb.idol.id','hermes-mm.idol.id','hermes.idol.id'):
+              try:
+                  status,body=read('https://'+host+'/login')
+                  parser=Forms(); parser.feed(body.decode('utf-8','replace'))
+                  emit('login_form_metadata',host=host,status=status,forms=parser.forms,password_test_performed=False)
+              except Exception as exc: emit('public_probe_error',host=host,error_type=type(exc).__name__)
+          emit('completed',mutation_performed=False,password_test_performed=False)
+          PY
