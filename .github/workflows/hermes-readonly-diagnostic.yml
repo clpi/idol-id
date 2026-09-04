@@ -1,0 +1,149 @@
+name: Hermes read-only incident diagnostic
+
+on:
+  push:
+    branches: [ops/hermes-readonly-diagnostic-20260904]
+    paths: [.github/workflows/hermes-readonly-diagnostic.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hermes-readonly-incident-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 3
+    steps:
+      - name: Observe public routes and Cloudflare configuration without mutation
+        env:
+          CLOUDFLARE_ACCOUNT_ID: 08a6895467d13bf4c4eed99de43e4af5
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import concurrent.futures
+          import datetime
+          import json
+          import os
+          import re
+          import socket
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          HOSTS = ('hermes-gb.idol.id', 'hermes-mm.idol.id', 'hermes.idol.id')
+          API = 'https://api.cloudflare.com/client/v4'
+          token = os.environ.get('CLOUDFLARE_API_TOKEN', '')
+          account = os.environ['CLOUDFLARE_ACCOUNT_ID']
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          def emit(kind, **data):
+              print(json.dumps({'kind': kind, **data}, sort_keys=True), flush=True)
+
+          def request(url, headers=None):
+              opener = urllib.request.build_opener(NoRedirect())
+              req = urllib.request.Request(url, headers=headers or {}, method='GET')
+              try:
+                  response = opener.open(req, timeout=12)
+              except urllib.error.HTTPError as exc:
+                  response = exc
+              with response:
+                  return response.status, response.headers, response.read(4_000_000)
+
+          def cf(path):
+              status, _, body = request(API + path, {'Authorization': 'Bearer ' + token})
+              try:
+                  data = json.loads(body)
+              except (ValueError, UnicodeError):
+                  raise RuntimeError('Cloudflare response was not JSON; HTTP=' + str(status))
+              if status != 200 or not data.get('success'):
+                  codes = [e.get('code') for e in data.get('errors', []) if isinstance(e, dict)]
+                  raise RuntimeError('Cloudflare HTTP=' + str(status) + ' error_codes=' + str(codes))
+              return data
+
+          def safe_origin(value):
+              if not isinstance(value, str):
+                  return None
+              parsed = urllib.parse.urlsplit(value)
+              if parsed.scheme in ('http', 'https', 'ssh', 'tcp'):
+                  host = parsed.hostname or ''
+                  if ':' in host:
+                      host = '[' + host + ']'
+                  return parsed.scheme + '://' + host + (':' + str(parsed.port) if parsed.port else '')
+              return value if re.fullmatch(r'http_status:\d{3}|hello_world', value) else '<non-http-origin>'
+
+          def probe(host):
+              out = {'host': host, 'authenticated_service_health': 'unverified'}
+              try:
+                  out['addresses'] = sorted({v[4][0] for v in socket.getaddrinfo(host, 443)})
+                  for path in ('/', '/login'):
+                      code, headers, body = request('https://' + host + path, {'Cache-Control': 'no-cache', 'User-Agent': 'IdolReadOnlyIncidentDiagnostic/1'})
+                      text = body[:100000].decode('utf-8', 'replace')
+                      title = re.search(r'<title[^>]*>(.*?)</title>', text, re.I | re.S)
+                      location = urllib.parse.urlsplit(headers.get('Location', ''))
+                      emit('public_probe', host=host, path=path, status=code,
+                           title=title.group(1).strip()[:120] if title else None,
+                           redirect_host=location.hostname, redirect_path=location.path,
+                           cloudflare_error_1033=bool(re.search(r'\b1033\b', text)),
+                           authenticated_service_health='unverified')
+              except Exception as exc:
+                  out['error_type'] = type(exc).__name__
+                  if isinstance(exc, urllib.error.URLError):
+                      out['reason_type'] = type(exc.reason).__name__
+              emit('host_summary', **out)
+
+          emit('started', observed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(), mutation_performed=False)
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+              list(pool.map(probe, HOSTS))
+          if not token:
+              emit('cloudflare_unavailable', reason='CLOUDFLARE_API_TOKEN is not available in the existing production environment')
+              raise SystemExit(2)
+          try:
+              zones = cf('/zones?' + urllib.parse.urlencode({'name': 'idol.id', 'status': 'active'}))['result']
+              if len(zones) != 1:
+                  raise RuntimeError('Expected exactly one accessible idol.id zone')
+              zone = zones[0]['id']
+              tunnel_ids = set()
+              for host in HOSTS:
+                  records = cf('/zones/' + zone + '/dns_records?' + urllib.parse.urlencode({'name': host, 'per_page': 100}))['result']
+                  if not records:
+                      emit('dns_record_missing', host=host)
+                  for record in records:
+                      content = record.get('content', '')
+                      emit('dns_record', host=host, record_type=record.get('type'), target=content if record.get('type') in ('CNAME', 'A', 'AAAA') else '<omitted>', proxied=record.get('proxied'))
+                      if record.get('type') == 'CNAME' and content.endswith('.cfargotunnel.com'):
+                          tunnel_ids.add(content.split('.')[0])
+              listing = cf('/accounts/' + account + '/cfd_tunnel?is_deleted=false&per_page=100')
+              if listing.get('result_info', {}).get('total_pages', 1) > 1:
+                  emit('coverage_limit', resource='tunnel inventory', reason='first 100 only')
+              for tunnel in listing['result']:
+                  emit('tunnel_status', id=tunnel.get('id'), name=tunnel.get('name'), status=tunnel.get('status'), remote_config=tunnel.get('remote_config'), active_at=tunnel.get('conns_active_at'), inactive_at=tunnel.get('conns_inactive_at'))
+              for tid in sorted(tunnel_ids):
+                  try:
+                      data = cf('/accounts/' + account + '/cfd_tunnel/' + tid + '/configurations')['result']
+                      emit('tunnel_configuration', tunnel_id=tid, version=data.get('version'), source=data.get('source'))
+                      for ingress in data.get('config', {}).get('ingress', []):
+                          host = ingress.get('hostname')
+                          if host in HOSTS or host in ('*.idol.id', None):
+                              emit('ingress', tunnel_id=tid, hostname=host, origin=safe_origin(ingress.get('service')))
+                  except Exception as exc:
+                      emit('configuration_unavailable', tunnel_id=tid, error=str(exc))
+              try:
+                  for route in cf('/zones/' + zone + '/workers/routes')['result']:
+                      if 'idol.id' in route.get('pattern', ''):
+                          emit('worker_route', pattern=route.get('pattern'), script=route.get('script'))
+              except Exception as exc:
+                  emit('worker_routes_unavailable', error=str(exc))
+          except Exception as exc:
+              emit('cloudflare_read_failed', error=str(exc))
+              raise SystemExit(2)
+          emit('completed', mutation_performed=False, authenticated_service_health='unverified')
+          PY
