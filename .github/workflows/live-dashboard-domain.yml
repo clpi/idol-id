@@ -1,0 +1,58 @@
+name: Live dashboard domain
+on:
+  push:
+    branches: [ops/live-dashboard-20260904]
+    paths: [.github/workflows/live-dashboard-domain.yml]
+permissions:
+  contents: read
+concurrency:
+  group: live-dashboard-domain
+  cancel-in-progress: false
+jobs:
+  configure-domain:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 3
+    steps:
+      - name: Configure only dashboard.idol.id
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.parse
+          HOST='dashboard.idol.id'
+          TARGET='proxy-v2.appdeploy.ai'
+          TOKEN=os.environ.get('CLOUDFLARE_API_TOKEN','')
+          if not TOKEN: raise SystemExit('CLOUDFLARE_API_TOKEN is not configured for this environment')
+          def api(path,method='GET',body=None):
+              req=urllib.request.Request('https://api.cloudflare.com/client/v4/'+path, data=None if body is None else json.dumps(body).encode(),headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},method=method)
+              with urllib.request.urlopen(req,timeout=25) as response: data=json.load(response)
+              if not data.get('success'): raise RuntimeError('Cloudflare rejected request: '+json.dumps(data.get('errors',[])))
+              return data['result']
+          zones=api('zones?name=idol.id&status=active')
+          if len(zones)!=1: raise SystemExit('Expected exactly one active idol.id zone')
+          base='zones/'+zones[0]['id']+'/dns_records'
+          records=api(base+'?'+urllib.parse.urlencode({'name':HOST}))
+          if any(r.get('name')!=HOST for r in records): raise SystemExit('Unexpected DNS selection; refusing changes')
+          conflicts=[r for r in records if r['type'] in ('A','AAAA','CNAME') and not (r['type']=='CNAME' and r['content'].rstrip('.')==TARGET)]
+          if conflicts:
+              print(json.dumps({'status':'existing_target_requires_review','records':[{k:r.get(k) for k in ('id','name','type','content','proxied')} for r in conflicts]}))
+              raise SystemExit(2)
+          existing=[r for r in records if r['type']=='CNAME' and r['content'].rstrip('.')==TARGET]
+          if len(existing)>1: raise SystemExit('Multiple CNAME records; refusing changes')
+          payload={'type':'CNAME','name':HOST,'content':TARGET,'ttl':60,'proxied':False,'comment':'Live Studio dashboard; AppDeploy custom-domain proxy'}
+          if existing:
+              record=existing[0]
+              if record.get('proxied'): record=api(base+'/'+record['id'],'PATCH',{'proxied':False,'ttl':60})
+              action='verified-existing'
+          else:
+              record=api(base,'POST',payload); action='created'
+          reread=api(base+'/'+record['id'])
+          if not (reread['name']==HOST and reread['type']=='CNAME' and reread['content'].rstrip('.')==TARGET and reread['proxied'] is False): raise SystemExit('DNS readback mismatch')
+          result={'action':action,'hostname':HOST,'type':'CNAME','target':TARGET,'proxied':False,'record_id':reread['id'],'other_hostnames_changed':False}
+          print(json.dumps(result,sort_keys=True))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('## Dashboard DNS configured\n\n```json\n'+json.dumps(result,indent=2)+'\n```\n\nAppDeploy must verify the hostname before HTTPS readiness is claimed.\n')
+          PY
