@@ -12,12 +12,12 @@ jobs:
     steps:
       - name: Install browser testing library
         run: python3 -m pip install --disable-pip-version-check playwright
-      - name: Verify custom-domain application and diagnose setup
+      - name: Verify custom-domain application after source label fix
         shell: bash
         run: |
           mkdir -p /tmp/live-dashboard-qa
           python3 - <<'PY'
-          import json, os, re, shutil
+          import json, os, re, shutil, urllib.request, ast
           from urllib.parse import urlsplit
           from datetime import datetime, timezone
           from playwright.sync_api import sync_playwright, expect
@@ -25,7 +25,7 @@ jobs:
           results=[]; stage='HTTPS page load'; out='/tmp/live-dashboard-qa'
           def clean(s): return re.sub(r'[A-Za-z0-9_\-]{40,}', '[redacted]', str(s))[:1000]
           def record(name,status='passed',**kw):
-              item={'test':name,'status':status,**kw}; results.append(item);print(json.dumps(item),flush=True)
+              item={'test':name,'status':status,**kw};results.append(item);print(json.dumps(item),flush=True)
           def step(name):
               global stage
               stage=name;print(json.dumps({'step':name}),flush=True)
@@ -34,64 +34,54 @@ jobs:
               chrome=shutil.which('google-chrome') or shutil.which('chromium')
               browser=p.chromium.launch(executable_path=chrome,headless=True)
               owner=browser.new_context(viewport={'width':1280,'height':800})
-              a=owner.new_page(); a.set_default_timeout(12000)
+              a=owner.new_page();a.set_default_timeout(12000)
               def response_log(r):
                   u=urlsplit(r.url)
-                  if r.request.resource_type in ('xhr','fetch'):
-                      print(json.dumps({'http':r.status,'host':u.hostname,'path':clean(u.path)}),flush=True)
+                  if r.request.resource_type in ('xhr','fetch'):print(json.dumps({'http':r.status,'host':u.hostname,'path':clean(u.path)}),flush=True)
               a.on('response',response_log)
-              a.on('requestfailed',lambda r: print(json.dumps({'network_failure':clean(r.failure),'host':urlsplit(r.url).hostname,'path':clean(urlsplit(r.url).path)}),flush=True))
-              a.on('pageerror',lambda e: print(json.dumps({'page_error':clean(str(e))}),flush=True))
+              a.on('requestfailed',lambda r:print(json.dumps({'network_failure':clean(r.failure),'host':urlsplit(r.url).hostname,'path':clean(urlsplit(r.url).path)}),flush=True))
+              a.on('pageerror',lambda e:print(json.dumps({'page_error':clean(str(e))}),flush=True))
               try:
                   response=a.goto(target,wait_until='networkidle',timeout=45000)
-                  if response.status!=200: raise RuntimeError('Custom hostname did not return HTTP 200')
-                  expect(a).to_have_title('Live Studio'); expect(a.get_by_role('heading',name='Across the fleet.')).to_be_visible()
-                  record('custom_domain_https_and_ui')
+                  if response.status!=200:raise RuntimeError('Custom hostname did not return HTTP 200')
+                  expect(a).to_have_title('Live Studio');expect(a.get_by_role('heading',name='Across the fleet.')).to_be_visible();record('custom_domain_https_and_ui')
+                  step('published collector source');source=urllib.request.urlopen(target+'live-collector.py',timeout=15).read(60000).decode();ast.parse(source)
+                  if "DASHBOARD = 'https://dashboard.idol.id/'" not in source or 'ALLOWED_DASHBOARDS' not in source:raise RuntimeError('Collector hostname migration missing')
+                  record('published_collector_python_and_hostname')
                   step('navigate Connections');nav(a,'Connections')
-                  step('fill workspace name');a.get_by_label('Workspace name',exact=True).fill('QA transport verification '+os.environ['GITHUB_RUN_ID'])
+                  a.get_by_label('Workspace name',exact=True).fill('QA transport verification '+os.environ['GITHUB_RUN_ID'])
                   step('submit workspace');a.get_by_role('button',name='Create workspace',exact=True).click()
-                  step('workspace acceptance');expect(a.get_by_role('status')).to_contain_text('Private workspace created',timeout=15000)
-                  step('pair source');a.get_by_label('Device label',exact=True).fill('QA source - synthetic fixture')
-                  a.get_by_role('button',name='Pair source',exact=True).click()
+                  expect(a.get_by_role('status')).to_contain_text('Private workspace created',timeout=15000)
+                  step('pair source');a.get_by_label('Device label',exact=True).fill('QA source - synthetic fixture');a.get_by_role('button',name='Pair source',exact=True).click()
                   expect(a.get_by_role('status')).to_contain_text('Source paired',timeout=15000)
                   a.get_by_label('Paired source',exact=True).select_option(label='QA source - synthetic fixture')
-                  with a.expect_download() as dl: a.get_by_role('button',name='Pairing file',exact=True).click()
+                  with a.expect_download() as dl:a.get_by_role('button',name='Pairing file',exact=True).click()
                   pairing=json.load(open(dl.value.path()))
-                  if pairing['dashboard_url']!=target: raise RuntimeError('Pairing points to wrong hostname')
+                  if pairing['dashboard_url']!=target:raise RuntimeError('Pairing points to wrong hostname')
                   session=a.evaluate("JSON.parse(sessionStorage.getItem('live-session'))")
-                  step('join readonly viewer');viewer=browser.new_context(viewport={'width':1280,'height':800})
-                  b=viewer.new_page();b.goto(target,wait_until='networkidle');nav(b,'Connections')
-                  b.get_by_label('Viewer code or recovery JSON',exact=True).fill(session['workspace']+'|'+session['key'])
-                  b.get_by_role('button',name='Connect viewer',exact=True).click()
-                  expect(b.get_by_role('status')).to_contain_text('read-only access',timeout=15000)
-                  expect(b.get_by_role('button',name='Pair source',exact=True)).to_be_disabled()
-                  nav(b,'Overview');expect(b.locator('.transport')).to_contain_text('Transport connected',timeout=15000)
-                  record('private_workspace_pairing_and_readonly_viewer')
+                  step('join readonly viewer');viewer=browser.new_context(viewport={'width':1280,'height':800});b=viewer.new_page();b.goto(target,wait_until='networkidle');nav(b,'Connections')
+                  b.get_by_label('Viewer code or recovery JSON',exact=True).fill(session['workspace']+'|'+session['key']);b.get_by_role('button',name='Connect viewer',exact=True).click()
+                  expect(b.get_by_role('status')).to_contain_text('read-only access',timeout=15000);expect(b.get_by_role('button',name='Pair source',exact=True)).to_be_disabled()
+                  nav(b,'Overview');expect(b.locator('.transport')).to_contain_text('Transport connected',timeout=15000);record('private_workspace_pairing_and_readonly_viewer')
                   step('cross-browser measurement delivery')
                   payload={'time':datetime.now(timezone.utc).isoformat(),'main':{'idol':'qa-only'},'seats':[{'repo':'idol','path':'/qa/synthetic/worktree','branch':'qa-transport-check','dirty':2,'ahead':1,'state':'present','touched':['qa-scope']}]}
-                  a.get_by_label('Measurement JSON',exact=True).fill(json.dumps(payload));a.get_by_role('button',name='Import measurement',exact=True).click()
-                  expect(a.get_by_role('status')).to_contain_text('Measurement accepted',timeout=15000)
-                  expect(b.locator('table').get_by_text('qa-transport-check',exact=True)).to_be_visible(timeout=15000)
-                  record('telemetry_delivered_without_viewer_refresh')
-                  step('persistence and identity guardrails');b.reload(wait_until='networkidle');nav(b,'Work')
-                  expect(b.locator('table').get_by_text('qa-transport-check',exact=True)).to_be_visible(timeout=15000)
+                  a.get_by_label('Measurement JSON',exact=True).fill(json.dumps(payload));a.get_by_role('button',name='Import measurement',exact=True).click();expect(a.get_by_role('status')).to_contain_text('Measurement accepted',timeout=15000)
+                  expect(b.locator('table').get_by_text('qa-transport-check',exact=True)).to_be_visible(timeout=15000);record('telemetry_delivered_without_viewer_refresh')
+                  step('persistence and identity guardrails');b.reload(wait_until='networkidle');nav(b,'Work');expect(b.locator('table').get_by_text('qa-transport-check',exact=True)).to_be_visible(timeout=15000)
                   expect(b.locator('table')).to_contain_text('Unattributed worktree');b.screenshot(path=out+'/desktop.png',full_page=True)
-                  nav(b,'Live map');b.get_by_role('button',name='Semantic',exact=True).click();expect(b.get_by_role('heading',name='No semantic identities received')).to_be_visible()
-                  record('persistence_and_path_not_semantic_guardrail')
-                  step('mobile layout');mobile=browser.new_context(viewport={'width':375,'height':667},is_mobile=True,has_touch=True)
-                  m=mobile.new_page();m.goto(target,wait_until='networkidle');m.get_by_role('button',name='Toggle navigation',exact=True).click();nav(m,'Connections')
+                  nav(b,'Live map');b.get_by_role('button',name='Semantic',exact=True).click();expect(b.get_by_role('heading',name='No semantic identities received')).to_be_visible();record('persistence_and_path_not_semantic_guardrail')
+                  step('mobile layout');mobile=browser.new_context(viewport={'width':375,'height':667},is_mobile=True,has_touch=True);m=mobile.new_page();m.goto(target,wait_until='networkidle');m.get_by_role('button',name='Toggle navigation',exact=True).click();nav(m,'Connections')
                   expect(m.get_by_label('Workspace name',exact=True)).to_be_visible()
-                  if not m.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'): raise RuntimeError('Mobile overflow')
+                  if not m.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'):raise RuntimeError('Mobile overflow')
                   m.screenshot(path=out+'/mobile.png',full_page=True);record('mobile_connections_layout')
                   step('viewer disconnect');nav(b,'Connections');b.get_by_role('button',name='Disconnect',exact=True).click();nav(b,'Work');expect(b.get_by_text('qa-transport-check',exact=True)).to_have_count(0);record('viewer_disconnect_clears_private_data')
               except Exception as exc:
-                  record(stage,'failed',error_type=type(exc).__name__,detail=clean(str(exc)))
-                  print(json.dumps({'visible_notices':[clean(x) for x in a.locator('.notice,.error-banner').all_text_contents()]}),flush=True)
+                  record(stage,'failed',error_type=type(exc).__name__,detail=clean(str(exc)));print(json.dumps({'visible_notices':[clean(x) for x in a.locator('.notice,.error-banner').all_text_contents()]}),flush=True)
                   a.screenshot(path=out+'/failure.png',full_page=True,mask=[a.locator('input'),a.locator('textarea')])
               browser.close()
           with open(out+'/results.json','w') as f:json.dump({'target':target,'data':'isolated synthetic QA workspace; no actual host monitoring claimed','results':results},f,indent=2)
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('## Dashboard verification\n\nSynthetic QA only; not fleet telemetry.\n\n```json\n'+json.dumps(results,indent=2)+'\n```\n')
-          if any(r['status']=='failed' for r in results): raise SystemExit(1)
+          if any(r['status']=='failed' for r in results):raise SystemExit(1)
           PY
       - name: Save redacted browser evidence
         if: always()
