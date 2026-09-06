@@ -1,0 +1,97 @@
+name: Gateway read audit
+on:
+  push:
+    branches: [ops/authenticated-audit-20260906]
+    paths: [.github/workflows/gateway-read-audit.yml]
+permissions:
+  contents: read
+concurrency:
+  group: gateway-read-audit-20260906
+  cancel-in-progress: false
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 3
+    steps:
+      - name: Read authenticated gateway status without dispatch
+        env:
+          HERMES_WEBUI_PASSWORD: ${{ secrets.HERMES_WEBUI_PASSWORD }}
+          OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, http.cookiejar, json, os, re, urllib.error, urllib.parse, urllib.request
+          from html.parser import HTMLParser
+          print(json.dumps({'kind':'audit-start','at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'dispatch':False}))
+          if datetime.datetime.now(datetime.timezone.utc) >= datetime.datetime(2026,9,7,tzinfo=datetime.timezone.utc):
+              raise SystemExit('This one-day diagnostic has expired')
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs): return None
+          allowed={'hermes.idol.id','claw.idol.id'}
+          password=os.environ.pop('HERMES_WEBUI_PASSWORD','')
+          token=os.environ.pop('OPENCLAW_GATEWAY_TOKEN','')
+          print(json.dumps({'kind':'credential-availability','hermes':bool(password),'openclaw':bool(token)}))
+          def request(opener,url,data=None,headers=None):
+              parsed=urllib.parse.urlsplit(url)
+              if parsed.scheme!='https' or parsed.hostname not in allowed: raise ValueError('destination not allowed')
+              req=urllib.request.Request(url,data=data,headers={'User-Agent':'IdolReadAudit/1','Cache-Control':'no-cache',**(headers or {})})
+              try: response=opener.open(req,timeout=10)
+              except urllib.error.HTTPError as error: response=error
+              with response:
+                  body=response.read(200001)
+                  print(json.dumps({'kind':'request','host':parsed.hostname,'path':parsed.path,'status':response.status,'bytes':len(body),'truncated':len(body)>200000}))
+                  return response.status,body[:200000]
+          def shape(value,depth=0):
+              if depth>4: return '<depth-bound>'
+              if isinstance(value,dict):
+                  return {k:shape(v,depth+1) for k,v in value.items() if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,60}',k) and not re.search('secret|password|credential|authorization|cookie|api.?key|session.?key',k,re.I)}
+              if isinstance(value,list): return {'count':len(value),'first_shapes':[shape(v,depth+1) for v in value[:3]]}
+              if isinstance(value,(bool,int,float)) or value is None: return value
+              if isinstance(value,str):
+                  if value in ('ok','error','active','inactive','running','stopped','held','blocked','idle','unknown','ready','open','closed','pass','fail','observe-plan','apply','S0','S1','S2','S3','disabled','enabled'): return value
+                  if re.fullmatch(r'[0-9a-f]{40}',value): return value
+                  return '<string-omitted>'
+              return '<omitted>'
+          def inspect_json(body,label):
+              try: value=json.loads(body)
+              except Exception: print(json.dumps({'kind':label,'json':False})); return
+              print(json.dumps({'kind':label,'shape':shape(value)})[:16000])
+          opener=urllib.request.build_opener(NoRedirect())
+          for path in ('/mcp','/.well-known/oauth-protected-resource','/.well-known/oauth-authorization-server'):
+              try: status,body=request(opener,'https://claw.idol.id'+path); inspect_json(body,'discovery')
+              except Exception as error: print(json.dumps({'kind':'discovery-error','path':path,'type':type(error).__name__}))
+          if token:
+              for name in ('compiler_status','live_status'):
+                  try:
+                      status,body=request(opener,'https://claw.idol.id/tools/invoke',json.dumps({'tool':name,'args':{}}).encode(),{'Content-Type':'application/json','Authorization':'Bearer '+token})
+                      inspect_json(body,name)
+                  except Exception as error: print(json.dumps({'kind':'tool-error','tool':name,'type':type(error).__name__}))
+          if password:
+              jar=http.cookiejar.CookieJar()
+              web=urllib.request.build_opener(NoRedirect(),urllib.request.HTTPCookieProcessor(jar))
+              class Form(HTMLParser):
+                  def __init__(self): super().__init__();self.forms=[];self.current=None
+                  def handle_starttag(self,tag,attrs):
+                      attrs=dict(attrs)
+                      if tag=='form':self.current={'action':attrs.get('action',''),'method':attrs.get('method','get'),'inputs':[]};self.forms.append(self.current)
+                      if tag=='input' and self.current is not None:self.current['inputs'].append(attrs)
+                  def handle_endtag(self,tag):
+                      if tag=='form':self.current=None
+              try:
+                  status,body=request(web,'https://hermes.idol.id/login')
+                  form=Form();form.feed(body.decode('utf-8','replace'))
+                  target=next((f for f in form.forms if any(x.get('type')=='password' for x in f['inputs'])),None)
+                  if status==200 and target and target['method'].lower()=='post':
+                      url=urllib.parse.urljoin('https://hermes.idol.id/login',target['action'])
+                      if urllib.parse.urlsplit(url).hostname!='hermes.idol.id':raise ValueError('login origin mismatch')
+                      fields={x['name']:x.get('value','') for x in target['inputs'] if x.get('name') and x.get('type')=='hidden'}
+                      fields.update({x.get('name','password'):password for x in target['inputs'] if x.get('type')=='password'})
+                      request(web,url,urllib.parse.urlencode(fields).encode(),{'Content-Type':'application/x-www-form-urlencoded','Origin':'https://hermes.idol.id'})
+                      for path in ('/api/status','/api/health','/api/usage'):
+                          status,body=request(web,'https://hermes.idol.id'+path);inspect_json(body,'hermes-status')
+                  else:print(json.dumps({'kind':'hermes-login','result':'form-not-established'}))
+              except Exception as error:print(json.dumps({'kind':'hermes-error','type':type(error).__name__}))
+          print(json.dumps({'kind':'audit-end','authenticated_attempt_possible':bool(token or password),'dispatch':False,'service_changes':False}))
+          PY
