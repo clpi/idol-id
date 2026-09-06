@@ -1,0 +1,110 @@
+name: Claim and graph adversarial audit
+on:
+  push:
+    branches: [ops/authenticated-audit-20260906]
+    paths: [.github/workflows/claim-and-graph-audit.yml]
+permissions:
+  contents: read
+jobs:
+  claims:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      IDOL_FLEET_NO_MODEL_INFERENCE: '1'
+    steps:
+      - name: Obtain exact public fleet source
+        run: |
+          git clone --quiet --no-checkout https://github.com/clpi/idol-id-agents.git fleet
+          git -C fleet checkout --quiet --detach da7f34068c3bc3cc375347cbbc332a86653c6530
+          test "$(git -C fleet rev-parse HEAD)" = da7f34068c3bc3cc375347cbbc332a86653c6530
+      - name: Test local claims with real store methods and controlled startup interleaving
+        working-directory: fleet
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures,json,pathlib,tempfile,threading
+          from unittest.mock import patch
+          from fleet_control.claims import SemanticClaimStore,ClaimConflict,ClaimCommandError
+          results=[]
+          def acquire(store,who):return store.acquire(owner=who,task_id=who,targets=['graph/application'],ttl_seconds=60,now=1000)
+          with tempfile.TemporaryDirectory() as tmp:
+              root=pathlib.Path(tmp)
+              store=SemanticClaimStore(root/'same')
+              acquire(store,'a')
+              refused=False
+              try:acquire(store,'b')
+              except ClaimConflict:refused=True
+              results.append({'case':'healthy-overlap-control','refused':refused,'pass':refused})
+              rows=json.loads(store.path.read_text());del rows[0]['expires_at'];store.path.write_text(json.dumps(rows))
+              refused=False
+              try:acquire(store,'b')
+              except (ClaimConflict,ClaimCommandError):refused=True
+              results.append({'case':'missing-expiry-corruption','refused':refused,'pass':refused})
+              # Different local roots intentionally demonstrate the local-only boundary.
+              left=SemanticClaimStore(root/'host-a');right=SemanticClaimStore(root/'host-b')
+              acquire(left,'a');acquire(right,'b')
+              results.append({'case':'separate-root-scope','both_granted':True,'classification':'scope-observation-not-a-local-lock-bug'})
+              shared=root/'startup';entered=threading.Event();resume=threading.Event()
+              original=SemanticClaimStore._write
+              def interleaved(self,rows):
+                  if self.root==shared and threading.current_thread().name.startswith('first') and rows==[]:
+                      entered.set()
+                      if not resume.wait(5):raise RuntimeError('startup test timed out')
+                  return original(self,rows)
+              with patch.object(SemanticClaimStore,'_write',interleaved):
+                  with concurrent.futures.ThreadPoolExecutor(1,thread_name_prefix='first') as pool:
+                      future=pool.submit(SemanticClaimStore,shared)
+                      try:
+                          if not entered.wait(5):raise RuntimeError('constructor did not reach initial write')
+                          active=SemanticClaimStore(shared);acquire(active,'owner')
+                          before=len(active.list(now=1000))
+                      finally:resume.set()
+                      future.result(timeout=5)
+                      after=len(active.list(now=1000))
+              results.append({'case':'concurrent-first-initialization','claims_before':before,'claims_after':after,'pass':before==1 and after==1})
+          for row in results:print('CLAIM_AUDIT='+json.dumps(row,sort_keys=True),flush=True)
+          print('SCOPE=actual imported PR source; synthetic private state; no production hosts or claims')
+          if any(row.get('pass') is False for row in results):raise SystemExit('FAIL: claim integrity not preserved')
+          PY
+  graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Test the unchanged gate using exact downloaded source and isolated source fixtures
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess,tempfile,urllib.request
+          revision='963c622cee35d4eac35eb3a4c7fe14b7bc860ef1'
+          prefix='https://raw.githubusercontent.com/clpi/idol/'+revision+'/'
+          paths=['gate/gap-145-identity-producer.sh','src/grammar_role_table.zig','src/token_classify_gen.zig']
+          sources={}
+          for path in paths:
+              with urllib.request.urlopen(prefix+path,timeout=15) as response:sources[path]=response.read()
+          print('SOURCE='+json.dumps({'revision':revision,'gate_sha256':hashlib.sha256(sources[paths[0]]).hexdigest()}))
+          variants={
+              'baseline':None,
+              'literal-control':('duplicate.zig','pub const duplicate = .{ .text = "while", .kind = .kw_while };\n'),
+              'derived-control':('duplicate.zig','pub const duplicate = .{ .text = row.spell, .kind = row.kind.? };\n'),
+              'reversed':('duplicate.zig','pub const duplicate = .{ .kind = .kw_while, .text = "while" };\n'),
+              'multiline':('duplicate.zig','pub const duplicate = .{\n.text = "while",\n.kind = .kw_while,\n};\n'),
+              'spacing':('duplicate.zig','pub const duplicate=.{.text="while",.kind=.kw_while};\n'),
+              'nested':('nested/duplicate.zig','pub const duplicate = .{ .text = "while", .kind = .kw_while };\n'),
+              'comment-owner':None,
+          }
+          results=[]
+          for case,fixture in variants.items():
+              with tempfile.TemporaryDirectory(prefix='idol-gate-audit-') as tmp:
+                  root=pathlib.Path(tmp)
+                  for path,body in sources.items():
+                      destination=root/path;destination.parent.mkdir(parents=True,exist_ok=True);destination.write_bytes(body)
+                  if fixture:
+                      destination=root/'src'/fixture[0];destination.parent.mkdir(parents=True,exist_ok=True);destination.write_text(fixture[1])
+                  if case=='comment-owner':
+                      (root/'src/grammar_role_table.zig').write_text('// pub const TokenKind = enum(u8)\n// return rows[@backingInt(self)].spell;\n')
+                      (root/'src/token_classify_gen.zig').write_text('// kws[i] = .{ .text = row.spell, .kind = row.kind.? };\n')
+                  result=subprocess.run(['sh',str(root/paths[0])],env={**os.environ,'GAP145_ROOT':str(root)},capture_output=True,text=True,timeout=10)
+                  expected_refusal=case not in ('baseline','derived-control')
+                  row={'case':case,'exit':result.returncode,'expected_refusal':expected_refusal,'assertion_pass':(result.returncode!=0)==expected_refusal,'last_line':result.stdout.strip().splitlines()[-1] if result.stdout.strip() else ''}
+                  print('GRAPH_AUDIT='+json.dumps(row,sort_keys=True),flush=True);results.append(row)
+          print('SCOPE=unchanged gate over synthetic source fixtures; not an Idol compiler build or deployed-state measurement')
+          if len(results)!=8 or any(not r['assertion_pass'] for r in results):raise SystemExit('FAIL: semantic class detector accepts adversarial fixtures')
+          PY
