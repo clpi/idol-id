@@ -1,0 +1,97 @@
+name: Fleet adversarial audit
+on:
+  push:
+    branches: [ops/authenticated-audit-20260906]
+    paths: [.github/workflows/fleet-adversarial-audit.yml]
+permissions:
+  contents: read
+concurrency:
+  group: fleet-adversarial-audit-20260906
+  cancel-in-progress: false
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 6
+    env:
+      IDOL_FLEET_NO_MODEL_INFERENCE: '1'
+      SUBJECT: da7f34068c3bc3cc375347cbbc332a86653c6530
+    steps:
+      - name: Obtain exact public source without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --no-checkout https://github.com/clpi/idol-id-agents.git fleet
+          git -C fleet checkout --quiet --detach "$SUBJECT"
+          test "$(git -C fleet rev-parse HEAD)" = "$SUBJECT"
+          python3 --version
+          git -C fleet rev-parse HEAD
+      - name: Execute existing complete no-inference test suite
+        working-directory: fleet
+        shell: bash
+        run: |
+          set +e
+          python3 -m unittest discover -s tests -v > "$RUNNER_TEMP/fleet-tests.txt" 2>&1
+          result=$?
+          grep -E '^(FAIL:|ERROR:|Ran |FAILED|OK|Traceback)' "$RUNNER_TEMP/fleet-tests.txt" || true
+          tail -n 50 "$RUNNER_TEMP/fleet-tests.txt"
+          echo "FULL_SUITE_EXIT=$result"
+          exit "$result"
+      - name: Adversarially test every terminal path using actual imported controller code
+        if: always()
+        working-directory: fleet
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, platform, shlex, signal, subprocess, tempfile, time
+          from fleet_control.gitops import _run_guarded_process
+          from fleet_control.control import LocalControl
+          def git(root,*args):
+              return subprocess.run(['git',*args],cwd=root,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True,timeout=10)
+          results=[]
+          for variant in ('no-child','inherited-pipes','detached-stdio'):
+              with tempfile.TemporaryDirectory(prefix='idol-adversarial-') as tmp:
+                  root=pathlib.Path(tmp)
+                  repo=root/'repo';repo.mkdir()
+                  git(repo,'init','-b','main')
+                  git(repo,'config','user.name','Audit')
+                  git(repo,'config','user.email','audit@example.invalid')
+                  (repo/'input').write_text('base\n')
+                  git(repo,'add','input');git(repo,'commit','-m','baseline')
+                  marker=root/'late-write';pidfile=root/'child.pid'
+                  if variant!='no-child':
+                      redirection=' </dev/null >/dev/null 2>&1' if variant=='detached-stdio' else ''
+                      hook=repo/'.git/hooks/post-checkout'
+                      hook.write_text('#!/bin/sh\n( sleep 0.65; printf late > '+shlex.quote(str(marker))+' )'+redirection+' &\nprintf "%s\\n" "$!" > '+shlex.quote(str(pidfile))+'\nexit 0\n')
+                      hook.chmod(0o700)
+                  control=LocalControl(root/'control');control.enable(60)
+                  observed={'variant':variant,'os':platform.system(),'subject':os.environ['SUBJECT']}
+                  try:
+                      began=time.monotonic()
+                      with control.transition_permit('maintenance'):
+                          try:
+                              completed=_run_guarded_process(['git','checkout','--detach','HEAD'],repository=repo,timeout=0.2,stderr=subprocess.STDOUT,launch_guard=None)
+                              observed['outcome']='returned';observed['exit']=completed.returncode
+                          except subprocess.TimeoutExpired:
+                              observed['outcome']='timeout'
+                      observed['return_ms']=round((time.monotonic()-began)*1000,2)
+                      observed['marker_at_return']=marker.exists()
+                      observed['control_after']=control.disable().mode
+                      time.sleep(0.9)
+                      observed['marker_after_disable']=marker.exists()
+                      observed['child_created']=pidfile.exists()
+                      if variant!='no-child' and not pidfile.exists():raise RuntimeError('positive-control child did not launch')
+                      observed['invariant_pass']=not observed['marker_after_disable']
+                      results.append(observed)
+                      print('ADVERSARIAL_RESULT='+json.dumps(observed,sort_keys=True),flush=True)
+                  finally:
+                      if pidfile.exists():
+                          try:os.kill(int(pidfile.read_text()),signal.SIGKILL)
+                          except ProcessLookupError:pass
+          print('AUDIT_SCOPE=isolated temporary repositories; no gateway credentials, provider inference, production processes or claims')
+          if len(results)!=3 or any(not row['invariant_pass'] for row in results):
+              raise SystemExit('FAIL: a supposedly completed operation can still mutate after disable')
+          PY
