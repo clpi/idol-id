@@ -1,11 +1,11 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, sans-serif; background: #0a0a0a; color: #e0e0e0; line-height: 1.6; overflow-x: hidden; }
+body { line-height: 1.6; overflow-x: hidden; }
 main[data-evidence-only] { max-width: 48rem; margin: 2rem auto; padding: 1rem; }
 h1 { font-size: 1.5rem; margin-bottom: 1rem; }
 p { margin-bottom: 0.5rem; }
 section { margin-top: 1.5rem; }
 ul { list-style: none; padding: 0; }
 li { margin-bottom: 0.25rem; }
-a { color: #6aa9f0; }
-pre { background: #111; padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; }
+a { color: var(--idol-signal); }
+pre { background: var(--idol-panel-raised); padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; }
 @media (max-width: 640px) { main[data-evidence-only] { margin: 1rem; padding: 0.5rem; } }

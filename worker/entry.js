@@ -61,7 +61,10 @@ export async function handle(request, env, dependencies = {}) {
   if (url.pathname === "/install.ps1" && url.hostname === "idol.id") return asset(env, request, "/content/install.ps1", { immutable: false });
   if (info?.redirect) return baseHandle(request, env, dependencies);
   if (info) {
-    if (isEvidenceNavigation(request, info, url.pathname)) return asset(env, request, "/apps/evidence/index.html", { html: true });
+    if (isEvidenceNavigation(request, info, url.pathname)) {
+      const response = await asset(env, request, "/apps/evidence/index.html", { html: true });
+      return request.method === "HEAD" ? new Response(null, response) : response;
+    }
     const mcpResponse = await handleMcpTransport(request, env, url.pathname, info, dependencies);
     if (mcpResponse) return secure(mcpResponse);
     const liveResponse = await handleLiveTransport(request, env, url.pathname, info, dependencies);
