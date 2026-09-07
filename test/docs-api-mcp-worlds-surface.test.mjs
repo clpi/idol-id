@@ -1,10 +1,161 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import { API_ENDPOINTS, resolveEndpointPath } from "../shared/api-endpoints.js";
 import { MCP_TOOLS } from "../shared/mcp.js";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+class FakeElement {
+  constructor(tagName = "div") {
+    this.tagName = String(tagName).toUpperCase();
+    this.id = "";
+    this.className = "";
+    this.textContent = "";
+    this.children = [];
+    this.style = { cssText: "" };
+    this.dataset = {};
+    this.attributes = {};
+  }
+  appendChild(node) {
+    if (node === null || node === undefined) return node;
+    this.children.push(node);
+    return node;
+  }
+  append(...nodes) {
+    for (const node of nodes) this.appendChild(node);
+  }
+  prepend(node) {
+    if (node === null || node === undefined) return;
+    this.children.unshift(node);
+  }
+  replaceChildren(...nodes) {
+    this.children = [];
+    for (const node of nodes) this.appendChild(node);
+  }
+}
+
+function fakeAnchor(text, href) {
+  const link = new FakeElement("a");
+  link.textContent = text;
+  link.attributes.href = href;
+  Object.defineProperty(link, "href", {
+    get() { return link.attributes.href ?? ""; },
+    set(value) { link.attributes.href = String(value); },
+  });
+  return link;
+}
+
+function createRegistryFixture() {
+  const documentElement = new FakeElement("html");
+  const head = new FakeElement("head");
+  const lensbar = new FakeElement("nav");
+  lensbar.className = "lensbar";
+  const published = fakeAnchor("published", "https://worlds.idol.id/");
+  const atlas = fakeAnchor("atlas", "https://worlds.idol.id/");
+  const homes = fakeAnchor("homes", "https://worlds.idol.id/");
+  const universe = fakeAnchor("universe", "https://worlds.idol.id/");
+  lensbar.appendChild(published);
+  lensbar.appendChild(atlas);
+  lensbar.appendChild(homes);
+  lensbar.appendChild(universe);
+  const links = [published, atlas, homes, universe];
+  lensbar.querySelectorAll = (selector) => {
+    if (selector === "a") return links;
+    return [];
+  };
+  const boundary = new FakeElement("div");
+  boundary.className = "boundary-note";
+  boundary.appendChild(new FakeElement("strong"));
+  const document = {
+    readyState: "complete",
+    documentElement,
+    head,
+    createElement(tag) {
+      if (tag === "link") return new FakeElement("link");
+      if (tag === "strong") return new FakeElement("strong");
+      return new FakeElement(tag);
+    },
+    createTextNode(text) { return { nodeType: "text", textContent: String(text) }; },
+    querySelector(selector) {
+      if (selector === ".lensbar") return lensbar;
+      if (selector === ".boundary-note") return boundary;
+      if (selector === "html") return documentElement;
+      if (selector === "head") return head;
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === 'link[rel="stylesheet"]') return [...head.children];
+      return [];
+    },
+    addEventListener() {},
+  };
+  return { document, documentElement, lensbar, boundary, published, atlas, homes, universe, links };
+}
+
+function createAtlasFixture() {
+  const documentElement = new FakeElement("html");
+  const title = new FakeElement("title");
+  title.textContent = "Worlds — idol.id";
+  const head = new FakeElement("head");
+  head.appendChild(title);
+  const eyebrow = new FakeElement("div");
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = "@ · compiler-published projection";
+  const heading = new FakeElement("h1");
+  heading.textContent = "Worlds";
+  const atlasHead = new FakeElement("header");
+  atlasHead.className = "atlas-head";
+  atlasHead.appendChild(eyebrow);
+  atlasHead.appendChild(heading);
+  const rail = new FakeElement("section");
+  rail.className = "rail";
+  rail.appendChild(atlasHead);
+  const atlas = new FakeElement("main");
+  atlas.className = "atlas";
+  atlas.appendChild(rail);
+  const staticBoundary = new FakeElement("section");
+  staticBoundary.className = "boundary";
+  atlas.appendChild(staticBoundary);
+  const staticNodes = [eyebrow, heading, atlasHead, rail, atlas, staticBoundary];
+  const document = {
+    readyState: "complete",
+    title: title.textContent,
+    documentElement,
+    head,
+    createElement(tag) { return new FakeElement(tag); },
+    createTextNode(text) { return { nodeType: "text", textContent: String(text) }; },
+    querySelector(selector) {
+      if (selector === ".atlas") return atlas;
+      if (selector === "html") return documentElement;
+      if (selector === "head") return head;
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === 'link[rel="stylesheet"]') return [...head.children];
+      return [];
+    },
+    addEventListener() {},
+  };
+  return { document, documentElement, head, title, atlas, staticBoundary, eyebrow, heading, atlasHead, rail, staticNodes };
+}
+
+function executeController(fixture, mutate) {
+  const sourcePath = new URL("../shared/lib-canonical.js", import.meta.url);
+  let source = readFileSync(sourcePath, "utf8");
+  if (typeof mutate === "function") source = mutate(source);
+  const context = {
+    document: fixture.document,
+    location: { href: "https://lib.idol.id/" },
+    URL,
+    console,
+  };
+  context.window = context;
+  vm.runInNewContext(source, context, { filename: "shared/lib-canonical.js" });
+  return context;
+}
 
 test("Docs keep document identity in the query, heading identity in the hash, and search every deployed projection", async () => {
   const [html, script, css, apiDoc, mcpDoc, universeDoc] = await Promise.all([
@@ -171,7 +322,6 @@ test("Worlds converge on canonical Lib routes and state the non-authority bounda
   assert.match(web, /host === "lib\.idol\.id"[\s\S]*?lib-canonical\.js/);
   assert.match(canonical, /atlas\.href = "\/atlas"/);
   assert.match(canonical, /universe\.href = "\/universe"/);
-  assert.match(canonical, /idempotent data attribute/i);
   assert.match(canonical, /compiler-published-world-projection/);
   assert.match(html, /compiler-published projection/);
   assert.match(html, /does not mint semantic identity, equivalence, or authority/i);
@@ -179,6 +329,64 @@ test("Worlds converge on canonical Lib routes and state the non-authority bounda
   assert.match(docs, /https:\/\/lib\.idol\.id\/atlas/);
   assert.match(docs, /path-preserving compatibility alias/i);
   assert.match(docs, /does not mint semantic identity/i);
+
+  function assertRegistryConverged(reg) {
+    assert.equal(reg.published.href, "/");
+    assert.equal(reg.atlas.href, "/atlas");
+    assert.equal(reg.homes.href, "/?set=homes");
+    assert.equal(reg.universe.href, "/universe");
+    assert.equal(reg.documentElement.dataset.idolProduct, "admitted-world-registry-projection");
+    assert.equal(reg.boundary.children.length, 2);
+  }
+
+  function assertAtlasConverged(atl) {
+    assert.equal(atl.documentElement.dataset.idolProduct, "compiler-published-world-projection");
+    assert.equal(atl.title.textContent, "Worlds — idol.id");
+    assert.equal(atl.heading.textContent, "Worlds");
+    assert.equal(atl.eyebrow.textContent, "@ · compiler-published projection");
+    assert.equal(atl.atlas.className, "atlas");
+    assert.equal(atl.staticBoundary.className, "boundary");
+    assert.equal(atl.staticNodes.length, 6);
+    assert.ok(atl.atlas.children.includes(atl.staticBoundary), "static boundary preserved inside .atlas after repeated convergence");
+    assert.ok(atl.atlasHead.children.includes(atl.eyebrow), "static eyebrow preserved inside .atlas-head");
+    assert.ok(atl.atlasHead.children.includes(atl.heading), "static h1 preserved inside .atlas-head");
+  }
+
+  const reg = createRegistryFixture();
+  executeController(reg);
+  assertRegistryConverged(reg);
+  executeController(reg);
+  assertRegistryConverged(reg);
+
+  const atl = createAtlasFixture();
+  executeController(atl);
+  assertAtlasConverged(atl);
+  executeController(atl);
+  assertAtlasConverged(atl);
+
+  const baseSource = readFileSync(new URL("../shared/lib-canonical.js", import.meta.url), "utf8");
+  assert.ok(baseSource.includes("admitted-world-registry-projection"), "unmutated source contains the registry product string");
+  assert.ok(baseSource.includes("compiler-published-world-projection"), "unmutated source contains the atlas product string");
+  assert.ok(baseSource.includes("boundary.replaceChildren();"), "unmutated source clears the boundary before rewriting");
+
+  const missingIdentity = createRegistryFixture();
+  const missingIdentitySource = baseSource.replace('document.documentElement.dataset.idolProduct = "admitted-world-registry-projection";', "");
+  assert.notEqual(missingIdentitySource, baseSource, "missing-identity mutation must change the source bytes");
+  executeController(missingIdentity, () => missingIdentitySource);
+  assert.throws(() => assertRegistryConverged(missingIdentity), /admitted-world-registry-projection/);
+
+  const wrongIdentity = createRegistryFixture();
+  const wrongIdentitySource = baseSource.replace('"admitted-world-registry-projection"', '"wrong-product"');
+  assert.notEqual(wrongIdentitySource, baseSource, "wrong-identity mutation must change the source bytes");
+  executeController(wrongIdentity, () => wrongIdentitySource);
+  assert.throws(() => assertRegistryConverged(wrongIdentity), /admitted-world-registry-projection/);
+
+  const accumulate = createRegistryFixture();
+  const accumulateSource = baseSource.replace("boundary.replaceChildren();", "/* skipped */");
+  assert.notEqual(accumulateSource, baseSource, "accumulating-boundary mutation must change the source bytes");
+  executeController(accumulate, () => accumulateSource);
+  executeController(accumulate, () => accumulateSource);
+  assert.throws(() => assertRegistryConverged(accumulate), /2/);
 });
 
 test("Lib registry and Atlas retain distinct presentation product identities", async () => {
