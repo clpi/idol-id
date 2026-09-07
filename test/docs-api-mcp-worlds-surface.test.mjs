@@ -95,51 +95,63 @@ function createRegistryFixture() {
   return { document, documentElement, lensbar, boundary, published, atlas, homes, universe, links };
 }
 
+function reachableNodes(node) {
+  return [node, ...(node.children ?? []).flatMap(reachableNodes)];
+}
+
 function createAtlasFixture() {
+  const html = readFileSync(new URL("../apps/worlds/index.html", import.meta.url), "utf8");
+  const staticText = (pattern) => {
+    const match = html.match(pattern);
+    assert.ok(match, "static Atlas content exists");
+    return match[1];
+  };
+  const expected = {
+    title: staticText(/<title>([^<]+)<\/title>/),
+    heading: staticText(/<h1>([^<]+)<\/h1>/),
+    boundary: staticText(/<p>([^<]*does not mint[^<]*)<\/p>/),
+  };
   const documentElement = new FakeElement("html");
   const title = new FakeElement("title");
-  title.textContent = "Worlds — idol.id";
+  title.textContent = expected.title;
   const head = new FakeElement("head");
   head.appendChild(title);
-  const eyebrow = new FakeElement("div");
-  eyebrow.className = "eyebrow";
-  eyebrow.textContent = "@ · compiler-published projection";
   const heading = new FakeElement("h1");
-  heading.textContent = "Worlds";
+  heading.textContent = expected.heading;
+  const staticBoundary = new FakeElement("p");
+  staticBoundary.textContent = expected.boundary;
   const atlasHead = new FakeElement("header");
   atlasHead.className = "atlas-head";
-  atlasHead.appendChild(eyebrow);
-  atlasHead.appendChild(heading);
+  atlasHead.append(heading, staticBoundary);
   const rail = new FakeElement("section");
   rail.className = "rail";
   rail.appendChild(atlasHead);
   const atlas = new FakeElement("main");
   atlas.className = "atlas";
   atlas.appendChild(rail);
-  const staticBoundary = new FakeElement("section");
-  staticBoundary.className = "boundary";
-  atlas.appendChild(staticBoundary);
-  const staticNodes = [eyebrow, heading, atlasHead, rail, atlas, staticBoundary];
+  const body = new FakeElement("body");
+  body.appendChild(atlas);
+  documentElement.append(head, body);
   const document = {
     readyState: "complete",
-    title: title.textContent,
+    get title() { return title.textContent; },
+    set title(value) { title.textContent = String(value); },
     documentElement,
     head,
+    body,
     createElement(tag) { return new FakeElement(tag); },
     createTextNode(text) { return { nodeType: "text", textContent: String(text) }; },
     querySelector(selector) {
-      if (selector === ".atlas") return atlas;
-      if (selector === "html") return documentElement;
-      if (selector === "head") return head;
-      return null;
+      if (selector === ".atlas-head p") return staticBoundary;
+      return reachableNodes(documentElement).find((node) => selector.startsWith(".")
+        ? node.className === selector.slice(1)
+        : node.tagName?.toLowerCase() === selector.toLowerCase()) ?? null;
     },
-    querySelectorAll(selector) {
-      if (selector === 'link[rel="stylesheet"]') return [...head.children];
-      return [];
-    },
+    querySelectorAll() { return []; },
     addEventListener() {},
   };
-  return { document, documentElement, head, title, atlas, staticBoundary, eyebrow, heading, atlasHead, rail, staticNodes };
+  return { document, documentElement, head, title, atlas, staticBoundary, heading, atlasHead, rail,
+    expected, nodeCount: reachableNodes(documentElement).length };
 }
 
 function executeController(fixture, mutate) {
@@ -341,15 +353,12 @@ test("Worlds converge on canonical Lib routes and state the non-authority bounda
 
   function assertAtlasConverged(atl) {
     assert.equal(atl.documentElement.dataset.idolProduct, "compiler-published-world-projection");
-    assert.equal(atl.title.textContent, "Worlds — idol.id");
-    assert.equal(atl.heading.textContent, "Worlds");
-    assert.equal(atl.eyebrow.textContent, "@ · compiler-published projection");
-    assert.equal(atl.atlas.className, "atlas");
-    assert.equal(atl.staticBoundary.className, "boundary");
-    assert.equal(atl.staticNodes.length, 6);
-    assert.ok(atl.atlas.children.includes(atl.staticBoundary), "static boundary preserved inside .atlas after repeated convergence");
-    assert.ok(atl.atlasHead.children.includes(atl.eyebrow), "static eyebrow preserved inside .atlas-head");
-    assert.ok(atl.atlasHead.children.includes(atl.heading), "static h1 preserved inside .atlas-head");
+    assert.equal(atl.document.title, atl.expected.title);
+    assert.equal(atl.heading.textContent, atl.expected.heading);
+    assert.equal(atl.staticBoundary.textContent, atl.expected.boundary);
+    assert.equal(reachableNodes(atl.documentElement).length, atl.nodeCount);
+    assert.ok(reachableNodes(atl.documentElement).includes(atl.heading));
+    assert.ok(reachableNodes(atl.documentElement).includes(atl.staticBoundary));
   }
 
   const reg = createRegistryFixture();
@@ -382,11 +391,25 @@ test("Worlds converge on canonical Lib routes and state the non-authority bounda
   assert.throws(() => assertRegistryConverged(wrongIdentity), /admitted-world-registry-projection/);
 
   const accumulate = createRegistryFixture();
-  const accumulateSource = baseSource.replace("boundary.replaceChildren();", "/* skipped */");
+  const accumulateSource = baseSource.replace("boundary.replaceChildren();", "");
   assert.notEqual(accumulateSource, baseSource, "accumulating-boundary mutation must change the source bytes");
   executeController(accumulate, () => accumulateSource);
   executeController(accumulate, () => accumulateSource);
   assert.throws(() => assertRegistryConverged(accumulate), /2/);
+
+  for (const mutation of [
+    'document.title = "mutated title";',
+    'document.querySelector(".atlas").appendChild(document.createElement("div"));',
+    'document.querySelector("h1").textContent = "mutated heading";',
+    'document.querySelector(".atlas-head p").textContent = "mutated boundary";',
+  ]) {
+    const changed = createAtlasFixture();
+    const changedSource = `${baseSource}\n${mutation}`;
+    assert.notEqual(changedSource, baseSource);
+    executeController(changed, () => changedSource);
+    executeController(changed, () => changedSource);
+    assert.throws(() => assertAtlasConverged(changed), { code: "ERR_ASSERTION" });
+  }
 });
 
 test("Lib registry and Atlas retain distinct presentation product identities", async () => {
