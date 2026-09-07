@@ -76,7 +76,10 @@ test("the evidence shell states only exact non-claims and machine-readable ident
   assert.match(html, /RESEARCH HYPOTHESIS/);
   for (const coordinate of ["/__idol/version", "/__idol/manifest", "/runtime/authority.json", "/runtime/manifest.json"])
     assert.match(html, new RegExp(coordinate.replaceAll("/", "\\/")));
-  assert.doesNotMatch(html, /faster than|native compiler|self-hosted|published worlds|semantic observatory|registry|world atlas|run|analyze|lower/i);
+  assert.doesNotMatch(html, /faster than|native compiler|self-hosted|published worlds|semantic observatory|registry|world atlas|analyze|lower/i);
+  const visibleText = html.replace(/<[^>]+>/g, " ");
+  assert.doesNotMatch(visibleText, /\brun\b/i);
+  assert.doesNotMatch(html, /<button[^>]*>(?:[^<]*(?:run|analyze)[^<]*)<\/button>/i);
   assert.match(script, /fetch\("\/__idol\/version"/);
   assert.match(script, /textContent/);
   assert.doesNotMatch(script, /innerHTML|localStorage|sessionStorage|document\.cookie|indexedDB/);
