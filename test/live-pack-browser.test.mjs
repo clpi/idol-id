@@ -1,19 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
-import { constants } from "node:fs";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { createServer } from "node:http";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { handleLiveTransport } from "../worker/live.js";
 import { createD1LiveStore } from "../shared/live-d1.js";
 import { createLiveService } from "../shared/live-service.js";
+import { executableChrome, dumpDom } from "./helpers/chromium.mjs";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const execute = promisify(execFile);
 const identity = { subject: "pack-browser-owner", email: "owner@example.test", displayName: "Pack owner" };
 
 function d1(database) {
@@ -74,10 +71,7 @@ async function browserForms(cases) {
 }
 
 test("Live browser preserves repeated operand/result slots through D1 persistence and graph readback", { timeout: 60000 }, async (t) => {
-  let chrome;
-  for (const candidate of [process.env.CHROME_BIN, "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"].filter(Boolean)) {
-    try { await access(candidate, constants.X_OK); chrome = candidate; break; } catch {}
-  }
+  const chrome = await executableChrome();
   if (!chrome) {
     assert.ok(!process.env.CI && process.env.LIVE_BROWSER_REQUIRED !== "1", "Set CHROME_BIN: the real-browser persistence proof is required");
     return t.skip("Set CHROME_BIN to run the real-browser persistence proof");
@@ -158,7 +152,7 @@ test("Live browser preserves repeated operand/result slots through D1 persistenc
   });
   await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
   origin = `http://127.0.0.1:${server.address().port}`;
-  const { stdout } = await execute(chrome, ["--headless=new", "--no-sandbox", "--disable-gpu", "--disable-background-networking", `--user-data-dir=${join(directory, "chrome")}`, "--dump-dom", "--virtual-time-budget=15000", `${origin}/apps/live/index.html?project=${project.id}`], { timeout: 30000, killSignal: "SIGKILL", maxBuffer: 2 * 1024 * 1024 });
+  const { stdout } = await dumpDom(chrome, `${origin}/apps/live/index.html?project=${project.id}`, join(directory, "chrome"));
   assert.match(stdout, /<output id="live-pack-proof">complete<\/output>/);
   assert.equal(requests.length, 3);
   assert.deepEqual(requests[2].operands, [a.id, "", b.id]);
