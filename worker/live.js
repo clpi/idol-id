@@ -143,11 +143,11 @@ export async function handleLiveTransport(request, env, pathname, info, dependen
       const mutation = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
       const identity = await browserIdentity(request, env, dependencies, mutation);
       const service = liveService(env, dependencies);
-      if (pathname === `${BROWSER}/projects`) return routeCollection(request, service, identity, mutation);
+      if (pathname === `${BROWSER}/projects`) return await routeCollection(request, service, identity, mutation);
       const project = PROJECT.exec(pathname);
-      if (project && project[1] === "browser") return routeProject(request, service, identity, project[2], mutation);
+      if (project && project[1] === "browser") return await routeProject(request, service, identity, project[2], mutation);
       const action = PROJECT_ACTION.exec(pathname);
-      if (action && action[1] === "browser") return routeAction(request, service, identity, action[2], action[3], mutation);
+      if (action && action[1] === "browser") return await routeAction(request, service, identity, action[2], action[3], mutation);
       return json({ error: "LIVE_BROWSER_ROUTE_NOT_FOUND" }, 404);
     }
 
@@ -157,11 +157,11 @@ export async function handleLiveTransport(request, env, pathname, info, dependen
       const mutation = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
       const identity = await apiIdentity(request, platform, mutation ? ["live:write"] : ["live:read"]);
       const service = liveService(env, dependencies);
-      if (pathname === `${API}/projects`) return routeCollection(request, service, identity, mutation);
+      if (pathname === `${API}/projects`) return await routeCollection(request, service, identity, mutation);
       const project = PROJECT.exec(pathname);
-      if (project && project[1] === "api") return routeProject(request, service, identity, project[2], mutation);
+      if (project && project[1] === "api") return await routeProject(request, service, identity, project[2], mutation);
       const action = PROJECT_ACTION.exec(pathname);
-      if (action && action[1] === "api") return routeAction(request, service, identity, action[2], action[3], mutation);
+      if (action && action[1] === "api") return await routeAction(request, service, identity, action[2], action[3], mutation);
       return json({ error: "LIVE_API_ROUTE_NOT_FOUND" }, 404);
     }
 

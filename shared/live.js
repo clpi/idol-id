@@ -45,18 +45,19 @@ function deepFreeze(value) {
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
-function strings(value, label, maximum = 64, itemMaximum = 320) {
+function sequence(value, label, maximum = 64, itemMaximum = 320) {
   if (value === undefined || value === null) return Object.freeze([]);
   if (!Array.isArray(value) || value.length > maximum) throw new LiveError("INVALID_LIVE_INPUT", `${label} must contain at most ${maximum} entries`);
+  return Object.freeze(Array.from(value, (candidate) => exact(candidate, `${label} entry`, itemMaximum)));
+}
+function strings(value, label, maximum = 64, itemMaximum = 320) {
+  const output = sequence(value, label, maximum, itemMaximum);
   const seen = new Set();
-  const output = [];
-  for (const candidate of value) {
-    const item = exact(candidate, `${label} entry`, itemMaximum);
+  for (const item of output) {
     if (seen.has(item)) throw new LiveError("LIVE_DUPLICATE_REFERENCE", `duplicate ${label} entry: ${item}`);
     seen.add(item);
-    output.push(item);
   }
-  return Object.freeze(output);
+  return output;
 }
 function id(value, kind) {
   const result = exact(value, `${kind} id`, 180);
@@ -122,8 +123,8 @@ export function normaliseLiveApplicationInput(input) {
     relation: exact(input.relation, "relation identity", 200),
     subject: id(input.subject, "node"),
     target: input.target === undefined || input.target === null || input.target === "" ? null : id(input.target, "node"),
-    operands: strings(input.operands, "application operands"),
-    results: strings(input.results, "application results"),
+    operands: sequence(input.operands, "application operands"),
+    results: sequence(input.results, "application results"),
     worlds: strings(input.worlds, "application worlds"),
     witnesses: strings(input.witnesses, "application witnesses"),
     demand: record(input.demand, "application demand"),

@@ -9,6 +9,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 function envWithAssets() {
   const files = new Map([
+    ["/apps/evidence/index.html", ["text/html", "<html>evidence</html>"]],
     ["/apps/lib/index.html", ["text/html", "<html>lib</html>"]],
     ["/apps/worlds/index.html", ["text/html", "<html>worlds</html>"]],
     ["/apps/universe/index.html", ["text/html", "<html>universe</html>"]],
@@ -33,17 +34,21 @@ test("Lib owns the public admitted-world registry and Worlds preserves compatibi
   assert.equal(response.headers.get("location"), "https://lib.idol.id/world/std?lens=projection");
 });
 
-test("Lib owns Atlas and public Universe lenses while Platform keeps private Universe management", async () => {
+test("public Lib navigation is evidence-only while Platform keeps private Universe management", async () => {
   const env = envWithAssets();
   let response = await handle(new Request("https://lib.idol.id/atlas", { headers: { "sec-fetch-mode": "navigate" } }), env);
   assert.equal(response.status, 200);
-  assert.equal(await response.text(), "<html>worlds</html>");
+  assert.equal(await response.text(), "<html>evidence</html>");
 
   response = await handle(new Request("https://lib.idol.id/world/std", { headers: { "sec-fetch-mode": "navigate" } }), env);
   assert.equal(response.status, 200);
-  assert.equal(await response.text(), "<html>worlds</html>");
+  assert.equal(await response.text(), "<html>evidence</html>");
 
   response = await handle(new Request("https://lib.idol.id/universe?mode=public", { headers: { "sec-fetch-mode": "navigate" } }), env);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "<html>evidence</html>");
+
+  response = await handle(new Request("https://platform.idol.id/universe", { headers: { "sec-fetch-mode": "navigate" } }), env);
   assert.equal(response.status, 200);
   assert.equal(await response.text(), "<html>universe</html>");
 });

@@ -213,11 +213,12 @@ test("public API examples come only from the authority-pinned example projection
   assert.match(api, /authority-pinned/i);
 });
 
-test("every Worker hostname has an explicit deployment route", async () => {
+test("only Book, API and MCP have deployment routes; the host map grants no public route", async () => {
   const { hostMap } = await import("../worker/index.js");
   const wrangler = parseJsonc(await read("wrangler.jsonc"));
   const routed = new Set((wrangler.routes || []).map((route) => route.pattern.split("/")[0]));
-  for (const hostname of Object.keys(hostMap)) assert.ok(routed.has(hostname), `${hostname} has no Wrangler route`);
+  assert.deepEqual([...routed].sort(), ["api.idol.id", "book.idol.id", "mcp.idol.id"]);
+  for (const hostname of routed) assert.ok(Object.hasOwn(hostMap, hostname), `${hostname} has no Worker handler`);
 });
 
 test("recovery policy states the enforceable future invariant without an impossible bug-free claim", async () => {

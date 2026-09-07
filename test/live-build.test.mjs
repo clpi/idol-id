@@ -44,7 +44,7 @@ test("immutable build contains Live, hosted MCP, exact routes, and honest implem
   assert.match(await readFile("dist/apps/site/index.html", "utf8"), /site-live-entry\.js/);
 });
 
-test("Worker, Wrangler, Access, navigation, verification, and CI own the two new surfaces", async () => {
+test("Live and MCP implementations remain present while deployment routes stay explicitly restricted", async () => {
   const [worker, entry, wrangler, provision, access, verify, shell, workflow, orchestrator] = await Promise.all([
     read("worker/index.js"),
     read("worker/entry.js"),
@@ -60,8 +60,11 @@ test("Worker, Wrangler, Access, navigation, verification, and CI own the two new
   assert.match(worker, /"mcp\.idol\.id"/);
   assert.match(entry, /handleLiveTransport/);
   assert.match(entry, /handleMcpTransport/);
-  assert.match(wrangler, /"pattern": "live\.idol\.id"[\s\S]*?"custom_domain": true/);
-  assert.match(wrangler, /"pattern": "mcp\.idol\.id"[\s\S]*?"custom_domain": true/);
+  assert.deepEqual(JSON.parse(wrangler).routes, [
+    { pattern: "book.idol.id/*", zone_name: "idol.id" },
+    { pattern: "api.idol.id/*", zone_name: "idol.id" },
+    { pattern: "mcp.idol.id", custom_domain: true },
+  ]);
   assert.match(provision, /provisionLiveAccess/);
   assert.match(access, /live\.idol\.id\/\*/);
   assert.match(verify, /live\.idol\.id/);
