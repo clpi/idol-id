@@ -29,6 +29,8 @@ jobs:
           node-version: 22
       - name: Repository authority and transport security
         run: node --test test/repository-platform-errors.test.mjs test/repository-worker.test.mjs test/repository-transformation-worker.test.mjs
+      - name: Release authority observer controls
+        run: python3 test/release-authority-observation.py
       - name: Test and build every surface
         id: full_check
         shell: bash
@@ -100,6 +102,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Verify upstream and pinned native authority before production changes
+        timeout-minutes: 2
+        env:
+          IDOL_AUTHORITY_READ_TOKEN: ${{ secrets.IDOL_AUTHORITY_READ_TOKEN }}
+        run: sh scripts/check-release-authority.sh
       - name: Require Cloudflare deployment token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
