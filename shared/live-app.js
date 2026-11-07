@@ -16,7 +16,8 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const text = (value) => String(value ?? "");
   const escapeHtml = (value) => text(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
-  const commaList = (value) => [...new Set(text(value).split(",").map((part) => part.trim()).filter(Boolean))];
+  const commaSequence = (value) => text(value).trim() ? text(value).split(",").map((part) => part.trim()) : [];
+  const commaList = (value) => [...new Set(commaSequence(value).filter(Boolean))];
 
   function notice(message, error = false) {
     const node = $("#live-notice");
@@ -269,7 +270,7 @@
     });
     $("#live-application-form")?.addEventListener("submit", (event) => {
       event.preventDefault();
-      submit(event.currentTarget, (data) => request(`/projects/${state.project.id}/applications`, { method: "POST", body: JSON.stringify({ relation: data.get("relation"), subject: data.get("subject"), target: data.get("target") || null, operands: commaList(data.get("operands")), results: commaList(data.get("results")), worlds: commaList(data.get("worlds")), witnesses: commaList(data.get("witnesses")), demand: data.get("demand") ? { fact: data.get("demand") } : {}, provenance: { actor: state.session?.profile?.subject || "browser" } }) }));
+      submit(event.currentTarget, (data) => request(`/projects/${state.project.id}/applications`, { method: "POST", body: JSON.stringify({ relation: data.get("relation"), subject: data.get("subject"), target: data.get("target") || null, operands: commaSequence(data.get("operands")), results: commaSequence(data.get("results")), worlds: commaList(data.get("worlds")), witnesses: commaList(data.get("witnesses")), demand: data.get("demand") ? { fact: data.get("demand") } : {}, provenance: { actor: state.session?.profile?.subject || "browser" } }) }));
     });
     $("#live-event-form")?.addEventListener("submit", (event) => {
       event.preventDefault();

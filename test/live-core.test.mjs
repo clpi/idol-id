@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createMemoryLiveStore } from "../shared/live-memory.js";
 import { createLiveService } from "../shared/live-service.js";
-import { LiveError, projectLiveGraph } from "../shared/live.js";
+import { LiveError, normaliseLiveApplicationInput, projectLiveGraph } from "../shared/live.js";
 
 const owner = Object.freeze({ subject: "subject-owner", email: "owner@example.test" });
 const other = Object.freeze({ subject: "subject-other", email: "other@example.test" });
@@ -36,6 +36,24 @@ function fixture() {
   });
   return { store, service };
 }
+
+test("application packs preserve every bounded slot while reference sets reject duplicates", () => {
+  const input = { relation: "ordered", subject: "ln_subject", operands: [" a ", "b", "a"], results: ["a", "a"] };
+  const application = normaliseLiveApplicationInput(input);
+  assert.deepEqual(application.operands, ["a", "b", "a"]);
+  assert.deepEqual(application.results, ["a", "a"]);
+  assert.equal(Object.isFrozen(application.operands), true);
+  assert.equal(Object.isFrozen(application.results), true);
+  assert.deepEqual(normaliseLiveApplicationInput({ ...input, operands: Array(64).fill("a") }).operands, Array(64).fill("a"));
+  for (const field of ["operands", "results"]) {
+    for (const value of [Array(65).fill("a"), ["a", " "], Array(2), "a,a"]) {
+      assert.throws(() => normaliseLiveApplicationInput({ ...input, [field]: value }), (error) => error.code === "INVALID_LIVE_INPUT");
+    }
+  }
+  for (const field of ["worlds", "witnesses"]) {
+    assert.throws(() => normaliseLiveApplicationInput({ ...input, [field]: ["ref", " ref "] }), (error) => error.code === "LIVE_DUPLICATE_REFERENCE");
+  }
+});
 
 test("Live owns one causal collaboration history and one admitted frontier without minting Idol semantics", async () => {
   const { service } = fixture();

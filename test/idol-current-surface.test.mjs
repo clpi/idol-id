@@ -31,11 +31,11 @@ test("studio uses real compiler transports and refuses browser-minted semantics"
 });
 
 test("shared chrome presents one bounded Idol product hierarchy", () => {
-  for (const label of ["studio", "graph", "worlds", "registry", "docs", "platform"]) {
+  for (const label of ["studio", "graph", "worlds", "registry", "docs", "book", "platform"]) {
     assert.match(shell, new RegExp(`label: "${label}"`));
   }
   const primary = shell.match(/const SURFACES = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
-  assert.equal((primary.match(/id:/g) || []).length, 6);
+  assert.deepEqual([...primary.matchAll(/id:\s*"([^"]+)"/g)].map((match) => match[1]), ["site", "graph", "worlds", "lib", "docs", "book", "platform"]);
   assert.match(shell, /word\.textContent = "IDOL"/);
   assert.match(shell, /Idol command palette/);
   assert.match(shell, /metaKey \|\| event\.ctrlKey/);
