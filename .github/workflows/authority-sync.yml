@@ -37,6 +37,11 @@ jobs:
         run: node scripts/sync-authority.mjs --write
       - name: Verify generated authority consumers
         run: npm run authority:check
+      - name: Verify release authority before proposing reconciliation
+        timeout-minutes: 2
+        env:
+          IDOL_AUTHORITY_READ_TOKEN: ${{ secrets.IDOL_AUTHORITY_READ_TOKEN }}
+        run: sh scripts/check-release-authority.sh
       - name: Open or update authority pull request
         env:
           GH_TOKEN: ${{ github.token }}
