@@ -38,6 +38,12 @@ if name == "node":
     assert sys.argv[1:] == ["scripts/check-upstream-authority.mjs"]
     assert os.environ.get("IDOL_AUTHORITY_READ_TOKEN") == "fixture-only-not-a-credential"
     sys.exit(int(os.environ.get("UPSTREAM_STATUS", "0")))
+if name == "npm":
+    assert sys.argv[1:] == ["run", "check"]
+    sys.exit(int(os.environ.get("CHECK_STATUS", "0")))
+if name == "npx":
+    assert sys.argv[1:] == ["--yes", "wrangler@4.125.0", "deploy"]
+    sys.exit(int(os.environ.get("DEPLOY_STATUS", "0")))
 assert name == "curl"
 status = int(os.environ.get("CURL_STATUS", "0"))
 if status == 0:
@@ -82,14 +88,15 @@ class ReleaseAuthority(unittest.TestCase):
         self.local.write_text(json.dumps(LOCAL))
         self.remote = self.root / "remote.json"
         self.remote.write_text(json.dumps(REMOTE))
-        for name in ["node", "curl"]:
+        for name in ["node", "curl", "npm", "npx"]:
             path = self.root / "bin" / name
             path.write_text(FAKE)
             path.chmod(0o755)
         self.calls = self.root / "calls.jsonl"
         self.env = dict(os.environ, PATH=str(self.root / "bin") + os.pathsep + os.environ["PATH"],
                         CALLS=str(self.calls), REMOTE=str(self.remote),
-                        IDOL_AUTHORITY_READ_TOKEN=TOKEN, UPSTREAM_STATUS="0", CURL_STATUS="0")
+                        IDOL_AUTHORITY_READ_TOKEN=TOKEN, UPSTREAM_STATUS="0", CURL_STATUS="0",
+                        CHECK_STATUS="0", DEPLOY_STATUS="0")
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -242,6 +249,44 @@ class ReleaseAuthority(unittest.TestCase):
                          "        run: npm run authority:check")
         self.assertTrue(steps[gate + 1].startswith("      - name: Open or update authority pull request\n"))
         self.assertNotIn("continue-on-error", workflow)
+
+    def run_manual_deploy(self, expected, readers):
+        command = json.loads((ROOT / "package.json").read_text())["scripts"]["deploy"]
+        result = subprocess.run(["sh", "-c", command], cwd=self.root, env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
+        records = [json.loads(line) for line in self.calls.read_text().splitlines()] if self.calls.exists() else []
+        self.assertEqual([entry["name"] for entry in records], readers)
+        for entry in records:
+            self.assertEqual(entry["cwd"], str(self.root))
+            self.assertNotIn(TOKEN, json.dumps(entry))
+        self.assertNotIn(TOKEN, result.stdout + result.stderr)
+        self.assertEqual(json.loads(self.local.read_text()), LOCAL)
+
+    def test_manual_deploy_runs_guard_and_full_checks_before_wrangler(self):
+        self.run_manual_deploy(0, ["node", "curl", "npm", "npx"])
+
+    def test_manual_deploy_missing_credential_stops_before_checks_or_wrangler(self):
+        self.env.pop("IDOL_AUTHORITY_READ_TOKEN")
+        self.run_manual_deploy(2, [])
+
+    def test_manual_deploy_upstream_refusal_stops_before_checks_or_wrangler(self):
+        self.env["UPSTREAM_STATUS"] = "3"
+        self.run_manual_deploy(3, ["node"])
+
+    def test_manual_deploy_native_refusal_stops_before_checks_or_wrangler(self):
+        document = copy.deepcopy(REMOTE)
+        document["authority"]["commit"] = "e" * 40
+        self.remote.write_text(json.dumps(document))
+        self.run_manual_deploy(3, ["node", "curl"])
+
+    def test_manual_deploy_failed_full_checks_stop_wrangler(self):
+        self.env["CHECK_STATUS"] = "9"
+        self.run_manual_deploy(9, ["node", "curl", "npm"])
+
+    def test_manual_deploy_wrangler_failure_is_preserved(self):
+        self.env["DEPLOY_STATUS"] = "17"
+        self.run_manual_deploy(17, ["node", "curl", "npm", "npx"])
 
 
 if __name__ == "__main__":

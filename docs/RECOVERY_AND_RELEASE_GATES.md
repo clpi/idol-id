@@ -43,3 +43,11 @@ Restoring the schedule still requires approved private-read access and semantic
 review of incompatible authority editions. Changes to the native authority and
 its realization evidence belong to the native owner. Do not replace law hashes
 or bypass failing web tests merely to make deployment green.
+
+The documented `npm run deploy` entry point also runs the same authority guard
+and the full `npm run check` before invoking Wrangler. The guard is part of the
+deploy command itself, not an optional npm lifecycle hook. Each failure stops the
+following command and its status is preserved. Offline controls execute that
+exact package command with recording fake readers, check runner and Wrangler.
+They do not authorize or execute a deployment and cannot prevent a privileged
+caller from invoking Wrangler or the provider API directly.
